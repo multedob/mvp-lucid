@@ -4,15 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import type { Session } from "@supabase/supabase-js";
 
-const PAYLOAD = {
-  base_version: 1,
-  raw_input: {
-    d1: [3, 3, 3, 3],
-    d2: [3, 3, 3, 3],
-    d3: [3, 3, 3, 3],
-    d4: [3, 3, 3, 3],
-    user_text: "Estou confuso sobre o que estou sentindo",
-  },
+const RAW_INPUT = {
+  d1: [3, 3, 3, 3],
+  d2: [3, 3, 3, 3],
+  d3: [3, 3, 3, 3],
+  d4: [3, 3, 3, 3],
+  user_text: "Estou confuso sobre o que estou sentindo",
 };
 
 const Test = () => {
@@ -22,6 +19,7 @@ const Test = () => {
   const [result, setResult] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentVersion, setCurrentVersion] = useState<number | null>(null);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
@@ -42,10 +40,28 @@ const Test = () => {
     setError(null);
     setResult(null);
     try {
+      const userId = session?.user?.id;
+      if (!userId) throw new Error("Usuário não autenticado");
+
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("version")
+        .eq("id", userId)
+        .single();
+
+      if (userError) throw new Error(`Erro ao buscar versão: ${userError.message}`);
+      if (!userData) throw new Error("Usuário não encontrado na tabela users");
+
+      const baseVersion = userData.version;
+      setCurrentVersion(baseVersion);
+
+      const payload = { base_version: baseVersion, raw_input: RAW_INPUT };
+
       const { data, error: fnError } = await supabase.functions.invoke("lucid-engine", {
-        body: PAYLOAD,
+        body: payload,
       });
       if (fnError) throw fnError;
+      setCurrentVersion(baseVersion + 1);
       setResult(JSON.stringify(data, null, 2));
     } catch (e: any) {
       setError(e.message ?? String(e));
@@ -70,10 +86,11 @@ const Test = () => {
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground mb-4 font-mono">user_id: {session?.user?.id}</p>
+      <p className="text-xs text-muted-foreground mb-1 font-mono">user_id: {session?.user?.id}</p>
+      <p className="text-xs text-muted-foreground mb-4 font-mono">base_version: {currentVersion ?? "—"}</p>
 
       <pre className="bg-muted p-4 rounded mb-4 text-sm overflow-auto">
-        {JSON.stringify(PAYLOAD, null, 2)}
+        {JSON.stringify({ base_version: currentVersion ?? "(será buscado)", raw_input: RAW_INPUT }, null, 2)}
       </pre>
 
       <Button onClick={callEngine} disabled={loading}>
