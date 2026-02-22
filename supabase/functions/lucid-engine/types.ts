@@ -185,6 +185,8 @@ export interface RagNode {
   prescriptive_score: RiskScore;
   normative_score:    RiskScore;
   content_text:       string;
+  source_author:      string;
+  source_work:        string;
 }
 
 // ─────────────────────────────────────────
