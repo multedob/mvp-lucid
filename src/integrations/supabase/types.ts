@@ -172,6 +172,8 @@ export type Database = {
           node_type: string
           normative_score: number
           prescriptive_score: number
+          source_author: string
+          source_work: string
           stage_max: number
           stage_min: number
           teleology_score: number
@@ -189,6 +191,8 @@ export type Database = {
           node_type: string
           normative_score?: number
           prescriptive_score?: number
+          source_author?: string
+          source_work?: string
           stage_max: number
           stage_min: number
           teleology_score?: number
@@ -206,6 +210,8 @@ export type Database = {
           node_type?: string
           normative_score?: number
           prescriptive_score?: number
+          source_author?: string
+          source_work?: string
           stage_max?: number
           stage_min?: number
           teleology_score?: number
