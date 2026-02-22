@@ -42,22 +42,39 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (
     typeof body !== "object" ||
     body === null ||
-    typeof (body as Record<string, unknown>)["raw_input"] !== "string" ||
+    typeof (body as Record<string, unknown>)["raw_input"] !== "object" ||
+    (body as Record<string, unknown>)["raw_input"] === null ||
     typeof (body as Record<string, unknown>)["base_version"] !== "number"
   ) {
     return json(
       {
         error: "INVALID_INPUT",
-        message: "Body must contain raw_input (string) and base_version (number)",
+        message: "Body must contain raw_input (object with d1–d4) and base_version (number)",
       },
       400
     );
   }
 
   const { raw_input, base_version } = body as {
-    raw_input: string;
+    raw_input: Record<string, unknown>;
     base_version: number;
   };
+
+  // Validação de raw_input: d1, d2, d3, d4 — cada um array de exatamente 4 números
+  const isQuad = (v: unknown): v is [number, number, number, number] =>
+    Array.isArray(v) && v.length === 4 && v.every((n) => typeof n === "number");
+
+  for (const key of ["d1", "d2", "d3", "d4"] as const) {
+    if (!isQuad(raw_input[key])) {
+      return json(
+        {
+          error: "INVALID_INPUT",
+          message: `raw_input.${key} must be an array of exactly 4 numbers`,
+        },
+        400
+      );
+    }
+  }
 
   // Placeholder response
   return json({
