@@ -230,7 +230,9 @@ H0: stabilizing language — no structural nodes active
 H1: calibrating language — moderate density
 H2: contrastive language — higher structural density permitted
 
-Respond exclusively according to the primary movement indicated. If a secondary movement is present, integrate it with parsimony.`;
+Respond exclusively according to the primary movement indicated. If a secondary movement is present, integrate it with parsimony.
+
+Always respond in the same language as the user's input. If the user wrote in Portuguese, respond in Portuguese.`;
 
   const user_content = node_texts
     ? `Structural nodes activated:\n\n${node_texts}\n\nRespond now.`
