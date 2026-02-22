@@ -48,7 +48,7 @@ const SUPPORTED_MODEL = "3.0"; // runtime suporta apenas esta versão
 // Fonte: EDGE_EXECUTION_SEQUENCE_SPEC_v1.11.1, PHASE 4
 // Produção: resolver de runtime_llm_registry (não implementado no MVP)
 const LLM_PROVIDER    = "anthropic";
-const LLM_MODEL_ID    = "claude-3-5-haiku-20241022";
+const LLM_MODEL_ID    = "claude-haiku-4-5-20251001";
 const LLM_TEMPERATURE = 0.3; // classificação usa 0, linguagem usa este valor
 
 // ─────────────────────────────────────────
