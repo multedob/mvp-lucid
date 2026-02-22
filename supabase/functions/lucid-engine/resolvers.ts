@@ -210,16 +210,18 @@ export async function resolveHistoricalMemory(
 
 export async function resolvePreviousHagoState(
   supabase:  SupabaseClient,
-  cycle_id:  string | null
+  user_id:   string
 ): Promise<HagoState> {
-  // base_version == 0 → H0 sempre (primeiro ciclo)
-  if (cycle_id === null) return "H0";
+  const { data, error } = await supabase
+    .from('cycles')
+    .select('hago_state')
+    .eq('user_id', user_id)
+    .order('version', { ascending: false })
+    .limit(1)
+    .single();
 
-  // MVP: schema não persiste hago_state em cycles
-  // Retorna H0 como estado inicial conservador
-  // TODO: quando cycles.hago_state for adicionado ao schema,
-  //       substituir por: SELECT hago_state FROM cycles WHERE id = $cycle_id
-  return "H0";
+  if (error || !data) return 'H0';
+  return data.hago_state as HagoState;
 }
 
 // ─────────────────────────────────────────
