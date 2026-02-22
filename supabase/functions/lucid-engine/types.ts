@@ -219,13 +219,23 @@ export interface AuditTrace {
 }
 
 // ─────────────────────────────────────────
+// 10b. RADAR INPUT
+// ─────────────────────────────────────────
+export interface RadarInput {
+  d1: [number, number, number, number];
+  d2: [number, number, number, number];
+  d3: [number, number, number, number];
+  d4: [number, number, number, number];
+}
+
+// ─────────────────────────────────────────
 // 11. CORE INPUT
 // Fonte: STRUCTURAL_CORE_CONTRACT_v1.8, seção 4
 // ─────────────────────────────────────────
 export interface CoreInput {
   contract_version:         typeof CONTRACT_VERSION;
   structural_model_version: string;
-  raw_input:                string;
+  raw_input:                RadarInput;
   previous_snapshot:        StructuralSnapshot;  // nunca null
   previous_node:            PreviousNode | null; // null se base_version=0
   historical_memory:        HistoricalNode[];
