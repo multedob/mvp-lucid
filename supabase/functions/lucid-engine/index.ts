@@ -382,7 +382,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // Resoluções auxiliares
     const [historical_memory, previous_hago_state, previousLines] = await Promise.all([
       resolveHistoricalMemory(supabase, user_id, base_version),
-      resolvePreviousHagoState(supabase, base_cycle_id),
+      resolvePreviousHagoState(supabase, user_id),
       resolvePreviousLines(supabase, base_cycle_id),
     ]);
 

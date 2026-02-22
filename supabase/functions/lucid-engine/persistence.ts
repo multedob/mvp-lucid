@@ -140,6 +140,7 @@ export async function persistCycle(
     p_llm_temperature:          input.llm_temperature,
     p_llm_config_hash:          input.llm_config_hash,
     p_structural_trace:         structural_trace,
+    p_hago_state:               input.hago_state,
   });
 
   if (error) {
