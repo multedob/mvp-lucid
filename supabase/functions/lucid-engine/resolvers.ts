@@ -178,7 +178,7 @@ export async function resolveHistoricalMemory(
     `)
     .eq("cycles.user_id", user_id)
     .lte("cycles.version", base_version)
-    .order("cycles.version", { ascending: false })
+    .order("version", { ascending: false, foreignTable: "cycles" })
     .order("distance", { ascending: true })
     .order("node_id", { ascending: true })
     .limit(7);
