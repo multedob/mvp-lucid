@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import type { Session } from "@supabase/supabase-js";
 
 const PAYLOAD = {
-  base_version: 0,
+  base_version: 1,
   raw_input: {
     d1: [3, 3, 3, 3],
     d2: [3, 3, 3, 3],
