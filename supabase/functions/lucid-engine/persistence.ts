@@ -57,6 +57,8 @@ export interface PersistenceInput {
   llm_config_hash:          string;
   // Auditoria
   audit_trace:              AuditTrace;
+  // LLM Response
+  llm_response?:            string;
 }
 
 // ─────────────────────────────────────────
@@ -141,6 +143,7 @@ export async function persistCycle(
     p_llm_config_hash:          input.llm_config_hash,
     p_structural_trace:         structural_trace,
     p_hago_state:               input.hago_state,
+    p_llm_response:             input.llm_response ?? null,
   });
 
   if (error) {
