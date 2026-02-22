@@ -4,12 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import type { Session } from "@supabase/supabase-js";
 
-const RAW_INPUT = {
-  d1: [3, 3, 3, 3],
-  d2: [3, 3, 3, 3],
-  d3: [3, 3, 3, 3],
-  d4: [3, 3, 3, 3],
-  user_text: "Estou confuso sobre o que estou sentindo",
+const DEFAULT_USER_TEXT = "Estou confuso sobre o que estou sentindo";
+const FIXED_DIMS = {
+  d1: [3, 3, 3, 3] as number[],
+  d2: [3, 3, 3, 3] as number[],
+  d3: [3, 3, 3, 3] as number[],
+  d4: [3, 3, 3, 3] as number[],
 };
 
 const Test = () => {
@@ -20,6 +20,7 @@ const Test = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentVersion, setCurrentVersion] = useState<number | null>(null);
+  const [userText, setUserText] = useState(DEFAULT_USER_TEXT);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
@@ -55,7 +56,8 @@ const Test = () => {
       const baseVersion = userData.version;
       setCurrentVersion(baseVersion);
 
-      const payload = { base_version: baseVersion, raw_input: RAW_INPUT };
+      const rawInput = { ...FIXED_DIMS, user_text: userText.trim() };
+      const payload = { base_version: baseVersion, raw_input: rawInput };
 
       const { data, error: fnError } = await supabase.functions.invoke("lucid-engine", {
         body: payload,
@@ -89,11 +91,19 @@ const Test = () => {
       <p className="text-xs text-muted-foreground mb-1 font-mono">user_id: {session?.user?.id}</p>
       <p className="text-xs text-muted-foreground mb-4 font-mono">base_version: {currentVersion ?? "—"}</p>
 
+      <label className="block text-sm font-medium mb-1">user_text</label>
+      <textarea
+        className="w-full rounded border border-border bg-muted p-3 text-sm font-mono mb-4 resize-y min-h-[80px]"
+        value={userText}
+        onChange={(e) => setUserText(e.target.value)}
+        placeholder="Digite o texto do usuário..."
+      />
+
       <pre className="bg-muted p-4 rounded mb-4 text-sm overflow-auto">
-        {JSON.stringify({ base_version: currentVersion ?? "(será buscado)", raw_input: RAW_INPUT }, null, 2)}
+        {JSON.stringify({ base_version: currentVersion ?? "(será buscado)", raw_input: { ...FIXED_DIMS, user_text: userText } }, null, 2)}
       </pre>
 
-      <Button onClick={callEngine} disabled={loading}>
+      <Button onClick={callEngine} disabled={loading || !userText.trim()}>
         {loading ? "Enviando..." : "Enviar POST"}
       </Button>
 
