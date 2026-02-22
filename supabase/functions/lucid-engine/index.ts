@@ -497,6 +497,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
       llm_response = "[linguistic layer unavailable]";
     }
 
+    // ─── PHASE 9.1 — Persist llm_response back to cycle
+    // llm_response is computed post-commit; update the persisted cycle
+    try {
+      await supabase
+        .from("cycles")
+        .update({ llm_response })
+        .eq("id", cycle_id);
+    } catch (updateErr) {
+      console.error("LLM_RESPONSE_PERSIST_ERROR:", updateErr);
+    }
+
     // ─── PHASE 10 — Response Emission
     // Fonte: HTTP_EDGE_UNIFIED_CONTRACT_v1.4.1, seção 4
     // cycle_integrity_hash, previous_cycle_hash, llm_config_hash NÃO expostos

@@ -54,6 +54,7 @@ export type Database = {
           llm_config_hash: string
           llm_model_id: string
           llm_provider: string
+          llm_response: string | null
           llm_temperature: number
           movement_primary: string
           movement_secondary: string | null
@@ -75,6 +76,7 @@ export type Database = {
           llm_config_hash: string
           llm_model_id: string
           llm_provider: string
+          llm_response?: string | null
           llm_temperature: number
           movement_primary: string
           movement_secondary?: string | null
@@ -96,6 +98,7 @@ export type Database = {
           llm_config_hash?: string
           llm_model_id?: string
           llm_provider?: string
+          llm_response?: string | null
           llm_temperature?: number
           movement_primary?: string
           movement_secondary?: string | null
@@ -307,6 +310,7 @@ export type Database = {
             Args: {
               p_base_version: number
               p_cycle_integrity_hash: string
+              p_hago_state: string
               p_input_classification: string
               p_input_hash: string
               p_llm_config_hash: string
@@ -337,6 +341,7 @@ export type Database = {
               p_llm_config_hash: string
               p_llm_model_id: string
               p_llm_provider: string
+              p_llm_response?: string
               p_llm_temperature: number
               p_movement_primary: string
               p_movement_secondary: string
