@@ -10,7 +10,8 @@
 //         RAG_NODE_MODEL_v1.2,
 //         RADAR_PARAMETER_TABLE_v1.0,
 //         HTTP_EDGE_UNIFIED_CONTRACT_v1.4.1,
-//         HAGO_STATE_MACHINE_v1.3
+//         HAGO_STATE_MACHINE_v1.3,
+//         RADAR_PIPELINE_SPEC_v2.1
 // ============================================================
 
 // ─────────────────────────────────────────
@@ -133,7 +134,6 @@ export const THRESHOLDS = {
   // Regime temporal MD
   MD_intraciclo_cap: 0.60,
   // A8: margem_CEC = 10% do CEC_threshold do conjunto ativo
-  // Calculada em runtime — não é absoluta
   MARGEM_CEC_FACTOR: 0.10,
 } as const;
 
@@ -155,6 +155,19 @@ export function cecThresholdForH2(
   return consolidated_flag
     ? t.CEC
     : t.CEC + t.CEC * THRESHOLDS.MARGEM_CEC_FACTOR;
+}
+
+// ─────────────────────────────────────────
+// 5b. RADAR INPUT
+// 16 valores numéricos — exatamente 4 por dimensão
+// Tuplas garantem cardinalidade fixa em compile time
+// Fonte: RADAR_PIPELINE_SPEC_v2.1, seção 2.1
+// ─────────────────────────────────────────
+export interface RadarInput {
+  d1: [number, number, number, number];
+  d2: [number, number, number, number];
+  d3: [number, number, number, number];
+  d4: [number, number, number, number];
 }
 
 // ─────────────────────────────────────────
@@ -219,18 +232,10 @@ export interface AuditTrace {
 }
 
 // ─────────────────────────────────────────
-// 10b. RADAR INPUT
-// ─────────────────────────────────────────
-export interface RadarInput {
-  d1: [number, number, number, number];
-  d2: [number, number, number, number];
-  d3: [number, number, number, number];
-  d4: [number, number, number, number];
-}
-
-// ─────────────────────────────────────────
 // 11. CORE INPUT
 // Fonte: STRUCTURAL_CORE_CONTRACT_v1.8, seção 4
+// raw_input: RadarInput — 16 valores numéricos estruturados
+// Texto do usuário não entra no Core
 // ─────────────────────────────────────────
 export interface CoreInput {
   contract_version:         typeof CONTRACT_VERSION;
@@ -274,6 +279,7 @@ export interface PostCoreOutput {
 // Fonte: HTTP_EDGE_UNIFIED_CONTRACT_v1.4.1
 // cycle_integrity_hash NÃO exposto — interno ao ledger
 // Fonte: HTTP_EDGE_UNIFIED_CONTRACT_v1.4.1, seção 8
+// raw_input (RadarInput) NÃO retornado — interno ao Core
 // ─────────────────────────────────────────
 export interface EdgeResponse {
   api_version:              string;
