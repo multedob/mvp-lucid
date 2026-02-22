@@ -82,7 +82,7 @@ async function classifyInput(user_text: string, anthropic: Anthropic): Promise<I
 
   // C5_PEDIDO_PRESCRITIVO: pedido direto de orientação prática
   if (
-    /\b(me diz(a|e) o que fazer|o que (eu )?devo|como (eu )?devo|preciso saber como|me ensina|me explica como|qual o passo|o que fazer)\b/.test(
+    /\b(me diz(a|e) o que fazer|o que (eu )?devo|como (eu )?devo|como (eu )?(fa[cç]o|posso|consigo) para|preciso saber como|me ensina|me explica como|qual o passo|o que fazer|como (ser|ficar|me tornar)|como melhorar)\b/.test(
       text,
     )
   ) {
