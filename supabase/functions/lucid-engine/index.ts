@@ -10,12 +10,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.27.3";
 
-import type {
-  RadarInput,
-  InputClassification,
-  EdgeResponse,
-  RagNode,
-} from "./types.ts";
+import type { RadarInput, InputClassification, EdgeResponse, RagNode } from "./types.ts";
 import { CONTRACT_VERSION, STRUCTURAL_MODEL_VERSION } from "./types.ts";
 
 import {
@@ -29,36 +24,32 @@ import {
   VersionConflictError,
 } from "./resolvers.ts";
 
-import { executeStructuralCore }    from "./core.ts";
-import { executePostCore }          from "./post-core.ts";
-import { persistCycle }             from "./persistence.ts";
-import {
-  computeCycleIntegrityHash,
-  computeLlmConfigHash,
-} from "./hash.ts";
+import { executeStructuralCore } from "./core.ts";
+import { executePostCore } from "./post-core.ts";
+import { persistCycle } from "./persistence.ts";
+import { computeCycleIntegrityHash, computeLlmConfigHash } from "./hash.ts";
 
 // ─────────────────────────────────────────
 // CONSTANTES
 // ─────────────────────────────────────────
 
-const API_VERSION     = "1.0";
+const API_VERSION = "1.0";
 const SUPPORTED_MODEL = "3.0"; // runtime suporta apenas esta versão
 
 // LLM Binding — MVP hardcoded (Anthropic claude-3-5-haiku)
 // Fonte: EDGE_EXECUTION_SEQUENCE_SPEC_v1.11.1, PHASE 4
 // Produção: resolver de runtime_llm_registry (não implementado no MVP)
-const LLM_PROVIDER    = "anthropic";
-const LLM_MODEL_ID    = "claude-haiku-4-5-20251001";
-const LLM_TEMPERATURE = 0;
+const LLM_PROVIDER = "anthropic";
+const LLM_MODEL_ID = "claude-haiku-4-5-20251001";
+const LLM_TEMPERATURE = 0.3; // classificação usa 0, linguagem usa este valor
 
 // ─────────────────────────────────────────
 // CORS
 // ─────────────────────────────────────────
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin":  "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -77,11 +68,7 @@ function json(body: unknown, status = 200): Response {
 // Proibido: acesso a snapshot, previous_node, histórico, hago_state
 // ─────────────────────────────────────────
 
-async function classifyInput(
-  user_text:  string,
-  anthropic:  Anthropic
-): Promise<InputClassification> {
-
+async function classifyInput(user_text: string, anthropic: Anthropic): Promise<InputClassification> {
   // ─── Fase 1: regras fortes (determinísticas)
   // Ordem de precedência: C7 > C5 > C6
   // Fonte: INPUT_CLASSIFICATION_SPEC_v1.1, seção 5
@@ -89,22 +76,24 @@ async function classifyInput(
   const text = user_text.toLowerCase();
 
   // C7_RISCO_HUMANO: risco físico, autolesão, violência iminente
-  if (
-    /\b(suicid|me matar|me machucar|me ferir|violência|matar|morrer|acabar com|me jogar)\b/.test(text)
-  ) {
+  if (/\b(suicid|me matar|me machucar|me ferir|violência|matar|morrer|acabar com|me jogar)\b/.test(text)) {
     return "C7_RISCO_HUMANO";
   }
 
   // C5_PEDIDO_PRESCRITIVO: pedido direto de orientação prática
   if (
-    /\b(me diz(a|e) o que fazer|o que (eu )?devo|como (eu )?devo|preciso saber como|me ensina|me explica como|qual o passo|o que fazer)\b/.test(text)
+    /\b(me diz(a|e) o que fazer|o que (eu )?devo|como (eu )?devo|preciso saber como|me ensina|me explica como|qual o passo|o que fazer)\b/.test(
+      text,
+    )
   ) {
     return "C5_PEDIDO_PRESCRITIVO";
   }
 
   // C6_VALIDACAO_IDENTITARIA: busca de definição identitária
   if (
-    /\b(quem (eu )?sou|minha identidade|sou (uma pessoa|alguém)|isso define|isso me define|isso faz de mim)\b/.test(text)
+    /\b(quem (eu )?sou|minha identidade|sou (uma pessoa|alguém)|isso define|isso me define|isso faz de mim)\b/.test(
+      text,
+    )
   ) {
     return "C6_VALIDACAO_IDENTITARIA";
   }
@@ -126,15 +115,13 @@ Rules:
 User input: "${user_text}"`;
 
   const response = await anthropic.messages.create({
-    model:       LLM_MODEL_ID,
-    max_tokens:  20,
+    model: LLM_MODEL_ID,
+    max_tokens: 20,
     temperature: 0, // temperatura=0 obrigatório para classificação
-    messages:    [{ role: "user", content: prompt }],
+    messages: [{ role: "user", content: prompt }],
   });
 
-  const raw = (response.content[0] as { type: string; text: string }).text
-    .trim()
-    .toUpperCase();
+  const raw = (response.content[0] as { type: string; text: string }).text.trim().toUpperCase();
 
   const valid: InputClassification[] = [
     "C1_CONFUSAO_CONCEITUAL",
@@ -161,17 +148,16 @@ User input: "${user_text}"`;
 // ─────────────────────────────────────────
 
 async function executeLlmLanguage(
-  anthropic:         Anthropic,
-  structural_model:  string,
-  snapshot:          Record<string, unknown>,
-  node_selection:    Array<Record<string, unknown>>,
-  hago_state:        string,
-  response_type:     string,
-  movement_primary:  string,
+  anthropic: Anthropic,
+  structural_model: string,
+  snapshot: Record<string, unknown>,
+  node_selection: Array<Record<string, unknown>>,
+  hago_state: string,
+  response_type: string,
+  movement_primary: string,
   movement_secondary: string | null,
-  nodes_corpus:      RagNode[]
+  nodes_corpus: RagNode[],
 ): Promise<string> {
-
   // Construir conteúdo dos nodes selecionados
   const node_texts = node_selection
     .map((n) => {
@@ -184,7 +170,7 @@ async function executeLlmLanguage(
   const system = `
 You are Luce.
 
-Your role is to help the user see more clearly how their thought is organized, and gently highlight tensions that may already be present.
+Your role is to help the user see more clearly how their thought is organized and gently highlight tensions that may already be present.
 
 VOICE
 - Clear
@@ -200,7 +186,6 @@ LANGUAGE
 - Write in natural, connected sentences.
 - No bullet points.
 - No numbering.
-- No structural explanations.
 - Maximum 3 short paragraphs.
 
 STRUCTURAL DISCIPLINE
@@ -226,11 +211,11 @@ ${movement_secondary ? `Secondary Movement: ${movement_secondary}` : ""}
     : "No structural nodes activated for this state. Respond according to HAGO state.";
 
   const response = await anthropic.messages.create({
-    model:       LLM_MODEL_ID,
-    max_tokens:  1024,
+    model: LLM_MODEL_ID,
+    max_tokens: 1024,
     temperature: LLM_TEMPERATURE,
     system,
-    messages:    [{ role: "user", content: user_content }],
+    messages: [{ role: "user", content: user_content }],
   });
 
   return (response.content[0] as { type: string; text: string }).text;
@@ -241,7 +226,6 @@ ${movement_secondary ? `Secondary Movement: ${movement_secondary}` : ""}
 // ─────────────────────────────────────────
 
 Deno.serve(async (req: Request): Promise<Response> => {
-
   // CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: CORS_HEADERS });
@@ -268,9 +252,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   // Rejeitar campos proibidos
   const FORBIDDEN = [
-    "user_id", "structural_model_version", "CGG", "stage_base",
-    "input_hash", "structural_hash", "input_classification",
-    "response_type", "movement_primary", "movement_secondary",
+    "user_id",
+    "structural_model_version",
+    "CGG",
+    "stage_base",
+    "input_hash",
+    "structural_hash",
+    "input_classification",
+    "response_type",
+    "movement_primary",
+    "movement_secondary",
   ];
   for (const f of FORBIDDEN) {
     if (f in body) {
@@ -313,63 +304,62 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const user_text = raw.user_text as string;
 
   // Inicializar clientes
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    { auth: { persistSession: false } }
-  );
+  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
+    auth: { persistSession: false },
+  });
 
   const anthropic = new Anthropic({
     apiKey: Deno.env.get("ANTHROPIC_API_KEY")!,
   });
 
   // Extrair user_id do JWT via Supabase
-  const { data: { user }, error: authError } = await supabase.auth.getUser(
-    authHeader.replace("Bearer ", "")
-  );
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
   if (authError || !user) {
     return json({ error: "UNAUTHORIZED", message: "Invalid token" }, 401);
   }
   const user_id = user.id;
 
   try {
-
     // ─── PHASE 1 — Structural Model Binding
     // Fonte: CORE_RUNTIME_REGISTRY_SPEC_v1.2
     const bound_version = await resolveStructuralModelVersion(supabase);
 
     // Verificar que runtime suporta esta versão
     if (bound_version !== SUPPORTED_MODEL) {
-      return json({
-        error:   "INTERNAL_ERROR",
-        message: `RUNTIME_VERSION_NOT_IMPLEMENTED: ${bound_version}`,
-      }, 500);
+      return json(
+        {
+          error: "INTERNAL_ERROR",
+          message: `RUNTIME_VERSION_NOT_IMPLEMENTED: ${bound_version}`,
+        },
+        500,
+      );
     }
 
     // ─── PHASE 2 — Snapshot Resolution
     // Fonte: SNAPSHOT_RESOLUTION_PROTOCOL_v2.2.1
-    const { snapshot: previous_snapshot, cycle_id: base_cycle_id } =
-      await resolveSnapshot(supabase, user_id, base_version);
+    const { snapshot: previous_snapshot, cycle_id: base_cycle_id } = await resolveSnapshot(
+      supabase,
+      user_id,
+      base_version,
+    );
 
     // ─── PHASE 3 — Previous Node Resolution
     // Fonte: PREVIOUS_NODE_RESOLUTION_PROTOCOL_v2.2.2
     const previous_node = await resolvePreviousNode(supabase, base_cycle_id);
 
     // Resoluções auxiliares
-    const [historical_memory, previous_hago_state, previousLines] =
-      await Promise.all([
-        resolveHistoricalMemory(supabase, user_id, base_version),
-        resolvePreviousHagoState(supabase, base_cycle_id),
-        resolvePreviousLines(supabase, base_cycle_id),
-      ]);
+    const [historical_memory, previous_hago_state, previousLines] = await Promise.all([
+      resolveHistoricalMemory(supabase, user_id, base_version),
+      resolvePreviousHagoState(supabase, base_cycle_id),
+      resolvePreviousLines(supabase, base_cycle_id),
+    ]);
 
     // ─── PHASE 4 — LLM Runtime Binding
     // MVP: hardcoded — sem registry LLM dinâmico
-    const llm_config_hash = await computeLlmConfigHash(
-      LLM_PROVIDER,
-      LLM_MODEL_ID,
-      LLM_TEMPERATURE
-    );
+    const llm_config_hash = await computeLlmConfigHash(LLM_PROVIDER, LLM_MODEL_ID, LLM_TEMPERATURE);
 
     // ─── PHASE 4.5 — Input Classification
     // Executada na Edge, antes do Core
@@ -378,9 +368,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const input_classification = await classifyInput(user_text, anthropic);
 
     // Buscar corpus RAG completo
-    const { data: ragCorpus, error: ragErr } = await supabase
-      .from("rag_corpus")
-      .select("*");
+    const { data: ragCorpus, error: ragErr } = await supabase.from("rag_corpus").select("*");
 
     if (ragErr || !ragCorpus) {
       return json({ error: "INTERNAL_ERROR", message: "Failed to load RAG corpus" }, 500);
@@ -390,16 +378,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // Core é função pura — sem I/O
     // Fonte: STRUCTURAL_CORE_CONTRACT_v1.8
     const core_output = await executeStructuralCore({
-      contract_version:         CONTRACT_VERSION,
+      contract_version: CONTRACT_VERSION,
       structural_model_version: bound_version,
-      raw_input:                radar_input,
+      raw_input: radar_input,
       previous_snapshot,
       previous_node,
       historical_memory,
       input_classification,
-      nodes:                    ragCorpus as RagNode[],
+      nodes: ragCorpus as RagNode[],
       previous_hago_state,
-      cyclesCompleted:          base_version,
+      cyclesCompleted: base_version,
       previousLines,
     });
 
@@ -414,7 +402,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       previous_cycle_hash,
       core_output.input_hash,
       core_output.structural_hash,
-      bound_version
+      bound_version,
     );
 
     // ─── PHASE 7 — Pre-Transaction Integrity Checks
@@ -438,23 +426,23 @@ Deno.serve(async (req: Request): Promise<Response> => {
       user_id,
       base_version,
       structural_model_version: bound_version,
-      raw_input:                radar_input,
-      input_hash:               core_output.input_hash,
-      structural_hash:          core_output.structural_hash,
+      raw_input: radar_input,
+      input_hash: core_output.input_hash,
+      structural_hash: core_output.structural_hash,
       previous_cycle_hash,
       cycle_integrity_hash,
-      structural_snapshot:      core_output.structural_snapshot,
-      node_selection:           core_output.node_selection,
-      hago_state:               core_output.hago_state,
+      structural_snapshot: core_output.structural_snapshot,
+      node_selection: core_output.node_selection,
+      hago_state: core_output.hago_state,
       input_classification,
-      response_type:            post_core.response_type,
-      movement_primary:         post_core.movement_primary,
-      movement_secondary:       post_core.movement_secondary,
-      llm_provider:             LLM_PROVIDER,
-      llm_model_id:             LLM_MODEL_ID,
-      llm_temperature:          LLM_TEMPERATURE,
+      response_type: post_core.response_type,
+      movement_primary: post_core.movement_primary,
+      movement_secondary: post_core.movement_secondary,
+      llm_provider: LLM_PROVIDER,
+      llm_model_id: LLM_MODEL_ID,
+      llm_temperature: LLM_TEMPERATURE,
       llm_config_hash,
-      audit_trace:              core_output.audit_trace,
+      audit_trace: core_output.audit_trace,
     });
 
     // ─── PHASE 9 — Language Execution (pós-commit)
@@ -471,7 +459,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         post_core.response_type,
         post_core.movement_primary,
         post_core.movement_secondary,
-        ragCorpus as RagNode[]
+        ragCorpus as RagNode[],
       );
     } catch (langErr) {
       // Log mas não abortar — ciclo está persistido
@@ -483,28 +471,27 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // Fonte: HTTP_EDGE_UNIFIED_CONTRACT_v1.4.1, seção 4
     // cycle_integrity_hash, previous_cycle_hash, llm_config_hash NÃO expostos
     const response: EdgeResponse = {
-      api_version:              API_VERSION,
+      api_version: API_VERSION,
       current_version,
       cycle_id,
       structural_model_version: bound_version,
-      input_hash:               core_output.input_hash,
-      structural_hash:          core_output.structural_hash,
-      structural_snapshot:      core_output.structural_snapshot,
-      node_selection:           core_output.node_selection,
-      hago_state:               core_output.hago_state,
+      input_hash: core_output.input_hash,
+      structural_hash: core_output.structural_hash,
+      structural_snapshot: core_output.structural_snapshot,
+      node_selection: core_output.node_selection,
+      hago_state: core_output.hago_state,
       input_classification,
-      response_type:            post_core.response_type,
-      movement_primary:         post_core.movement_primary,
-      movement_secondary:       post_core.movement_secondary,
-      llm_provider:             LLM_PROVIDER,
-      llm_model_id:             LLM_MODEL_ID,
-      llm_temperature:          LLM_TEMPERATURE,
+      response_type: post_core.response_type,
+      movement_primary: post_core.movement_primary,
+      movement_secondary: post_core.movement_secondary,
+      llm_provider: LLM_PROVIDER,
+      llm_model_id: LLM_MODEL_ID,
+      llm_temperature: LLM_TEMPERATURE,
       llm_response,
-      audit_trace:              core_output.audit_trace,
+      audit_trace: core_output.audit_trace,
     };
 
     return json(response, 200);
-
   } catch (err) {
     if (err instanceof VersionConflictError) {
       return json({ error: "VERSION_CONFLICT", message: err.message }, 409);
