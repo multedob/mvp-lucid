@@ -17,7 +17,7 @@ import type {
   NodeType,
   DensityClass,
 } from "./types.ts";
-import { StructuralModelImpl } from "./types.ts";
+import { STATIC_BASE_SNAPSHOT } from "./types.ts";
 
 // Supabase client type (injetado pela Edge — evita import circular)
 // deno-lint-ignore no-explicit-any
@@ -58,7 +58,7 @@ export async function resolveStructuralModelVersion(
 // ─────────────────────────────────────────
 // PHASE 2 — SNAPSHOT RESOLUTION
 // Fonte: SNAPSHOT_RESOLUTION_PROTOCOL_v2.2.1
-// base_version == 0 → baseSnapshot via modelImpl injetado pelo index (B2.1)
+// base_version == 0 → STATIC_BASE_SNAPSHOT
 // base_version > 0  → SELECT FROM structural_snapshots
 // Retorna: { snapshot, cycle_id }
 // ─────────────────────────────────────────
@@ -71,13 +71,11 @@ export interface SnapshotResolutionResult {
 export async function resolveSnapshot(
   supabase:     SupabaseClient,
   user_id:      string,
-  base_version: number,
-  modelImpl:    StructuralModelImpl  // Fonte: CORE_RUNTIME_REGISTRY_SPEC_v1.2 §4 (B2.1)
+  base_version: number
 ): Promise<SnapshotResolutionResult> {
-  // base_version == 0 → baseSnapshot da versão ativa (sem lookup duplicado)
-  // Fonte: CORE_RUNTIME_REGISTRY_SPEC_v1.2 §4 (B2.1)
+  // base_version == 0 → estado sentinela de bootstrap
   if (base_version === 0) {
-    return { snapshot: { ...modelImpl.baseSnapshot }, cycle_id: null };
+    return { snapshot: { ...STATIC_BASE_SNAPSHOT }, cycle_id: null };
   }
 
   // Buscar cycle_id correspondente ao base_version
@@ -202,12 +200,10 @@ export async function resolveHistoricalMemory(
 
 // ─────────────────────────────────────────
 // PREVIOUS HAGO STATE RESOLUTION
-// Não especificado em STRUCTURAL_CORE_CONTRACT_v1.8
 // Ambiguidade A9: Edge injeta o hago_state do ciclo anterior
-// Fonte: cycles.hago_state — campo não existente no schema v3.3
-// Decisão MVP: não persiste hago_state → usar H0 como default
-// Declaração: se o schema for atualizado para persistir hago_state,
-//             remover esta função e fazer SELECT direto
+// Fonte: cycles.hago_state — adicionado via migration 20260222191059
+// Campo persiste hago_state desde essa migration — SELECT direto é válido
+// Fallback H0 cobre apenas o caso de ciclo não encontrado (base_version=0)
 // ─────────────────────────────────────────
 
 export async function resolvePreviousHagoState(
