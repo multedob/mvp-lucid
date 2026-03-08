@@ -137,7 +137,7 @@ export function executeRadar(input: RadarExecutorInput): RadarOutput {
 
   // ─── Passo 8 — Maturidade de Dados (MD)
   // MD = (C_norm + V_norm + I_norm + O_norm) / 4
-  // Regime S0 (ciclo aberto): MD_intraciclo = min(MD, 0.60)
+  // Regime S0 canônico: MD_intraciclo = min(MD, 0.60) — suspenso no MVP (ver abaixo)
   // Fonte: RADAR_v6, seção 5 / RADAR_PIPELINE_SPEC_v2.1, seção 2.9
 
   // C_norm: robustez por número de ciclos
