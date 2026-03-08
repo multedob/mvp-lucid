@@ -90,8 +90,10 @@ export interface StructuralSnapshot {
 // Vinculado a structural_model_version "3.0"
 // Fonte: SNAPSHOT_RESOLUTION_PROTOCOL_v2.2.1,
 //        seção base_version_zero_behavior
+// Prefixo _ indica uso interno — não importar diretamente.
+//        Fonte: CORE_RUNTIME_REGISTRY_SPEC_v1.2, seção 4 (B2.1)
 // ─────────────────────────────────────────
-export const STATIC_BASE_SNAPSHOT: Readonly<StructuralSnapshot> = {
+const _STATIC_BASE_SNAPSHOT_V3_0: Readonly<StructuralSnapshot> = {
   CGG0:              "1.00",
   CGG:               "1.00",
   D1:                "0.00",
@@ -106,6 +108,22 @@ export const STATIC_BASE_SNAPSHOT: Readonly<StructuralSnapshot> = {
   stage_base:        1,
   substage:          0,
   consolidated_flag: false,
+} as const;
+
+// ─────────────────────────────────────────
+// 4b. STRUCTURAL MODEL IMPLEMENTATION MAP
+// Fonte: CORE_RUNTIME_REGISTRY_SPEC_v1.2, seção 4
+// Cada versão expõe sua própria configuração canônica.
+// Acesse baseSnapshot via STRUCTURAL_MODELS[bound_version].baseSnapshot
+// ─────────────────────────────────────────
+export interface StructuralModelImpl {
+  baseSnapshot: Readonly<StructuralSnapshot>;
+}
+
+export const STRUCTURAL_MODELS: Readonly<Record<string, StructuralModelImpl>> = {
+  "3.0": {
+    baseSnapshot: _STATIC_BASE_SNAPSHOT_V3_0,
+  },
 } as const;
 
 // ─────────────────────────────────────────
