@@ -142,14 +142,31 @@ export function executeRadar(input: RadarExecutorInput): RadarOutput {
 
   // C_norm: robustez por número de ciclos
   // C_norm = min(cyclesCompleted / 4, 1)
+  // Sem histórico: C_norm = 0 (penaliza ausência — design intencional)
   const C_norm = Math.min(cyclesCompleted / 4, 1);
 
   // V_norm: estabilidade longitudinal (variação média entre ciclos)
   // V = média das variações absolutas linha a linha vs ciclo anterior
-  // Se não há ciclo anterior: V = 0 (máxima instabilidade não se aplica)
-  const V =
-    previousLines !== null && previousLines.length === 16 ? avg(all.map((l, i) => Math.abs(l - previousLines[i]))) : 0;
-  const V_norm = 1 - Math.min(V, 7) / 7;
+  // BUG-3 fix: previousLines=null com cyclesCompleted>0 = dado ausente, não estabilidade
+  //   → V_norm = 0.5 (neutro) em vez de 1.0 (máxima estabilidade artificial)
+  //   → V_norm = 1.0 apenas quando há dado real e variação é zero
+  //   → cyclesCompleted=0: V_norm = 0.5 (primeiro ciclo, sem histórico — neutro)
+  //
+  // R2.1 — Assimetria documentada (intencional):
+  // C_norm=0 e V_norm=0.5 no ciclo 0 são comportamentos diferentes para ausência.
+  // C_norm penaliza (espelha acumulação real de evidência histórica).
+  // V_norm neutraliza (ausência de histórico ≠ instabilidade — não deve penalizar).
+  // Resultado: MD primeiro ciclo é levemente elevado vs ambos em 0.
+  // Aceito: C_norm pune falta de histórico longitudinal; V_norm não pune
+  // falta de baseline de variação (sem baseline, sem sinal negativo).
+  let V_norm: number;
+  if (previousLines !== null && previousLines.length === 16) {
+    const V = avg(all.map((l, i) => Math.abs(l - (previousLines as number[])[i])));
+    V_norm = 1 - Math.min(V, 7) / 7;
+  } else {
+    // Sem dado longitudinal: contribuição neutra (não infla MD, não penaliza)
+    V_norm = 0.5;
+  }
 
   // I_norm: homogeneidade interna das 16 linhas (σ_intra)
   // I_norm = 1 − min(σ_intra, 4) / 4
@@ -166,12 +183,13 @@ export function executeRadar(input: RadarExecutorInput): RadarOutput {
   // MD_raw = média dos 4 componentes, clamp [0,1]
   const MD_raw = clamp((C_norm + V_norm + I_norm + O_norm) / 4, 0, 1);
 
-  // MVP — Desvio Formal Declarado (B1.2):
-  // O sistema de ciclo completo (S0→S1→S2) não está implementado no MVP.
-  // O MVP opera em modo S1-simulado: MD_raw usado sem cap S0.
-  // Cap S0 (0.60) será reativado quando ciclo real for implementado.
-  // Fonte: RADAR_PIPELINE_SPEC_v2.1, seção 4.3 (S0 cap) — suspenso no MVP
-  const MD = MD_raw;
+  // B1.2 — Desvio Formal: ENCERRADO (C2.4)
+  // Desvio original: cap MD S0 suspenso por ausência de cycle_state real no MVP.
+  // Encerrado em: C1.2 + B1.3 — cycle_state real implementado e cap reativado.
+  // Cap S0 (MD ≤ 0.60) agora aplicado em core.ts pós-buildSnapshot, não aqui.
+  // radar.ts permanece função pura — sem acesso a cycle_state (design intencional).
+  // Fonte: RADAR_PIPELINE_SPEC_v2.1, seção 4.3; decisão arquitetural C1.2 (R1.1)
+  const MD = MD_raw;  // Sem cap aqui — cap aplicado em core.ts quando cycle_state="S0"
 
   // ─── Passo 9 — Índice de Confiança (IC)
   // IC = MD_raw × CEC
