@@ -522,14 +522,22 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     // ─── PHASE 9.1 — Persist llm_response back to cycle
-    // llm_response is computed post-commit; update the persisted cycle
-    try {
-      await supabase
-        .from("cycles")
-        .update({ llm_response })
-        .eq("id", cycle_id);
-    } catch (updateErr) {
-      console.error("LLM_RESPONSE_PERSIST_ERROR:", updateErr);
+    // llm_response é computado pós-commit — UPDATE separado permitido pela spec
+    // Fonte: EDGE_EXECUTION_SEQUENCE_SPEC_v1.11.1, PHASE 9
+    // B2.2: Supabase JS não lança exceção em erro — checar { error } explicitamente
+    const { error: llmPersistError } = await supabase
+      .from("cycles")
+      .update({ llm_response })
+      .eq("id", cycle_id);
+
+    if (llmPersistError) {
+      // Falha não invalida ciclo — mas deve ser logada para observabilidade
+      // Ciclo com llm_response = null é recuperável via /retry-llm (futuro)
+      console.error("LLM_RESPONSE_PERSIST_ERROR:", {
+        cycle_id,
+        error: llmPersistError.message ?? llmPersistError.details ?? String(llmPersistError),
+        code:  llmPersistError.code,
+      });
     }
 
     // ─── PHASE 10 — Response Emission
