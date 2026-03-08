@@ -166,9 +166,12 @@ export function executeRadar(input: RadarExecutorInput): RadarOutput {
   // MD_raw = média dos 4 componentes, clamp [0,1]
   const MD_raw = clamp((C_norm + V_norm + I_norm + O_norm) / 4, 0, 1);
 
-  // S0 (ciclo aberto): cap em MD_intraciclo_cap = 0.60
-  // O Core opera sempre em S0 — fechamento é responsabilidade da Edge
-  const MD = Math.min(MD_raw, THRESHOLDS.MD_intraciclo_cap);
+  // MVP — Desvio Formal Declarado (B1.2):
+  // O sistema de ciclo completo (S0→S1→S2) não está implementado no MVP.
+  // O MVP opera em modo S1-simulado: MD_raw usado sem cap S0.
+  // Cap S0 (0.60) será reativado quando ciclo real for implementado.
+  // Fonte: RADAR_PIPELINE_SPEC_v2.1, seção 4.3 (S0 cap) — suspenso no MVP
+  const MD = MD_raw;
 
   // ─── Passo 9 — Índice de Confiança (IC)
   // IC = MD_raw × CEC
@@ -195,8 +198,10 @@ export function executeRadar(input: RadarExecutorInput): RadarOutput {
 
   // ─── consolidated_flag
   // Todos os critérios de promoção satisfeitos simultaneamente
-  // Usa thresholds do conjunto ativo para o stage_base atual
+  // Usa MD_raw (não capado) — MVP opera em S1-simulado
   // Fonte: RADAR_v6, seção 8-9 / HAGO_STATE_MACHINE_v1.3
+  // MVP — Desvio Formal: S2 (ciclo consolidado real) não implementado.
+  // consolidated_flag = true equivale a S2-simulado neste MVP.
   const t = getThresholds(stage_base);
   const consolidated_flag = MD_raw >= t.MD && DC <= t.DC && CEC >= t.CEC && VE <= t.VE;
 
