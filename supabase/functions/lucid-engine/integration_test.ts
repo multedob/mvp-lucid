@@ -4,6 +4,20 @@
 // Fonte: INTEGRATION_TEST_PROTOCOL_v2.1
 // Runner: Deno (deno test --allow-env)
 // ============================================================
+//
+// COBERTURA ATUAL vs INTEGRATION_TEST_PROTOCOL_v2.1:
+//
+// ✅ Cobertos: 3.1, 3.2, 3.3, 3.4, 3.4b, 3.5, 3.6, 3.7, 3.8,
+//             3.9, 3.10, 3.10b, 3.11, 3.12, CDA 1+2, hash chain,
+//             RADAR, HAGO
+//
+// ⏳ PENDENTES (dívida técnica declarada):
+//   3.13 real — "cycles table contém response_type/movement correspondentes
+//               ao calculado" — requer banco real; coberto pelo primeiro
+//               ciclo executado em produção.
+//   Seção 4   — 200 execuções, métricas globais de distribuição —
+//               implementar antes de escalar para usuários reais.
+// ============================================================
 
 import { assertEquals, assertNotEquals, assert } from "https://deno.land/std@0.208.0/assert/mod.ts";
 
@@ -332,7 +346,7 @@ Deno.test("3.12 — Determinismo Movement: tabela completa R×H", async () => {
 // TESTE 3.13 — Invariante cyclesCompleted=0 → H0
 // ─────────────────────────────────────────
 
-Deno.test("3.13 — Invariante: cyclesCompleted=0 → H0 sempre", () => {
+Deno.test("HAGO — Invariante: cyclesCompleted=0 força H0 (independente de previousState)", () => {
   for (const prev of ["H0", "H1", "H2"] as HagoState[]) {
     const result = executeHago({
       previousState:        prev,

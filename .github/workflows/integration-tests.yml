@@ -20,6 +20,13 @@ jobs:
         with:
           deno-version: v1.41.0
 
+      - name: Type check (arquivos locais)
+        working-directory: supabase/functions/lucid-engine
+        run: |
+          deno check --no-remote \
+            types.ts hash.ts radar.ts hago.ts rag.ts cda.ts \
+            core.ts post-core.ts persistence.ts resolvers.ts
+
       - name: Run integration tests
         working-directory: supabase/functions/lucid-engine
         run: |
