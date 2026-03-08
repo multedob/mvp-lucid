@@ -11,7 +11,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.27.3";
 
 import type { RadarInput, InputClassification, EdgeResponse, RagNode } from "./types.ts";
-import { CONTRACT_VERSION, STRUCTURAL_MODEL_VERSION } from "./types.ts";
+import { CONTRACT_VERSION, STRUCTURAL_MODEL_VERSION, STRUCTURAL_MODELS } from "./types.ts";
 
 import {
   resolveStructuralModelVersion,
@@ -34,7 +34,7 @@ import { computeCycleIntegrityHash, computeLlmConfigHash } from "./hash.ts";
 // ─────────────────────────────────────────
 
 const API_VERSION = "1.0";
-const SUPPORTED_MODEL = "3.0"; // runtime suporta apenas esta versão
+// SUPPORTED_MODEL removido — verificação agora via STRUCTURAL_MODELS map (B2.1, B2.4)
 
 // LLM Binding — MVP hardcoded (Anthropic claude-3-5-haiku)
 // Fonte: EDGE_EXECUTION_SEQUENCE_SPEC_v1.11.1, PHASE 4
@@ -377,8 +377,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // Fonte: CORE_RUNTIME_REGISTRY_SPEC_v1.2
     const bound_version = await resolveStructuralModelVersion(supabase);
 
-    // Verificar que runtime suporta esta versão
-    if (bound_version !== SUPPORTED_MODEL) {
+    // Verificar que runtime tem implementação para esta versão
+    // Fonte: CORE_RUNTIME_REGISTRY_SPEC_v1.2 §4 (B2.1, B2.4)
+    const modelImpl = STRUCTURAL_MODELS[bound_version];
+    if (!modelImpl) {
       return json(
         {
           error: "INTERNAL_ERROR",
@@ -394,6 +396,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       supabase,
       user_id,
       base_version,
+      modelImpl,  // Fonte: CORE_RUNTIME_REGISTRY_SPEC_v1.2 §4 (B2.1) — sem lookup duplo
     );
 
     // ─── PHASE 3 — Previous Node Resolution
