@@ -64,7 +64,8 @@ export type RiskScore    = 0 | 1 | 2;
 // Regra: campos numéricos como string "X.XX"
 //        stage_base: number (integer = floor(CGG))
 //        substage: number (integer, derivado de δ)
-//        consolidated_flag: boolean
+// PC-3: consolidated_flag removido — código morto desde B1.3
+//        cycle_state em HagoInput substitui com semântica real
 // Fonte: SNAPSHOT_RESOLUTION_PROTOCOL_v2.2.1
 // ─────────────────────────────────────────
 export interface StructuralSnapshot {
@@ -81,7 +82,6 @@ export interface StructuralSnapshot {
   IC:                string;
   stage_base:        number;
   substage:          number;
-  consolidated_flag: boolean;
 }
 
 // ─────────────────────────────────────────
@@ -107,7 +107,6 @@ const _STATIC_BASE_SNAPSHOT_V3_0: Readonly<StructuralSnapshot> = {
   IC:                "0.00",
   stage_base:        1,
   substage:          0,
-  consolidated_flag: false,
 } as const;
 
 // ─────────────────────────────────────────
@@ -165,12 +164,14 @@ export function getThresholds(stage_base: number): ThresholdSet {
 // Helper: CEC mínimo para H2
 // Fonte: HAGO_STATE_MACHINE_v1.3, seção 4.3
 // A8: margem escala com CEC_threshold do conjunto ativo
+// PC-3: parâmetro renomeado de consolidated_flag → is_s2
+// Caller (hago.ts) passa: cycle_state === "S2"
 export function cecThresholdForH2(
   stage_base: number,
-  consolidated_flag: boolean
+  is_s2: boolean
 ): number {
   const t = getThresholds(stage_base);
-  return consolidated_flag
+  return is_s2
     ? t.CEC
     : t.CEC + t.CEC * THRESHOLDS.MARGEM_CEC_FACTOR;
 }

@@ -86,7 +86,6 @@ function hagoForMetrics(
     previousState: prev,
     MD, DC, CEC, VE,
     stage_base: stage,
-    consolidated_flag: false,
     cyclesCompleted: cycles,
     input_classification: "C1_CONFUSAO_CONCEITUAL",
   });
@@ -253,7 +252,6 @@ Deno.test("3.10 — CRÍTICO: C5_PEDIDO_PRESCRITIVO → H0 obrigatório", () => 
       previousState:        prev,
       MD: 0.80, DC: 0.10, CEC: 0.90, VE: 0.10,
       stage_base:           5,
-      consolidated_flag:    true,
       cyclesCompleted:      10,
       input_classification: "C5_PEDIDO_PRESCRITIVO",
     });
@@ -338,7 +336,6 @@ Deno.test("3.13 — Invariante: cyclesCompleted=0 → H0 sempre", () => {
       previousState:        prev,
       MD: 0.80, DC: 0.10, CEC: 0.90, VE: 0.10,
       stage_base:           5,
-      consolidated_flag:    true,
       cyclesCompleted:      0,
       input_classification: "C1_CONFUSAO_CONCEITUAL",
     });
@@ -475,7 +472,6 @@ Deno.test("HAGO — H0 nunca salta diretamente para H2", () => {
     previousState:        "H0",
     MD: 0.80, DC: 0.10, CEC: 0.99, VE: 0.10,
     stage_base:           3,
-    consolidated_flag:    true,
     cyclesCompleted:      5,
     input_classification: "C1_CONFUSAO_CONCEITUAL",
   });

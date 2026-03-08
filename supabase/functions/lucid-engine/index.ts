@@ -319,10 +319,112 @@ ${movement_secondary ? `Secondary Movement: ${movement_secondary}` : ""}`;
 // HANDLER PRINCIPAL
 // ─────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+// MD-2: /retry-llm — Re-executa a camada linguística para ciclos com
+//        llm_response = null (falha de PHASE 9 em ciclo já persistido).
+// Fonte: EDGE_EXECUTION_SEQUENCE_SPEC_v1.11.1, nota PHASE 9
+// ─────────────────────────────────────────────────────────────────────────────
+async function handleRetryLlm(req: Request): Promise<Response> {
+  if (req.method !== "POST") {
+    return json({ error: "INVALID_INPUT", message: "Method not allowed" }, 400);
+  }
+
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return json({ error: "UNAUTHORIZED", message: "Missing authorization" }, 401);
+  }
+
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: "INVALID_INPUT", message: "Body must be valid JSON" }, 400);
+  }
+
+  const cycle_id = body.cycle_id;
+  if (typeof cycle_id !== "string" || !cycle_id) {
+    return json({ error: "INVALID_INPUT", message: "cycle_id is required" }, 400);
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  const anthropic = new Anthropic({ apiKey: anthropicKey });
+
+  // Buscar ciclo — validar que pertence ao usuário autenticado e que llm_response é null
+  const token = authHeader.slice(7);
+  const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+  if (authErr || !user) {
+    return json({ error: "UNAUTHORIZED", message: "Invalid token" }, 401);
+  }
+
+  const { data: cycle, error: fetchErr } = await supabase
+    .from("cycles")
+    .select("id, user_id, version, structural_model_version, hago_state, llm_response, structural_snapshots(snapshot_json), audit_log(structural_trace)")
+    .eq("id", cycle_id)
+    .single();
+
+  if (fetchErr || !cycle) {
+    return json({ error: "NOT_FOUND", message: "Cycle not found" }, 404);
+  }
+
+  if (cycle.user_id !== user.id) {
+    return json({ error: "FORBIDDEN", message: "Cycle does not belong to this user" }, 403);
+  }
+
+  if (cycle.llm_response !== null) {
+    return json({ error: "CONFLICT", message: "Cycle already has llm_response — retry not allowed" }, 409);
+  }
+
+  // Buscar node_selection do audit_log (structural_trace contém node_selection)
+  const audit = Array.isArray(cycle.audit_log) ? cycle.audit_log[0] : cycle.audit_log;
+  const trace = audit?.structural_trace as Record<string, unknown> ?? {};
+  const snapshot = Array.isArray(cycle.structural_snapshots)
+    ? cycle.structural_snapshots[0]?.snapshot_json
+    : (cycle.structural_snapshots as Record<string, unknown>)?.snapshot_json;
+
+  try {
+    const bound_version = cycle.structural_model_version as string;
+    const langResult = await executeLlmLanguage(
+      anthropic,
+      bound_version,
+      snapshot as Record<string, unknown>,
+      (trace.node_selection ?? []) as Array<Record<string, unknown>>,
+      cycle.hago_state,
+      trace.response_type as string ?? "REFLECT",
+      trace.movement_primary as string ?? "NONE",
+      trace.movement_secondary as string ?? null,
+      (trace.rag_corpus ?? []) as RagNode[],
+      (trace.user_text ?? "") as string,
+    );
+
+    const { error: updateErr } = await supabase
+      .from("cycles")
+      .update({ llm_response: langResult.text, llm_prompt_hash: langResult.prompt_hash })
+      .eq("id", cycle_id);
+
+    if (updateErr) {
+      return json({ error: "PERSIST_ERROR", message: "LLM response generated but failed to persist" }, 500);
+    }
+
+    return json({ cycle_id, llm_response: langResult.text }, 200);
+  } catch (err) {
+    console.error("RETRY_LLM_ERROR:", err);
+    return json({ error: "LLM_ERROR", message: "LLM execution failed" }, 502);
+  }
+}
+
 Deno.serve(async (req: Request): Promise<Response> => {
   // CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: CORS_HEADERS });
+  }
+
+  // ─── Roteamento por pathname
+  const url = new URL(req.url);
+  if (url.pathname.endsWith("/retry-llm")) {
+    return handleRetryLlm(req);
   }
 
   // ─── PHASE 0 — Request Validation
@@ -572,6 +674,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       llm_config_hash,
       audit_trace: core_output.audit_trace,
       cycle_state,  // C1.3
+      user_text: body.user_text ?? undefined,  // PC-2
     });
 
     // ─── PHASE 9 — Language Execution (pós-commit)

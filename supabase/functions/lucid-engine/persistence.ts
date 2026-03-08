@@ -50,6 +50,8 @@ export interface PersistenceInput {
   response_type:            ResponseType;
   movement_primary:         Movement;
   movement_secondary:       Movement | null;
+  // Ciclo IPE (C1.3)
+  cycle_state:              string; // "S0" | "S1" | "S2"
   // LLM Binding
   llm_provider:             string;
   llm_model_id:             string;
@@ -59,6 +61,9 @@ export interface PersistenceInput {
   audit_trace:              AuditTrace;
   // LLM Response
   llm_response?:            string;
+  // PC-2: texto livre do usuário — persistido com consentimento explícito
+  // Base legal: termo de uso aceito | Retenção: indefinida | Exclusão: futura
+  user_text?:               string;
 }
 
 // ─────────────────────────────────────────
@@ -143,7 +148,9 @@ export async function persistCycle(
     p_llm_config_hash:          input.llm_config_hash,
     p_structural_trace:         structural_trace,
     p_hago_state:               input.hago_state,
+    p_cycle_state:              input.cycle_state,          // C1.3
     p_llm_response:             input.llm_response ?? null,
+    p_user_text:                input.user_text ?? null,     // PC-2
   });
 
   if (error) {

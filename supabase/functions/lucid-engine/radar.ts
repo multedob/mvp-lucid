@@ -47,7 +47,6 @@ export interface RadarOutput {
   IC: number;
   stage_base: number;
   substage: number;
-  consolidated_flag: boolean;
 }
 
 // ─────────────────────────────────────────
@@ -214,14 +213,9 @@ export function executeRadar(input: RadarExecutorInput): RadarOutput {
   const f = CGG - Math.floor(CGG);
   const substage = f < 0.33 ? 0 : f < 0.66 ? 1 : 2;
 
-  // ─── consolidated_flag
-  // Todos os critérios de promoção satisfeitos simultaneamente
-  // Usa MD_raw (não capado) — MVP opera em S1-simulado
-  // Fonte: RADAR_v6, seção 8-9 / HAGO_STATE_MACHINE_v1.3
-  // MVP — Desvio Formal: S2 (ciclo consolidado real) não implementado.
-  // consolidated_flag = true equivale a S2-simulado neste MVP.
-  const t = getThresholds(stage_base);
-  const consolidated_flag = MD_raw >= t.MD && DC <= t.DC && CEC >= t.CEC && VE <= t.VE;
+  // PC-3: consolidated_flag removido — cálculo e retorno eliminados
+  // Razão: código morto desde B1.3 (cycle_state substituiu a semântica)
+  // getThresholds ainda usado em buildSnapshot implicitamente via stage_base
 
   return {
     CGG0,
@@ -237,7 +231,6 @@ export function executeRadar(input: RadarExecutorInput): RadarOutput {
     IC,
     stage_base,
     substage,
-    consolidated_flag,
   };
 }
 
@@ -263,6 +256,5 @@ export function buildSnapshot(r: RadarOutput): StructuralSnapshot {
     IC: fmt2(r.IC),
     stage_base: r.stage_base,
     substage: r.substage,
-    consolidated_flag: r.consolidated_flag,
   };
 }
