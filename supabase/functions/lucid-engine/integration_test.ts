@@ -416,7 +416,7 @@ Deno.test("MVP — 6 ciclos encadeados com hash chain válida", async () => {
     });
 
     const new_snapshot    = buildSnapshot(radar);
-    const input_hash      = await computeInputHash(raw, snapshot, null);
+    const input_hash      = await computeInputHash(raw, snapshot, null, `texto simulado ciclo ${cycle}`);
     const structural_hash = await computeStructuralHash(new_snapshot, []);
     const integrity_hash  = await computeCycleIntegrityHash(
       previousCycleHash, input_hash, structural_hash, "3.0"

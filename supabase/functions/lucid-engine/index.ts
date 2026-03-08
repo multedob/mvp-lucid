@@ -608,7 +608,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     // ─── PHASE 4.5 — Input Classification
     // Executada na Edge, antes do Core
-    // Core não recebe user_text
     // Fonte: INPUT_CLASSIFICATION_SPEC_v1.1
     const input_classification = await classifyInput(user_text, anthropic);
 
@@ -634,6 +633,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       historical_memory,
       input_classification,
       nodes: ragCorpus as RagNode[],
+      user_text,  // B2 fix: incluído no input_hash
       previous_hago_state,
       cyclesCompleted: base_version,
       previousLines,

@@ -83,18 +83,26 @@ export async function sha256(input: string): Promise<string> {
 // Escopo: raw_input + previous_snapshot + previous_node
 // Invariante: previous_snapshot nunca null
 // Nota: raw_input é RadarInput (objeto numérico estruturado)
+// user_text incluído no hash para representar fielmente o que gerou o output.
+// Justificativa: inputs são perguntas abertas — hashes nunca repetem de qualquer forma.
+// Normalização evita colisões espúrias por espaços/capitalização.
 // ─────────────────────────────────────────
 export async function computeInputHash(
   raw_input: RadarInput,
   previous_snapshot: StructuralSnapshot,
-  previous_node: PreviousNode | null
+  previous_node: PreviousNode | null,
+  user_text: string
 ): Promise<string> {
   if (previous_snapshot === null || previous_snapshot === undefined) {
     throw new Error("computeInputHash: previous_snapshot cannot be null");
   }
 
+  // Normalização de user_text: trim + lowercase + colapsar espaços múltiplos
+  const normalized_user_text = user_text.trim().toLowerCase().replace(/\s+/g, " ");
+
   // Keys em ordem ASCII para determinismo do canonicalize
   const payload = {
+    normalized_user_text,
     previous_node,
     previous_snapshot,
     raw_input,

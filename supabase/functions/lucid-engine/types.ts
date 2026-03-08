@@ -271,6 +271,7 @@ export interface CoreInput {
   historical_memory:        HistoricalNode[];
   input_classification:     InputClassification; // obrigatório
   nodes:                    RagNode[];
+  user_text:                string;  // incluído no input_hash (B2 fix)
 }
 
 // ─────────────────────────────────────────

@@ -152,7 +152,8 @@ export async function executeStructuralCore(
     computeInputHash(
       input.raw_input,
       input.previous_snapshot,
-      input.previous_node
+      input.previous_node,
+      input.user_text  // B2 fix: user_text incluído no hash
     ),
     computeStructuralHash(
       structural_snapshot,
