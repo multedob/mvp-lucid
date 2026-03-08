@@ -10,7 +10,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.27.3";
 
-import type { RadarInput, InputClassification, EdgeResponse, RagNode } from "./types.ts";
+import type { RadarInput, InputClassification, EdgeResponse, RagNode, CycleState } from "./types.ts";
 import { CONTRACT_VERSION, STRUCTURAL_MODEL_VERSION, STRUCTURAL_MODELS } from "./types.ts";
 
 import {
@@ -27,7 +27,7 @@ import {
 import { executeStructuralCore } from "./core.ts";
 import { executePostCore } from "./post-core.ts";
 import { persistCycle } from "./persistence.ts";
-import { computeCycleIntegrityHash, computeLlmConfigHash } from "./hash.ts";
+import { computeCycleIntegrityHash, computeLlmConfigHash, computePromptHash } from "./hash.ts";
 
 // ─────────────────────────────────────────
 // CONSTANTES
@@ -42,6 +42,47 @@ const API_VERSION = "1.0";
 const LLM_PROVIDER = "anthropic";
 const LLM_MODEL_ID = "claude-haiku-4-5-20251001";
 const LLM_TEMPERATURE = 0.7; // classificação usa 0, linguagem usa este valor
+
+// MD-3: versão formal do system prompt — incrementar a cada mudança de prompt
+// Permite auditoria de qual prompt gerou cada resposta via llm_prompt_hash
+const LLM_PROMPT_VERSION = "v1.1";
+
+// ─────────────────────────────────────────
+// CACHE MODULE-LEVEL — RAG CORPUS (PC-7)
+// O corpus é imutável entre deploys (apenas migrations alteram).
+// Cache em memória elimina query a cada request sem risco de stale data.
+// Invalidação: apenas redeploy da Edge Function.
+// ─────────────────────────────────────────
+
+let _ragCorpusCache: RagNode[] | null = null;
+
+// ─────────────────────────────────────────
+// RATE LIMITING MODULE-LEVEL (MD-1)
+// Controle de frequência por user_id em memória.
+// Limite: 1 request a cada RATE_LIMIT_MS milissegundos por usuário.
+// Escopo: instância da Edge Function (não distribuído).
+// Suficiente para MVP — produção requer Redis ou tabela no banco.
+// ─────────────────────────────────────────
+
+const RATE_LIMIT_MS = 3000;
+// MD-1 — Rate limit: limitação de escopo
+// Este rate limit é por instância (module-level map), não distribuído.
+// Em Deno/Supabase, cada instância é independente — múltiplas instâncias
+// paralelas não compartilham estado. Suficiente para MVP (proteção de UX),
+// mas NÃO é proteção de segurança distribuída. Para proteção real:
+// usar Redis, Supabase RLS ou middleware de borda.
+// R2.3: race condition intra-instância também existe (Deno não é single-threaded
+// estrito com async — dois requests simultâneos podem passar o check antes
+// de qualquer um escrever no mapa). Aceito para MVP, documentado aqui. // 1 ciclo a cada 3 segundos por usuário
+const _rateLimitMap = new Map<string, number>(); // user_id → timestamp do último request
+
+function checkRateLimit(user_id: string): boolean {
+  const now = Date.now();
+  const last = _rateLimitMap.get(user_id) ?? 0;
+  if (now - last < RATE_LIMIT_MS) return false; // bloqueado
+  _rateLimitMap.set(user_id, now);
+  return true; // permitido
+}
 
 // ─────────────────────────────────────────
 // CORS
@@ -165,7 +206,7 @@ async function executeLlmLanguage(
   movement_secondary: string | null,
   nodes_corpus: RagNode[],
   user_text: string,
-): Promise<string> {
+): Promise<{ text: string; prompt_hash: string }> {
   // FIX 1 — node_texts inclui source_author e source_work
   const node_texts = node_selection
     .map((n) => {
@@ -268,7 +309,10 @@ ${movement_secondary ? `Secondary Movement: ${movement_secondary}` : ""}`;
     messages: [{ role: "user", content: user_content }],
   });
 
-  return (response.content[0] as { type: string; text: string }).text;
+  const text = (response.content[0] as { type: string; text: string }).text;
+  // MD-3: hash do prompt para auditabilidade — SHA256(version + system)
+  const prompt_hash = await computePromptHash(LLM_PROMPT_VERSION, system);
+  return { text, prompt_hash };
 }
 
 // ─────────────────────────────────────────
@@ -327,16 +371,35 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return json({ error: "INVALID_INPUT", message: "raw_input must be object with d1-d4 and user_text" }, 400);
   }
 
+  // B1.3 — cycle_state: determinado pelo IPE, default S0 se ausente
+  const VALID_CYCLE_STATES: CycleState[] = ["S0", "S1", "S2"];
+  const cycle_state: CycleState =
+    body.cycle_state === undefined
+      ? "S0"
+      : VALID_CYCLE_STATES.includes(body.cycle_state as CycleState)
+        ? (body.cycle_state as CycleState)
+        : null!;
+
+  if (cycle_state === null) {
+    return json({ error: "INVALID_INPUT", message: 'cycle_state must be "S0", "S1" or "S2"' }, 400);
+  }
+
   const raw = body.raw_input as Record<string, unknown>;
   const base_version = body.base_version as number;
 
-  // Validar d1–d4 (tuplas de 4 números)
+  // Validar d1–d4 (tuplas de 4 números no range [1,8])
   const isQuad = (v: unknown): v is [number, number, number, number] =>
     Array.isArray(v) && v.length === 4 && v.every((n) => typeof n === "number");
+
+  const inRange = (arr: number[]): boolean => arr.every((n) => n >= 1 && n <= 8);
 
   for (const key of ["d1", "d2", "d3", "d4"]) {
     if (!isQuad(raw[key])) {
       return json({ error: "INVALID_INPUT", message: `raw_input.${key} must be array of exactly 4 numbers` }, 400);
+    }
+    // PC-5: validar range canônico [1,8] conforme LUCID_SELF_LINES v1.0
+    if (!inRange(raw[key] as number[])) {
+      return json({ error: "INVALID_INPUT", message: `raw_input.${key} values must be between 1 and 8` }, 400);
     }
   }
 
@@ -372,6 +435,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
   const user_id = user.id;
 
+  // MD-1: rate limiting por user_id
+  if (!checkRateLimit(user_id)) {
+    return json(
+      { error: "RATE_LIMITED", message: "Too many requests — wait before sending another cycle" },
+      429,
+    );
+  }
+
   try {
     // ─── PHASE 1 — Structural Model Binding
     // Fonte: CORE_RUNTIME_REGISTRY_SPEC_v1.2
@@ -392,11 +463,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     // ─── PHASE 2 — Snapshot Resolution
     // Fonte: SNAPSHOT_RESOLUTION_PROTOCOL_v2.2.1
+    // Nota: modelImpl verificado em PHASE 1 — não é parâmetro do resolver
     const { snapshot: previous_snapshot, cycle_id: base_cycle_id } = await resolveSnapshot(
       supabase,
       user_id,
       base_version,
-      modelImpl,  // Fonte: CORE_RUNTIME_REGISTRY_SPEC_v1.2 §4 (B2.1) — sem lookup duplo
     );
 
     // ─── PHASE 3 — Previous Node Resolution
@@ -420,12 +491,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // Fonte: INPUT_CLASSIFICATION_SPEC_v1.1
     const input_classification = await classifyInput(user_text, anthropic);
 
-    // Buscar corpus RAG completo
-    const { data: ragCorpus, error: ragErr } = await supabase.from("rag_corpus").select("*");
-
-    if (ragErr || !ragCorpus) {
-      return json({ error: "INTERNAL_ERROR", message: "Failed to load RAG corpus" }, 500);
+    // Buscar corpus RAG (cache module-level — PC-7)
+    if (!_ragCorpusCache) {
+      const { data: ragCorpus, error: ragErr } = await supabase.from("rag_corpus").select("*");
+      if (ragErr || !ragCorpus) {
+        return json({ error: "INTERNAL_ERROR", message: "Failed to load RAG corpus" }, 500);
+      }
+      _ragCorpusCache = ragCorpus as RagNode[];
     }
+    const ragCorpus = _ragCorpusCache;
 
     // ─── PHASE 5 — Structural Core Execution
     // Core é função pura — sem I/O
@@ -442,6 +516,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       previous_hago_state,
       cyclesCompleted: base_version,
       previousLines,
+      cycle_state,  // B1.3
     });
 
     // ─── PHASE 5.3 + 5.4 — Response Type + Movement Resolution
@@ -496,14 +571,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
       llm_temperature: LLM_TEMPERATURE,
       llm_config_hash,
       audit_trace: core_output.audit_trace,
+      cycle_state,  // C1.3
     });
 
     // ─── PHASE 9 — Language Execution (pós-commit)
     // Falha linguística NÃO invalida ciclo já persistido
     // Fonte: EDGE_EXECUTION_SEQUENCE_SPEC_v1.11.1, PHASE 9
     let llm_response = "";
+    let llm_prompt_hash = "";
     try {
-      llm_response = await executeLlmLanguage(
+      const langResult = await executeLlmLanguage(
         anthropic,
         bound_version,
         core_output.structural_snapshot as unknown as Record<string, unknown>,
@@ -515,19 +592,21 @@ Deno.serve(async (req: Request): Promise<Response> => {
         ragCorpus as RagNode[],
         user_text,
       );
+      llm_response = langResult.text;
+      llm_prompt_hash = langResult.prompt_hash;
     } catch (langErr) {
       // Log mas não abortar — ciclo está persistido
       console.error("LANGUAGE_EXECUTION_ERROR:", langErr);
       llm_response = "[linguistic layer unavailable]";
     }
 
-    // ─── PHASE 9.1 — Persist llm_response back to cycle
+    // ─── PHASE 9.1 — Persist llm_response + llm_prompt_hash back to cycle
     // llm_response é computado pós-commit — UPDATE separado permitido pela spec
     // Fonte: EDGE_EXECUTION_SEQUENCE_SPEC_v1.11.1, PHASE 9
     // B2.2: Supabase JS não lança exceção em erro — checar { error } explicitamente
     const { error: llmPersistError } = await supabase
       .from("cycles")
-      .update({ llm_response })
+      .update({ llm_response, llm_prompt_hash: llm_prompt_hash || null })
       .eq("id", cycle_id);
 
     if (llmPersistError) {
