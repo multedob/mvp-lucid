@@ -22,10 +22,10 @@ import { fmt2 } from "./hash.ts";
 // ─────────────────────────────────────────
 
 export interface RadarExecutorInput {
-  lines:            RadarInput;
-  previousCGG:      number;   // parseFloat(previous_snapshot.CGG)
-  cyclesCompleted:  number;   // base_version (0 = primeiro ciclo)
-  previousLines:    number[] | null; // 16 linhas do ciclo anterior
+  lines: RadarInput;
+  previousCGG: number; // parseFloat(previous_snapshot.CGG)
+  cyclesCompleted: number; // base_version (0 = primeiro ciclo)
+  previousLines: number[] | null; // 16 linhas do ciclo anterior
 }
 
 // ─────────────────────────────────────────
@@ -34,19 +34,19 @@ export interface RadarExecutorInput {
 // ─────────────────────────────────────────
 
 export interface RadarOutput {
-  CGG0:             number;
-  CGG:              number;
-  D1:               number;
-  D2:               number;
-  D3:               number;
-  D4:               number;
-  DC:               number;
-  CEC:              number;
-  VE:               number;
-  MD:               number;
-  IC:               number;
-  stage_base:       number;
-  substage:         number;
+  CGG0: number;
+  CGG: number;
+  D1: number;
+  D2: number;
+  D3: number;
+  D4: number;
+  DC: number;
+  CEC: number;
+  VE: number;
+  MD: number;
+  IC: number;
+  stage_base: number;
+  substage: number;
   consolidated_flag: boolean;
 }
 
@@ -60,8 +60,7 @@ function avg(values: number[]): number {
 
 function stdDev(values: number[]): number {
   const mu = avg(values);
-  const variance =
-    values.reduce((sum, v) => sum + (v - mu) ** 2, 0) / values.length;
+  const variance = values.reduce((sum, v) => sum + (v - mu) ** 2, 0) / values.length;
   return Math.sqrt(variance);
 }
 
@@ -79,12 +78,7 @@ export function executeRadar(input: RadarExecutorInput): RadarOutput {
   const { lines, previousCGG, cyclesCompleted, previousLines } = input;
 
   // Flatten: 16 linhas em array [d1[0..3], d2[0..3], d3[0..3], d4[0..3]]
-  const all: number[] = [
-    ...lines.d1,
-    ...lines.d2,
-    ...lines.d3,
-    ...lines.d4,
-  ];
+  const all: number[] = [...lines.d1, ...lines.d2, ...lines.d3, ...lines.d4];
 
   // ─── Passo 1 — CGG₀
   // CGG₀ = (1/16) × Σ Lᵢ
@@ -103,13 +97,7 @@ export function executeRadar(input: RadarExecutorInput): RadarOutput {
   // CGG = min(CGG₀, D1+1.5, D2+1.5, D3+1.5, D4+1.5)
   // Aplicado uma única vez. Sem recursividade.
   // Fonte: RADAR_v6, seção 2 / RADAR_PIPELINE_SPEC_v2.1, seção 2.4
-  const CGG_raw = Math.min(
-    CGG0,
-    D1 + 1.5,
-    D2 + 1.5,
-    D3 + 1.5,
-    D4 + 1.5
-  );
+  const CGG_raw = Math.min(CGG0, D1 + 1.5, D2 + 1.5, D3 + 1.5, D4 + 1.5);
   // CGG ∈ [1,8] — piso mínimo estrutural
   const CGG = clamp(CGG_raw, 1, 8);
 
@@ -138,20 +126,14 @@ export function executeRadar(input: RadarExecutorInput): RadarOutput {
   // ─── Passo 6 — Penalidade Relacional (D3)
   // Se D3 < 4.5: CEC = max(CEC_bruto − 0.10, 0)
   // Fonte: RADAR_v6, seção 10 / RADAR_PIPELINE_SPEC_v2.1, seção 2.7
-  const CEC =
-    D3 < THRESHOLDS.D3_penalty_floor
-      ? Math.max(CEC_bruto - THRESHOLDS.CEC_penalty_D3, 0)
-      : CEC_bruto;
+  const CEC = D3 < THRESHOLDS.D3_penalty_floor ? Math.max(CEC_bruto - THRESHOLDS.CEC_penalty_D3, 0) : CEC_bruto;
 
   // ─── Passo 7 — Variância Estrutural (VE)
   // Primeiro ciclo (cyclesCompleted === 0): VE = 0
   // Demais: VE = |CGG_t − CGG_t-1|
   // VE ∈ [0,7] — não normalizado
   // Fonte: RADAR_v6, seção 6 / RADAR_PIPELINE_SPEC_v2.1, seção 2.8
-  const VE =
-    cyclesCompleted === 0
-      ? 0
-      : Math.abs(CGG - previousCGG);
+  const VE = cyclesCompleted === 0 ? 0 : Math.abs(CGG - previousCGG);
 
   // ─── Passo 8 — Maturidade de Dados (MD)
   // MD = (C_norm + V_norm + I_norm + O_norm) / 4
@@ -166,9 +148,7 @@ export function executeRadar(input: RadarExecutorInput): RadarOutput {
   // V = média das variações absolutas linha a linha vs ciclo anterior
   // Se não há ciclo anterior: V = 0 (máxima instabilidade não se aplica)
   const V =
-    previousLines !== null && previousLines.length === 16
-      ? avg(all.map((l, i) => Math.abs(l - previousLines[i])))
-      : 0;
+    previousLines !== null && previousLines.length === 16 ? avg(all.map((l, i) => Math.abs(l - previousLines[i]))) : 0;
   const V_norm = 1 - Math.min(V, 7) / 7;
 
   // I_norm: homogeneidade interna das 16 linhas (σ_intra)
@@ -184,22 +164,20 @@ export function executeRadar(input: RadarExecutorInput): RadarOutput {
   const O_norm = 1 - F;
 
   // MD_raw = média dos 4 componentes, clamp [0,1]
-  const MD_raw = clamp(
-    (C_norm + V_norm + I_norm + O_norm) / 4,
-    0,
-    1
-  );
+  const MD_raw = clamp((C_norm + V_norm + I_norm + O_norm) / 4, 0, 1);
 
   // S0 (ciclo aberto): cap em MD_intraciclo_cap = 0.60
   // O Core opera sempre em S0 — fechamento é responsabilidade da Edge
   const MD = Math.min(MD_raw, THRESHOLDS.MD_intraciclo_cap);
 
   // ─── Passo 9 — Índice de Confiança (IC)
-  // IC = MD × CEC
+  // IC = MD_raw × CEC
+  // Fonte: RADAR_v6, seção 7 / RADAR_ONTOLOGY_SCHEMA_v1:
+  // "IC é calculado exclusivamente com MD_raw.
+  //  MD_intraciclo (cap 0.60) nunca participa do IC."
   // IC ∈ [0,1]
   // IC não participa da promoção — regula densidade interpretativa
-  // Fonte: RADAR_v6, seção 7 / RADAR_PIPELINE_SPEC_v2.1, seção 2.10
-  const IC = clamp(MD * CEC, 0, 1);
+  const IC = clamp(MD_raw * CEC, 0, 1);
 
   // ─── Mapeamento CGG → Estágio
   // stage_base = floor(CGG), clamp [1,8]
@@ -220,11 +198,7 @@ export function executeRadar(input: RadarExecutorInput): RadarOutput {
   // Usa thresholds do conjunto ativo para o stage_base atual
   // Fonte: RADAR_v6, seção 8-9 / HAGO_STATE_MACHINE_v1.3
   const t = getThresholds(stage_base);
-  const consolidated_flag =
-    MD_raw >= t.MD &&
-    DC     <= t.DC &&
-    CEC    >= t.CEC &&
-    VE     <= t.VE;
+  const consolidated_flag = MD_raw >= t.MD && DC <= t.DC && CEC >= t.CEC && VE <= t.VE;
 
   return {
     CGG0,
@@ -253,19 +227,19 @@ export function executeRadar(input: RadarExecutorInput): RadarOutput {
 
 export function buildSnapshot(r: RadarOutput): StructuralSnapshot {
   return {
-    CGG0:              fmt2(r.CGG0),
-    CGG:               fmt2(r.CGG),
-    D1:                fmt2(r.D1),
-    D2:                fmt2(r.D2),
-    D3:                fmt2(r.D3),
-    D4:                fmt2(r.D4),
-    CEC:               fmt2(r.CEC),
-    DC:                fmt2(r.DC),
-    MD:                fmt2(r.MD),
-    VE:                fmt2(r.VE),
-    IC:                fmt2(r.IC),
-    stage_base:        r.stage_base,
-    substage:          r.substage,
+    CGG0: fmt2(r.CGG0),
+    CGG: fmt2(r.CGG),
+    D1: fmt2(r.D1),
+    D2: fmt2(r.D2),
+    D3: fmt2(r.D3),
+    D4: fmt2(r.D4),
+    CEC: fmt2(r.CEC),
+    DC: fmt2(r.DC),
+    MD: fmt2(r.MD),
+    VE: fmt2(r.VE),
+    IC: fmt2(r.IC),
+    stage_base: r.stage_base,
+    substage: r.substage,
     consolidated_flag: r.consolidated_flag,
   };
 }
