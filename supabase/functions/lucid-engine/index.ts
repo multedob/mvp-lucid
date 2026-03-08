@@ -693,7 +693,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       llm_config_hash,
       audit_trace: core_output.audit_trace,
       cycle_state,  // C1.3
-      user_text: body.user_text ?? undefined,  // PC-2
+      user_text: user_text,  // PC-2: variável extraída de raw.user_text na linha 538
     });
 
     // ─── PHASE 9 — Language Execution (pós-commit)
