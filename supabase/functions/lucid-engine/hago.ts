@@ -25,7 +25,7 @@ import type {
 
 export interface HagoInput {
   previousState:        HagoState;
-  MD:                   number;
+  MD:                   number;  // MD_raw — sem cap S0 no MVP (S1-simulado)
   DC:                   number;
   CEC:                  number;
   VE:                   number;
@@ -75,8 +75,9 @@ export function executeHago(input: HagoInput): HagoState {
   const t = getThresholds(stage_base);
 
   // ─── Qualificação H1
-  // Condições: MD ≥ threshold AND DC ≤ threshold AND VE ≤ threshold
+  // Condições: MD_raw ≥ threshold AND DC ≤ threshold AND VE ≤ threshold
   // CEC NÃO é requisito para H1
+  // MVP: MD recebido é MD_raw (S1-simulado, sem cap 0.60)
   // Fonte: HAGO_STATE_MACHINE_v1.3, seção 4.2
   const qualifiesH1 =
     MD >= t.MD &&
