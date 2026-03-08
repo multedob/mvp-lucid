@@ -17,7 +17,7 @@ import type {
   NodeType,
   DensityClass,
 } from "./types.ts";
-import { STATIC_BASE_SNAPSHOT } from "./types.ts";
+import { StructuralModelImpl } from "./types.ts";
 
 // Supabase client type (injetado pela Edge — evita import circular)
 // deno-lint-ignore no-explicit-any
@@ -58,7 +58,7 @@ export async function resolveStructuralModelVersion(
 // ─────────────────────────────────────────
 // PHASE 2 — SNAPSHOT RESOLUTION
 // Fonte: SNAPSHOT_RESOLUTION_PROTOCOL_v2.2.1
-// base_version == 0 → STATIC_BASE_SNAPSHOT
+// base_version == 0 → baseSnapshot via modelImpl injetado pelo index (B2.1)
 // base_version > 0  → SELECT FROM structural_snapshots
 // Retorna: { snapshot, cycle_id }
 // ─────────────────────────────────────────
@@ -71,11 +71,13 @@ export interface SnapshotResolutionResult {
 export async function resolveSnapshot(
   supabase:     SupabaseClient,
   user_id:      string,
-  base_version: number
+  base_version: number,
+  modelImpl:    StructuralModelImpl  // Fonte: CORE_RUNTIME_REGISTRY_SPEC_v1.2 §4 (B2.1)
 ): Promise<SnapshotResolutionResult> {
-  // base_version == 0 → estado sentinela de bootstrap
+  // base_version == 0 → baseSnapshot da versão ativa (sem lookup duplicado)
+  // Fonte: CORE_RUNTIME_REGISTRY_SPEC_v1.2 §4 (B2.1)
   if (base_version === 0) {
-    return { snapshot: { ...STATIC_BASE_SNAPSHOT }, cycle_id: null };
+    return { snapshot: { ...modelImpl.baseSnapshot }, cycle_id: null };
   }
 
   // Buscar cycle_id correspondente ao base_version
