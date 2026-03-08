@@ -99,7 +99,7 @@ export async function executeStructuralCore(
   // Fonte: STRUCTURAL_CORE_CONTRACT_v1.8, seção 5 item 3
   const hago_state: HagoState = executeHago({
     previousState:        input.previous_hago_state,
-    MD:                   radarOutput.MD,
+    MD:                   radarOutput.MD,  // MD_raw em S1-simulado (B1.2)
     DC:                   radarOutput.DC,
     CEC:                  radarOutput.CEC,
     VE:                   radarOutput.VE,
