@@ -361,7 +361,7 @@ async function handleRetryLlm(req: Request): Promise<Response> {
 
   const { data: cycle, error: fetchErr } = await supabase
     .from("cycles")
-    .select("id, user_id, structural_model_version, hago_state, llm_response, structural_snapshots(snapshot_json), audit_log(structural_trace)")
+    .select("id, user_id, user_text, structural_model_version, hago_state, llm_response, structural_snapshots(snapshot_json), audit_log(structural_trace)")
     .eq("id", cycle_id)
     .single();
 
@@ -392,6 +392,17 @@ async function handleRetryLlm(req: Request): Promise<Response> {
     }, 422);
   }
 
+  // E4: cycles.user_text é a fonte de verdade canônica.
+  // structural_trace.user_text é espelho auxiliar — não usado aqui.
+  // null = ciclo corrompido ou bug de persistência — rejeitar explicitamente.
+  const retry_user_text = cycle.user_text as string | null;
+  if (!retry_user_text) {
+    return json({
+      error: "RETRY_UNAVAILABLE",
+      message: "user_text ausente no ciclo — não é possível reprocessar sem o texto original do usuário",
+    }, 422);
+  }
+
   // B1: re-buscar corpus do DB (igual ao fluxo principal — não persiste no trace)
   const { data: ragCorpus, error: ragErr } = await supabase.from("rag_corpus").select("*");
   if (ragErr || !ragCorpus) {
@@ -415,7 +426,7 @@ async function handleRetryLlm(req: Request): Promise<Response> {
       trace.movement_primary as string,
       (trace.movement_secondary ?? null) as string | null,
       ragCorpus as RagNode[],
-      (trace.user_text ?? "") as string,
+      retry_user_text,
     );
 
     const { error: updateErr } = await supabase
