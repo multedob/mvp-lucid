@@ -13,6 +13,7 @@ import type {
   SelectedNode,
   HagoState,
   AuditTrace,
+  CycleState,   // S1: movido de hago.ts → types.ts (C2.3)
   CONTRACT_VERSION,
 } from "./types.ts";
 import { executeRadar, buildSnapshot } from "./radar.ts";
@@ -36,12 +37,11 @@ import {
 
 export interface ExtendedCoreInput extends CoreInput {
   previous_hago_state: HagoState;
-  // cyclesCompleted: base_version do usuário
-  // usado pelo RADAR para MD e VE
   cyclesCompleted: number;
-  // previousLines: 16 linhas do ciclo anterior (para V_norm no MD)
-  // null se base_version == 0
   previousLines: number[] | null;
+  // B1.3: cycle_state determinado pelo IPE, consumido como input externo
+  // Backend valida, não calcula
+  cycle_state: CycleState;
 }
 
 // ─────────────────────────────────────────
@@ -94,17 +94,28 @@ export async function executeStructuralCore(
   // Fonte: CANONICAL_JSON_SPEC_v1.1
   const structural_snapshot: StructuralSnapshot = buildSnapshot(radarOutput);
 
+  // C1.2 — MD cap S0: snapshot persiste MD capado em ciclo aberto
+  // Decisão arquitetural (R1.1): cap aplicado em core.ts pós-buildSnapshot
+  // Razão: radar.ts é função pura sem conhecimento de cycle_state
+  // IC usa MD_raw (calculado no RADAR antes do cap) — não afetado
+  // HAGO retorna H0 para S0 antes de avaliar MD — cap não afeta HAGO
+  // Cap canônico S0: MD ≤ 0.60 (RADAR_PIPELINE_SPEC_v2.1, seção 4.3)
+  if (input.cycle_state === "S0") {
+    const MD_capped = Math.min(parseFloat(structural_snapshot.MD), 0.60);
+    structural_snapshot.MD = MD_capped.toFixed(2);
+  }
+
   // ─── Passo 3: HAGO STATE MACHINE
   // Determina estado conversacional para este ciclo
   // Fonte: STRUCTURAL_CORE_CONTRACT_v1.8, seção 5 item 3
   const hago_state: HagoState = executeHago({
     previousState:        input.previous_hago_state,
-    MD:                   radarOutput.MD,  // MD_raw em S1-simulado (B1.2)
+    MD:                   radarOutput.MD,
     DC:                   radarOutput.DC,
     CEC:                  radarOutput.CEC,
     VE:                   radarOutput.VE,
     stage_base:           radarOutput.stage_base,
-    consolidated_flag:    radarOutput.consolidated_flag,
+    cycle_state:          input.cycle_state,  // B1.3
     cyclesCompleted:      input.cyclesCompleted,
     input_classification: input.input_classification,
   });
@@ -145,7 +156,8 @@ export async function executeStructuralCore(
     ),
     computeStructuralHash(
       structural_snapshot,
-      node_selection
+      node_selection,
+      input.cycle_state  // C2.1
     ),
   ]);
 
