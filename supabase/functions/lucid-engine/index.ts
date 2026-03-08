@@ -361,7 +361,7 @@ async function handleRetryLlm(req: Request): Promise<Response> {
 
   const { data: cycle, error: fetchErr } = await supabase
     .from("cycles")
-    .select("id, user_id, version, structural_model_version, hago_state, llm_response, structural_snapshots(snapshot_json), audit_log(structural_trace)")
+    .select("id, user_id, structural_model_version, hago_state, llm_response, structural_snapshots(snapshot_json), audit_log(structural_trace)")
     .eq("id", cycle_id)
     .single();
 
@@ -377,12 +377,31 @@ async function handleRetryLlm(req: Request): Promise<Response> {
     return json({ error: "CONFLICT", message: "Cycle already has llm_response — retry not allowed" }, 409);
   }
 
-  // Buscar node_selection do audit_log (structural_trace contém node_selection)
+  // B1: extrair campos do structural_trace (expandido em persistence.ts)
   const audit = Array.isArray(cycle.audit_log) ? cycle.audit_log[0] : cycle.audit_log;
-  const trace = audit?.structural_trace as Record<string, unknown> ?? {};
+  const trace = (audit?.structural_trace ?? {}) as Record<string, unknown>;
   const snapshot = Array.isArray(cycle.structural_snapshots)
     ? cycle.structural_snapshots[0]?.snapshot_json
     : (cycle.structural_snapshots as Record<string, unknown>)?.snapshot_json;
+
+  // Validar campos obrigatórios do trace
+  if (!trace.node_selection || !trace.response_type || !trace.movement_primary) {
+    return json({
+      error: "TRACE_INCOMPLETE",
+      message: "Cycle structural_trace missing required fields — cycle predates B1 fix, cannot retry",
+    }, 422);
+  }
+
+  // B1: re-buscar corpus do DB (igual ao fluxo principal — não persiste no trace)
+  const { data: ragCorpus, error: ragErr } = await supabase.from("rag_corpus").select("*");
+  if (ragErr || !ragCorpus) {
+    return json({ error: "INTERNAL_ERROR", message: "Failed to load RAG corpus" }, 500);
+  }
+
+  // B1: aplicar rate limit (igual ao fluxo principal — A2)
+  if (!checkRateLimit(user.id)) {
+    return json({ error: "RATE_LIMITED", message: "Too many requests" }, 429);
+  }
 
   try {
     const bound_version = cycle.structural_model_version as string;
@@ -390,12 +409,12 @@ async function handleRetryLlm(req: Request): Promise<Response> {
       anthropic,
       bound_version,
       snapshot as Record<string, unknown>,
-      (trace.node_selection ?? []) as Array<Record<string, unknown>>,
+      (trace.node_selection) as Array<Record<string, unknown>>,
       cycle.hago_state,
-      trace.response_type as string ?? "REFLECT",
-      trace.movement_primary as string ?? "NONE",
-      trace.movement_secondary as string ?? null,
-      (trace.rag_corpus ?? []) as RagNode[],
+      trace.response_type as string,
+      trace.movement_primary as string,
+      (trace.movement_secondary ?? null) as string | null,
+      ragCorpus as RagNode[],
       (trace.user_text ?? "") as string,
     );
 

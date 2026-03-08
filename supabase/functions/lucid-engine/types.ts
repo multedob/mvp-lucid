@@ -125,6 +125,10 @@ export const STRUCTURAL_MODELS: Readonly<Record<string, StructuralModelImpl>> = 
   },
 } as const;
 
+// B2: alias público para uso em testes e resolvers externos
+// _STATIC_BASE_SNAPSHOT_V3_0 permanece privado — acesso canônico via STRUCTURAL_MODELS["3.0"].baseSnapshot
+export const STATIC_BASE_SNAPSHOT: Readonly<StructuralSnapshot> = _STATIC_BASE_SNAPSHOT_V3_0;
+
 // ─────────────────────────────────────────
 // 5. THRESHOLDS ESTRUTURAIS
 // Fonte: RADAR_PARAMETER_TABLE_v1.0

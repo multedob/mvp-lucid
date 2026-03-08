@@ -111,10 +111,19 @@ export async function persistCycle(
   }));
 
   // Preparar structural_trace para audit_log
+  // B1: campos expandidos para suportar /retry-llm (MD-2)
+  // node_selection, response_type, movement* e user_text permitem
+  // re-executar executeLlmLanguage sem re-processar o ciclo inteiro.
+  // rag_corpus NÃO persiste aqui — re-fetchado do DB no retry (igual ao fluxo principal).
   const structural_trace = {
     audit_trace:              input.audit_trace,
     hago_state:               input.hago_state,
     structural_model_version: input.structural_model_version,
+    node_selection:           input.node_selection,
+    response_type:            input.response_type,
+    movement_primary:         input.movement_primary,
+    movement_secondary:       input.movement_secondary ?? null,
+    user_text:                input.user_text ?? null,
   };
 
   // ─── Chamada RPC atômica
