@@ -83,26 +83,18 @@ export async function sha256(input: string): Promise<string> {
 // Escopo: raw_input + previous_snapshot + previous_node
 // Invariante: previous_snapshot nunca null
 // Nota: raw_input é RadarInput (objeto numérico estruturado)
-// user_text incluído no hash para representar fielmente o que gerou o output.
-// Justificativa: inputs são perguntas abertas — hashes nunca repetem de qualquer forma.
-// Normalização evita colisões espúrias por espaços/capitalização.
 // ─────────────────────────────────────────
 export async function computeInputHash(
   raw_input: RadarInput,
   previous_snapshot: StructuralSnapshot,
-  previous_node: PreviousNode | null,
-  user_text: string
+  previous_node: PreviousNode | null
 ): Promise<string> {
   if (previous_snapshot === null || previous_snapshot === undefined) {
     throw new Error("computeInputHash: previous_snapshot cannot be null");
   }
 
-  // Normalização de user_text: trim + lowercase + colapsar espaços múltiplos
-  const normalized_user_text = user_text.trim().toLowerCase().replace(/\s+/g, " ");
-
   // Keys em ordem ASCII para determinismo do canonicalize
   const payload = {
-    normalized_user_text,
     previous_node,
     previous_snapshot,
     raw_input,
@@ -114,21 +106,16 @@ export async function computeInputHash(
 // ─────────────────────────────────────────
 // 4. STRUCTURAL HASH
 // Fonte: STRUCTURAL_CORE_CONTRACT_v1.8, seção 8
-// Escopo: structural_snapshot + node_selection + cycle_state
+// Escopo: structural_snapshot + node_selection
 // Excluídos: audit_trace, contract_version,
 //            structural_model_version,
 //            input_classification, historical_memory
-// C2.1: cycle_state incluído no hash — dois ciclos com inputs idênticos
-// mas estados de ciclo diferentes são ciclos distintos e devem ter hashes
-// distintos. Omitir cycle_state cria colisões auditáveis silenciosas.
 // ─────────────────────────────────────────
 export async function computeStructuralHash(
   structural_snapshot: StructuralSnapshot,
-  node_selection: SelectedNode[],
-  cycle_state: string  // C2.1: "S0" | "S1" | "S2"
+  node_selection: SelectedNode[]
 ): Promise<string> {
   const payload = {
-    cycle_state,
     node_selection,
     structural_snapshot,
   };
@@ -190,18 +177,4 @@ export async function computeLlmConfigHash(
 // ─────────────────────────────────────────
 export function fmt2(n: number): string {
   return n.toFixed(2);
-}
-
-// ─────────────────────────────────────────
-// 8. PROMPT HASH (MD-3)
-// Versionamento formal do system prompt do LLM.
-// SHA256(version_tag + prompt_content)
-// Persiste como llm_prompt_hash nos ciclos futuros.
-// Permite auditoria de qual prompt gerou cada resposta.
-// ─────────────────────────────────────────
-export async function computePromptHash(
-  prompt_version: string,  // ex: "v1.1" — incrementar a cada mudança de prompt
-  system_prompt: string
-): Promise<string> {
-  return sha256(prompt_version + system_prompt);
 }

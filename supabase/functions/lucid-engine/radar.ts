@@ -22,10 +22,10 @@ import { fmt2 } from "./hash.ts";
 // ─────────────────────────────────────────
 
 export interface RadarExecutorInput {
-  lines: RadarInput;
-  previousCGG: number; // parseFloat(previous_snapshot.CGG)
-  cyclesCompleted: number; // base_version (0 = primeiro ciclo)
-  previousLines: number[] | null; // 16 linhas do ciclo anterior
+  lines:            RadarInput;
+  previousCGG:      number;   // parseFloat(previous_snapshot.CGG)
+  cyclesCompleted:  number;   // base_version (0 = primeiro ciclo)
+  previousLines:    number[] | null; // 16 linhas do ciclo anterior
 }
 
 // ─────────────────────────────────────────
@@ -34,19 +34,20 @@ export interface RadarExecutorInput {
 // ─────────────────────────────────────────
 
 export interface RadarOutput {
-  CGG0: number;
-  CGG: number;
-  D1: number;
-  D2: number;
-  D3: number;
-  D4: number;
-  DC: number;
-  CEC: number;
-  VE: number;
-  MD: number;
-  IC: number;
-  stage_base: number;
-  substage: number;
+  CGG0:             number;
+  CGG:              number;
+  D1:               number;
+  D2:               number;
+  D3:               number;
+  D4:               number;
+  DC:               number;
+  CEC:              number;
+  VE:               number;
+  MD:               number;
+  IC:               number;
+  stage_base:       number;
+  substage:         number;
+  consolidated_flag: boolean;
 }
 
 // ─────────────────────────────────────────
@@ -59,7 +60,8 @@ function avg(values: number[]): number {
 
 function stdDev(values: number[]): number {
   const mu = avg(values);
-  const variance = values.reduce((sum, v) => sum + (v - mu) ** 2, 0) / values.length;
+  const variance =
+    values.reduce((sum, v) => sum + (v - mu) ** 2, 0) / values.length;
   return Math.sqrt(variance);
 }
 
@@ -77,7 +79,12 @@ export function executeRadar(input: RadarExecutorInput): RadarOutput {
   const { lines, previousCGG, cyclesCompleted, previousLines } = input;
 
   // Flatten: 16 linhas em array [d1[0..3], d2[0..3], d3[0..3], d4[0..3]]
-  const all: number[] = [...lines.d1, ...lines.d2, ...lines.d3, ...lines.d4];
+  const all: number[] = [
+    ...lines.d1,
+    ...lines.d2,
+    ...lines.d3,
+    ...lines.d4,
+  ];
 
   // ─── Passo 1 — CGG₀
   // CGG₀ = (1/16) × Σ Lᵢ
@@ -96,7 +103,13 @@ export function executeRadar(input: RadarExecutorInput): RadarOutput {
   // CGG = min(CGG₀, D1+1.5, D2+1.5, D3+1.5, D4+1.5)
   // Aplicado uma única vez. Sem recursividade.
   // Fonte: RADAR_v6, seção 2 / RADAR_PIPELINE_SPEC_v2.1, seção 2.4
-  const CGG_raw = Math.min(CGG0, D1 + 1.5, D2 + 1.5, D3 + 1.5, D4 + 1.5);
+  const CGG_raw = Math.min(
+    CGG0,
+    D1 + 1.5,
+    D2 + 1.5,
+    D3 + 1.5,
+    D4 + 1.5
+  );
   // CGG ∈ [1,8] — piso mínimo estrutural
   const CGG = clamp(CGG_raw, 1, 8);
 
@@ -125,47 +138,38 @@ export function executeRadar(input: RadarExecutorInput): RadarOutput {
   // ─── Passo 6 — Penalidade Relacional (D3)
   // Se D3 < 4.5: CEC = max(CEC_bruto − 0.10, 0)
   // Fonte: RADAR_v6, seção 10 / RADAR_PIPELINE_SPEC_v2.1, seção 2.7
-  const CEC = D3 < THRESHOLDS.D3_penalty_floor ? Math.max(CEC_bruto - THRESHOLDS.CEC_penalty_D3, 0) : CEC_bruto;
+  const CEC =
+    D3 < THRESHOLDS.D3_penalty_floor
+      ? Math.max(CEC_bruto - THRESHOLDS.CEC_penalty_D3, 0)
+      : CEC_bruto;
 
   // ─── Passo 7 — Variância Estrutural (VE)
   // Primeiro ciclo (cyclesCompleted === 0): VE = 0
   // Demais: VE = |CGG_t − CGG_t-1|
   // VE ∈ [0,7] — não normalizado
   // Fonte: RADAR_v6, seção 6 / RADAR_PIPELINE_SPEC_v2.1, seção 2.8
-  const VE = cyclesCompleted === 0 ? 0 : Math.abs(CGG - previousCGG);
+  const VE =
+    cyclesCompleted === 0
+      ? 0
+      : Math.abs(CGG - previousCGG);
 
   // ─── Passo 8 — Maturidade de Dados (MD)
   // MD = (C_norm + V_norm + I_norm + O_norm) / 4
-  // Regime S0 canônico: MD_intraciclo = min(MD, 0.60) — suspenso no MVP (ver abaixo)
+  // Regime S0 (ciclo aberto): MD_intraciclo = min(MD, 0.60)
   // Fonte: RADAR_v6, seção 5 / RADAR_PIPELINE_SPEC_v2.1, seção 2.9
 
   // C_norm: robustez por número de ciclos
   // C_norm = min(cyclesCompleted / 4, 1)
-  // Sem histórico: C_norm = 0 (penaliza ausência — design intencional)
   const C_norm = Math.min(cyclesCompleted / 4, 1);
 
   // V_norm: estabilidade longitudinal (variação média entre ciclos)
   // V = média das variações absolutas linha a linha vs ciclo anterior
-  // BUG-3 fix: previousLines=null com cyclesCompleted>0 = dado ausente, não estabilidade
-  //   → V_norm = 0.5 (neutro) em vez de 1.0 (máxima estabilidade artificial)
-  //   → V_norm = 1.0 apenas quando há dado real e variação é zero
-  //   → cyclesCompleted=0: V_norm = 0.5 (primeiro ciclo, sem histórico — neutro)
-  //
-  // R2.1 — Assimetria documentada (intencional):
-  // C_norm=0 e V_norm=0.5 no ciclo 0 são comportamentos diferentes para ausência.
-  // C_norm penaliza (espelha acumulação real de evidência histórica).
-  // V_norm neutraliza (ausência de histórico ≠ instabilidade — não deve penalizar).
-  // Resultado: MD primeiro ciclo é levemente elevado vs ambos em 0.
-  // Aceito: C_norm pune falta de histórico longitudinal; V_norm não pune
-  // falta de baseline de variação (sem baseline, sem sinal negativo).
-  let V_norm: number;
-  if (previousLines !== null && previousLines.length === 16) {
-    const V = avg(all.map((l, i) => Math.abs(l - (previousLines as number[])[i])));
-    V_norm = 1 - Math.min(V, 7) / 7;
-  } else {
-    // Sem dado longitudinal: contribuição neutra (não infla MD, não penaliza)
-    V_norm = 0.5;
-  }
+  // Se não há ciclo anterior: V = 0 (máxima instabilidade não se aplica)
+  const V =
+    previousLines !== null && previousLines.length === 16
+      ? avg(all.map((l, i) => Math.abs(l - previousLines[i])))
+      : 0;
+  const V_norm = 1 - Math.min(V, 7) / 7;
 
   // I_norm: homogeneidade interna das 16 linhas (σ_intra)
   // I_norm = 1 − min(σ_intra, 4) / 4
@@ -180,24 +184,22 @@ export function executeRadar(input: RadarExecutorInput): RadarOutput {
   const O_norm = 1 - F;
 
   // MD_raw = média dos 4 componentes, clamp [0,1]
-  const MD_raw = clamp((C_norm + V_norm + I_norm + O_norm) / 4, 0, 1);
+  const MD_raw = clamp(
+    (C_norm + V_norm + I_norm + O_norm) / 4,
+    0,
+    1
+  );
 
-  // B1.2 — Desvio Formal: ENCERRADO (C2.4)
-  // Desvio original: cap MD S0 suspenso por ausência de cycle_state real no MVP.
-  // Encerrado em: C1.2 + B1.3 — cycle_state real implementado e cap reativado.
-  // Cap S0 (MD ≤ 0.60) agora aplicado em core.ts pós-buildSnapshot, não aqui.
-  // radar.ts permanece função pura — sem acesso a cycle_state (design intencional).
-  // Fonte: RADAR_PIPELINE_SPEC_v2.1, seção 4.3; decisão arquitetural C1.2 (R1.1)
-  const MD = MD_raw;  // Sem cap aqui — cap aplicado em core.ts quando cycle_state="S0"
+  // S0 (ciclo aberto): cap em MD_intraciclo_cap = 0.60
+  // O Core opera sempre em S0 — fechamento é responsabilidade da Edge
+  const MD = Math.min(MD_raw, THRESHOLDS.MD_intraciclo_cap);
 
   // ─── Passo 9 — Índice de Confiança (IC)
-  // IC = MD_raw × CEC
-  // Fonte: RADAR_v6, seção 7 / RADAR_ONTOLOGY_SCHEMA_v1:
-  // "IC é calculado exclusivamente com MD_raw.
-  //  MD_intraciclo (cap 0.60) nunca participa do IC."
+  // IC = MD × CEC
   // IC ∈ [0,1]
   // IC não participa da promoção — regula densidade interpretativa
-  const IC = clamp(MD_raw * CEC, 0, 1);
+  // Fonte: RADAR_v6, seção 7 / RADAR_PIPELINE_SPEC_v2.1, seção 2.10
+  const IC = clamp(MD * CEC, 0, 1);
 
   // ─── Mapeamento CGG → Estágio
   // stage_base = floor(CGG), clamp [1,8]
@@ -213,9 +215,16 @@ export function executeRadar(input: RadarExecutorInput): RadarOutput {
   const f = CGG - Math.floor(CGG);
   const substage = f < 0.33 ? 0 : f < 0.66 ? 1 : 2;
 
-  // PC-3: consolidated_flag removido — cálculo e retorno eliminados
-  // Razão: código morto desde B1.3 (cycle_state substituiu a semântica)
-  // getThresholds ainda usado em buildSnapshot implicitamente via stage_base
+  // ─── consolidated_flag
+  // Todos os critérios de promoção satisfeitos simultaneamente
+  // Usa thresholds do conjunto ativo para o stage_base atual
+  // Fonte: RADAR_v6, seção 8-9 / HAGO_STATE_MACHINE_v1.3
+  const t = getThresholds(stage_base);
+  const consolidated_flag =
+    MD_raw >= t.MD &&
+    DC     <= t.DC &&
+    CEC    >= t.CEC &&
+    VE     <= t.VE;
 
   return {
     CGG0,
@@ -231,6 +240,7 @@ export function executeRadar(input: RadarExecutorInput): RadarOutput {
     IC,
     stage_base,
     substage,
+    consolidated_flag,
   };
 }
 
@@ -243,18 +253,19 @@ export function executeRadar(input: RadarExecutorInput): RadarOutput {
 
 export function buildSnapshot(r: RadarOutput): StructuralSnapshot {
   return {
-    CGG0: fmt2(r.CGG0),
-    CGG: fmt2(r.CGG),
-    D1: fmt2(r.D1),
-    D2: fmt2(r.D2),
-    D3: fmt2(r.D3),
-    D4: fmt2(r.D4),
-    CEC: fmt2(r.CEC),
-    DC: fmt2(r.DC),
-    MD: fmt2(r.MD),
-    VE: fmt2(r.VE),
-    IC: fmt2(r.IC),
-    stage_base: r.stage_base,
-    substage: r.substage,
+    CGG0:              fmt2(r.CGG0),
+    CGG:               fmt2(r.CGG),
+    D1:                fmt2(r.D1),
+    D2:                fmt2(r.D2),
+    D3:                fmt2(r.D3),
+    D4:                fmt2(r.D4),
+    CEC:               fmt2(r.CEC),
+    DC:                fmt2(r.DC),
+    MD:                fmt2(r.MD),
+    VE:                fmt2(r.VE),
+    IC:                fmt2(r.IC),
+    stage_base:        r.stage_base,
+    substage:          r.substage,
+    consolidated_flag: r.consolidated_flag,
   };
 }

@@ -96,9 +96,6 @@ export function resolveMovement(
   switch (response_type) {
     case "R1_EXPLICATIVA": {
       // H0 → M7, H1 → M3, H2 → M4
-      // PC-6 — Limitação M7: M7 como primário ocorre apenas em H0.
-      // H2 em AMBIGUOUS/INSUFFICIENT recebe M4 (primário) + M7 (secundário, ver abaixo).
-      // M7 como primário para H2 requer atualização em MOVEMENT_RESOLUTION_SPEC v2.1 — pós-MVP.
       if (hago_state === "H0") movement_primary = "M7_CLARIFICACAO_SEMANTICA";
       else if (hago_state === "H1") movement_primary = "M3_NOMEACAO_PADRAO";
       else movement_primary = "M4_DESLOCAMENTO_NIVEL"; // H2

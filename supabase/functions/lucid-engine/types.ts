@@ -64,8 +64,7 @@ export type RiskScore    = 0 | 1 | 2;
 // Regra: campos numéricos como string "X.XX"
 //        stage_base: number (integer = floor(CGG))
 //        substage: number (integer, derivado de δ)
-// PC-3: consolidated_flag removido — código morto desde B1.3
-//        cycle_state em HagoInput substitui com semântica real
+//        consolidated_flag: boolean
 // Fonte: SNAPSHOT_RESOLUTION_PROTOCOL_v2.2.1
 // ─────────────────────────────────────────
 export interface StructuralSnapshot {
@@ -82,6 +81,7 @@ export interface StructuralSnapshot {
   IC:                string;
   stage_base:        number;
   substage:          number;
+  consolidated_flag: boolean;
 }
 
 // ─────────────────────────────────────────
@@ -90,10 +90,8 @@ export interface StructuralSnapshot {
 // Vinculado a structural_model_version "3.0"
 // Fonte: SNAPSHOT_RESOLUTION_PROTOCOL_v2.2.1,
 //        seção base_version_zero_behavior
-// Prefixo _ indica uso interno — não importar diretamente.
-//        Fonte: CORE_RUNTIME_REGISTRY_SPEC_v1.2, seção 4 (B2.1)
 // ─────────────────────────────────────────
-const _STATIC_BASE_SNAPSHOT_V3_0: Readonly<StructuralSnapshot> = {
+export const STATIC_BASE_SNAPSHOT: Readonly<StructuralSnapshot> = {
   CGG0:              "1.00",
   CGG:               "1.00",
   D1:                "0.00",
@@ -107,27 +105,8 @@ const _STATIC_BASE_SNAPSHOT_V3_0: Readonly<StructuralSnapshot> = {
   IC:                "0.00",
   stage_base:        1,
   substage:          0,
+  consolidated_flag: false,
 } as const;
-
-// ─────────────────────────────────────────
-// 4b. STRUCTURAL MODEL IMPLEMENTATION MAP
-// Fonte: CORE_RUNTIME_REGISTRY_SPEC_v1.2, seção 4
-// Cada versão expõe sua própria configuração canônica.
-// Acesse baseSnapshot via STRUCTURAL_MODELS[bound_version].baseSnapshot
-// ─────────────────────────────────────────
-export interface StructuralModelImpl {
-  baseSnapshot: Readonly<StructuralSnapshot>;
-}
-
-export const STRUCTURAL_MODELS: Readonly<Record<string, StructuralModelImpl>> = {
-  "3.0": {
-    baseSnapshot: _STATIC_BASE_SNAPSHOT_V3_0,
-  },
-} as const;
-
-// B2: alias público para uso em testes e resolvers externos
-// _STATIC_BASE_SNAPSHOT_V3_0 permanece privado — acesso canônico via STRUCTURAL_MODELS["3.0"].baseSnapshot
-export const STATIC_BASE_SNAPSHOT: Readonly<StructuralSnapshot> = _STATIC_BASE_SNAPSHOT_V3_0;
 
 // ─────────────────────────────────────────
 // 5. THRESHOLDS ESTRUTURAIS
@@ -168,14 +147,12 @@ export function getThresholds(stage_base: number): ThresholdSet {
 // Helper: CEC mínimo para H2
 // Fonte: HAGO_STATE_MACHINE_v1.3, seção 4.3
 // A8: margem escala com CEC_threshold do conjunto ativo
-// PC-3: parâmetro renomeado de consolidated_flag → is_s2
-// Caller (hago.ts) passa: cycle_state === "S2"
 export function cecThresholdForH2(
   stage_base: number,
-  is_s2: boolean
+  consolidated_flag: boolean
 ): number {
   const t = getThresholds(stage_base);
-  return is_s2
+  return consolidated_flag
     ? t.CEC
     : t.CEC + t.CEC * THRESHOLDS.MARGEM_CEC_FACTOR;
 }
@@ -271,7 +248,6 @@ export interface CoreInput {
   historical_memory:        HistoricalNode[];
   input_classification:     InputClassification; // obrigatório
   nodes:                    RagNode[];
-  user_text:                string;  // incluído no input_hash (B2 fix)
 }
 
 // ─────────────────────────────────────────

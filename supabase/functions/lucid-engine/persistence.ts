@@ -50,8 +50,6 @@ export interface PersistenceInput {
   response_type:            ResponseType;
   movement_primary:         Movement;
   movement_secondary:       Movement | null;
-  // Ciclo IPE (C1.3)
-  cycle_state:              string; // "S0" | "S1" | "S2"
   // LLM Binding
   llm_provider:             string;
   llm_model_id:             string;
@@ -61,9 +59,6 @@ export interface PersistenceInput {
   audit_trace:              AuditTrace;
   // LLM Response
   llm_response?:            string;
-  // PC-2: texto livre do usuário — persistido com consentimento explícito
-  // Base legal: termo de uso aceito | Retenção: indefinida | Exclusão: futura
-  user_text?:               string;
 }
 
 // ─────────────────────────────────────────
@@ -111,19 +106,10 @@ export async function persistCycle(
   }));
 
   // Preparar structural_trace para audit_log
-  // B1: campos expandidos para suportar /retry-llm (MD-2)
-  // node_selection, response_type, movement* e user_text permitem
-  // re-executar executeLlmLanguage sem re-processar o ciclo inteiro.
-  // rag_corpus NÃO persiste aqui — re-fetchado do DB no retry (igual ao fluxo principal).
   const structural_trace = {
     audit_trace:              input.audit_trace,
     hago_state:               input.hago_state,
     structural_model_version: input.structural_model_version,
-    node_selection:           input.node_selection,
-    response_type:            input.response_type,
-    movement_primary:         input.movement_primary,
-    movement_secondary:       input.movement_secondary ?? null,
-    user_text:                input.user_text ?? null,
   };
 
   // ─── Chamada RPC atômica
@@ -157,9 +143,7 @@ export async function persistCycle(
     p_llm_config_hash:          input.llm_config_hash,
     p_structural_trace:         structural_trace,
     p_hago_state:               input.hago_state,
-    p_cycle_state:              input.cycle_state,          // C1.3
     p_llm_response:             input.llm_response ?? null,
-    p_user_text:                input.user_text ?? null,     // PC-2
   });
 
   if (error) {

@@ -10,8 +10,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.27.3";
 
-import type { RadarInput, InputClassification, EdgeResponse, RagNode, CycleState } from "./types.ts";
-import { CONTRACT_VERSION, STRUCTURAL_MODEL_VERSION, STRUCTURAL_MODELS } from "./types.ts";
+import type { RadarInput, InputClassification, EdgeResponse, RagNode } from "./types.ts";
+import { CONTRACT_VERSION, STRUCTURAL_MODEL_VERSION } from "./types.ts";
 
 import {
   resolveStructuralModelVersion,
@@ -27,14 +27,14 @@ import {
 import { executeStructuralCore } from "./core.ts";
 import { executePostCore } from "./post-core.ts";
 import { persistCycle } from "./persistence.ts";
-import { computeCycleIntegrityHash, computeLlmConfigHash, computePromptHash } from "./hash.ts";
+import { computeCycleIntegrityHash, computeLlmConfigHash } from "./hash.ts";
 
 // ─────────────────────────────────────────
 // CONSTANTES
 // ─────────────────────────────────────────
 
 const API_VERSION = "1.0";
-// SUPPORTED_MODEL removido — verificação agora via STRUCTURAL_MODELS map (B2.1, B2.4)
+const SUPPORTED_MODEL = "3.0"; // runtime suporta apenas esta versão
 
 // LLM Binding — MVP hardcoded (Anthropic claude-3-5-haiku)
 // Fonte: EDGE_EXECUTION_SEQUENCE_SPEC_v1.11.1, PHASE 4
@@ -42,47 +42,6 @@ const API_VERSION = "1.0";
 const LLM_PROVIDER = "anthropic";
 const LLM_MODEL_ID = "claude-haiku-4-5-20251001";
 const LLM_TEMPERATURE = 0.7; // classificação usa 0, linguagem usa este valor
-
-// MD-3: versão formal do system prompt — incrementar a cada mudança de prompt
-// Permite auditoria de qual prompt gerou cada resposta via llm_prompt_hash
-const LLM_PROMPT_VERSION = "v1.1";
-
-// ─────────────────────────────────────────
-// CACHE MODULE-LEVEL — RAG CORPUS (PC-7)
-// O corpus é imutável entre deploys (apenas migrations alteram).
-// Cache em memória elimina query a cada request sem risco de stale data.
-// Invalidação: apenas redeploy da Edge Function.
-// ─────────────────────────────────────────
-
-let _ragCorpusCache: RagNode[] | null = null;
-
-// ─────────────────────────────────────────
-// RATE LIMITING MODULE-LEVEL (MD-1)
-// Controle de frequência por user_id em memória.
-// Limite: 1 request a cada RATE_LIMIT_MS milissegundos por usuário.
-// Escopo: instância da Edge Function (não distribuído).
-// Suficiente para MVP — produção requer Redis ou tabela no banco.
-// ─────────────────────────────────────────
-
-const RATE_LIMIT_MS = 3000;
-// MD-1 — Rate limit: limitação de escopo
-// Este rate limit é por instância (module-level map), não distribuído.
-// Em Deno/Supabase, cada instância é independente — múltiplas instâncias
-// paralelas não compartilham estado. Suficiente para MVP (proteção de UX),
-// mas NÃO é proteção de segurança distribuída. Para proteção real:
-// usar Redis, Supabase RLS ou middleware de borda.
-// R2.3: race condition intra-instância também existe (Deno não é single-threaded
-// estrito com async — dois requests simultâneos podem passar o check antes
-// de qualquer um escrever no mapa). Aceito para MVP, documentado aqui. // 1 ciclo a cada 3 segundos por usuário
-const _rateLimitMap = new Map<string, number>(); // user_id → timestamp do último request
-
-function checkRateLimit(user_id: string): boolean {
-  const now = Date.now();
-  const last = _rateLimitMap.get(user_id) ?? 0;
-  if (now - last < RATE_LIMIT_MS) return false; // bloqueado
-  _rateLimitMap.set(user_id, now);
-  return true; // permitido
-}
 
 // ─────────────────────────────────────────
 // CORS
@@ -206,7 +165,7 @@ async function executeLlmLanguage(
   movement_secondary: string | null,
   nodes_corpus: RagNode[],
   user_text: string,
-): Promise<{ text: string; prompt_hash: string }> {
+): Promise<string> {
   // FIX 1 — node_texts inclui source_author e source_work
   const node_texts = node_selection
     .map((n) => {
@@ -309,152 +268,17 @@ ${movement_secondary ? `Secondary Movement: ${movement_secondary}` : ""}`;
     messages: [{ role: "user", content: user_content }],
   });
 
-  const text = (response.content[0] as { type: string; text: string }).text;
-  // MD-3: hash do prompt para auditabilidade — SHA256(version + system)
-  const prompt_hash = await computePromptHash(LLM_PROMPT_VERSION, system);
-  return { text, prompt_hash };
+  return (response.content[0] as { type: string; text: string }).text;
 }
 
 // ─────────────────────────────────────────
 // HANDLER PRINCIPAL
 // ─────────────────────────────────────────
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MD-2: /retry-llm — Re-executa a camada linguística para ciclos com
-//        llm_response = null (falha de PHASE 9 em ciclo já persistido).
-// Fonte: EDGE_EXECUTION_SEQUENCE_SPEC_v1.11.1, nota PHASE 9
-// ─────────────────────────────────────────────────────────────────────────────
-async function handleRetryLlm(req: Request): Promise<Response> {
-  if (req.method !== "POST") {
-    return json({ error: "INVALID_INPUT", message: "Method not allowed" }, 400);
-  }
-
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return json({ error: "UNAUTHORIZED", message: "Missing authorization" }, 401);
-  }
-
-  let body: Record<string, unknown>;
-  try {
-    body = await req.json();
-  } catch {
-    return json({ error: "INVALID_INPUT", message: "Body must be valid JSON" }, 400);
-  }
-
-  const cycle_id = body.cycle_id;
-  if (typeof cycle_id !== "string" || !cycle_id) {
-    return json({ error: "INVALID_INPUT", message: "cycle_id is required" }, 400);
-  }
-
-  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
-  const supabase = createClient(supabaseUrl, supabaseKey);
-  const anthropic = new Anthropic({ apiKey: anthropicKey });
-
-  // Buscar ciclo — validar que pertence ao usuário autenticado e que llm_response é null
-  const token = authHeader.slice(7);
-  const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
-  if (authErr || !user) {
-    return json({ error: "UNAUTHORIZED", message: "Invalid token" }, 401);
-  }
-
-  const { data: cycle, error: fetchErr } = await supabase
-    .from("cycles")
-    .select("id, user_id, user_text, structural_model_version, hago_state, llm_response, structural_snapshots(snapshot_json), audit_log(structural_trace)")
-    .eq("id", cycle_id)
-    .single();
-
-  if (fetchErr || !cycle) {
-    return json({ error: "NOT_FOUND", message: "Cycle not found" }, 404);
-  }
-
-  if (cycle.user_id !== user.id) {
-    return json({ error: "FORBIDDEN", message: "Cycle does not belong to this user" }, 403);
-  }
-
-  if (cycle.llm_response !== null) {
-    return json({ error: "CONFLICT", message: "Cycle already has llm_response — retry not allowed" }, 409);
-  }
-
-  // B1: extrair campos do structural_trace (expandido em persistence.ts)
-  const audit = Array.isArray(cycle.audit_log) ? cycle.audit_log[0] : cycle.audit_log;
-  const trace = (audit?.structural_trace ?? {}) as Record<string, unknown>;
-  const snapshot = Array.isArray(cycle.structural_snapshots)
-    ? cycle.structural_snapshots[0]?.snapshot_json
-    : (cycle.structural_snapshots as Record<string, unknown>)?.snapshot_json;
-
-  // Validar campos obrigatórios do trace
-  if (!trace.node_selection || !trace.response_type || !trace.movement_primary) {
-    return json({
-      error: "TRACE_INCOMPLETE",
-      message: "Cycle structural_trace missing required fields — cycle predates B1 fix, cannot retry",
-    }, 422);
-  }
-
-  // E4: cycles.user_text é a fonte de verdade canônica.
-  // structural_trace.user_text é espelho auxiliar — não usado aqui.
-  // null = ciclo corrompido ou bug de persistência — rejeitar explicitamente.
-  const retry_user_text = cycle.user_text as string | null;
-  if (!retry_user_text) {
-    return json({
-      error: "RETRY_UNAVAILABLE",
-      message: "user_text ausente no ciclo — não é possível reprocessar sem o texto original do usuário",
-    }, 422);
-  }
-
-  // B1: re-buscar corpus do DB (igual ao fluxo principal — não persiste no trace)
-  const { data: ragCorpus, error: ragErr } = await supabase.from("rag_corpus").select("*");
-  if (ragErr || !ragCorpus) {
-    return json({ error: "INTERNAL_ERROR", message: "Failed to load RAG corpus" }, 500);
-  }
-
-  // B1: aplicar rate limit (igual ao fluxo principal — A2)
-  if (!checkRateLimit(user.id)) {
-    return json({ error: "RATE_LIMITED", message: "Too many requests" }, 429);
-  }
-
-  try {
-    const bound_version = cycle.structural_model_version as string;
-    const langResult = await executeLlmLanguage(
-      anthropic,
-      bound_version,
-      snapshot as Record<string, unknown>,
-      (trace.node_selection) as Array<Record<string, unknown>>,
-      cycle.hago_state,
-      trace.response_type as string,
-      trace.movement_primary as string,
-      (trace.movement_secondary ?? null) as string | null,
-      ragCorpus as RagNode[],
-      retry_user_text,
-    );
-
-    const { error: updateErr } = await supabase
-      .from("cycles")
-      .update({ llm_response: langResult.text, llm_prompt_hash: langResult.prompt_hash })
-      .eq("id", cycle_id);
-
-    if (updateErr) {
-      return json({ error: "PERSIST_ERROR", message: "LLM response generated but failed to persist" }, 500);
-    }
-
-    return json({ cycle_id, llm_response: langResult.text }, 200);
-  } catch (err) {
-    console.error("RETRY_LLM_ERROR:", err);
-    return json({ error: "LLM_ERROR", message: "LLM execution failed" }, 502);
-  }
-}
-
 Deno.serve(async (req: Request): Promise<Response> => {
   // CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: CORS_HEADERS });
-  }
-
-  // ─── Roteamento por pathname
-  const url = new URL(req.url);
-  if (url.pathname.endsWith("/retry-llm")) {
-    return handleRetryLlm(req);
   }
 
   // ─── PHASE 0 — Request Validation
@@ -503,35 +327,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return json({ error: "INVALID_INPUT", message: "raw_input must be object with d1-d4 and user_text" }, 400);
   }
 
-  // B1.3 — cycle_state: determinado pelo IPE, default S0 se ausente
-  const VALID_CYCLE_STATES: CycleState[] = ["S0", "S1", "S2"];
-  const cycle_state: CycleState =
-    body.cycle_state === undefined
-      ? "S0"
-      : VALID_CYCLE_STATES.includes(body.cycle_state as CycleState)
-        ? (body.cycle_state as CycleState)
-        : null!;
-
-  if (cycle_state === null) {
-    return json({ error: "INVALID_INPUT", message: 'cycle_state must be "S0", "S1" or "S2"' }, 400);
-  }
-
   const raw = body.raw_input as Record<string, unknown>;
   const base_version = body.base_version as number;
 
-  // Validar d1–d4 (tuplas de 4 números no range [1,8])
+  // Validar d1–d4 (tuplas de 4 números)
   const isQuad = (v: unknown): v is [number, number, number, number] =>
     Array.isArray(v) && v.length === 4 && v.every((n) => typeof n === "number");
-
-  const inRange = (arr: number[]): boolean => arr.every((n) => n >= 1 && n <= 8);
 
   for (const key of ["d1", "d2", "d3", "d4"]) {
     if (!isQuad(raw[key])) {
       return json({ error: "INVALID_INPUT", message: `raw_input.${key} must be array of exactly 4 numbers` }, 400);
-    }
-    // PC-5: validar range canônico [1,8] conforme LUCID_SELF_LINES v1.0
-    if (!inRange(raw[key] as number[])) {
-      return json({ error: "INVALID_INPUT", message: `raw_input.${key} values must be between 1 and 8` }, 400);
     }
   }
 
@@ -567,23 +372,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
   const user_id = user.id;
 
-  // MD-1: rate limiting por user_id
-  if (!checkRateLimit(user_id)) {
-    return json(
-      { error: "RATE_LIMITED", message: "Too many requests — wait before sending another cycle" },
-      429,
-    );
-  }
-
   try {
     // ─── PHASE 1 — Structural Model Binding
     // Fonte: CORE_RUNTIME_REGISTRY_SPEC_v1.2
     const bound_version = await resolveStructuralModelVersion(supabase);
 
-    // Verificar que runtime tem implementação para esta versão
-    // Fonte: CORE_RUNTIME_REGISTRY_SPEC_v1.2 §4 (B2.1, B2.4)
-    const modelImpl = STRUCTURAL_MODELS[bound_version];
-    if (!modelImpl) {
+    // Verificar que runtime suporta esta versão
+    if (bound_version !== SUPPORTED_MODEL) {
       return json(
         {
           error: "INTERNAL_ERROR",
@@ -595,7 +390,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     // ─── PHASE 2 — Snapshot Resolution
     // Fonte: SNAPSHOT_RESOLUTION_PROTOCOL_v2.2.1
-    // Nota: modelImpl verificado em PHASE 1 — não é parâmetro do resolver
     const { snapshot: previous_snapshot, cycle_id: base_cycle_id } = await resolveSnapshot(
       supabase,
       user_id,
@@ -619,18 +413,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     // ─── PHASE 4.5 — Input Classification
     // Executada na Edge, antes do Core
+    // Core não recebe user_text
     // Fonte: INPUT_CLASSIFICATION_SPEC_v1.1
     const input_classification = await classifyInput(user_text, anthropic);
 
-    // Buscar corpus RAG (cache module-level — PC-7)
-    if (!_ragCorpusCache) {
-      const { data: ragCorpus, error: ragErr } = await supabase.from("rag_corpus").select("*");
-      if (ragErr || !ragCorpus) {
-        return json({ error: "INTERNAL_ERROR", message: "Failed to load RAG corpus" }, 500);
-      }
-      _ragCorpusCache = ragCorpus as RagNode[];
+    // Buscar corpus RAG completo
+    const { data: ragCorpus, error: ragErr } = await supabase.from("rag_corpus").select("*");
+
+    if (ragErr || !ragCorpus) {
+      return json({ error: "INTERNAL_ERROR", message: "Failed to load RAG corpus" }, 500);
     }
-    const ragCorpus = _ragCorpusCache;
 
     // ─── PHASE 5 — Structural Core Execution
     // Core é função pura — sem I/O
@@ -644,11 +436,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
       historical_memory,
       input_classification,
       nodes: ragCorpus as RagNode[],
-      user_text,  // B2 fix: incluído no input_hash
       previous_hago_state,
       cyclesCompleted: base_version,
       previousLines,
-      cycle_state,  // B1.3
     });
 
     // ─── PHASE 5.3 + 5.4 — Response Type + Movement Resolution
@@ -703,17 +493,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
       llm_temperature: LLM_TEMPERATURE,
       llm_config_hash,
       audit_trace: core_output.audit_trace,
-      cycle_state,  // C1.3
-      user_text: user_text,  // PC-2: variável extraída de raw.user_text na linha 538
     });
 
     // ─── PHASE 9 — Language Execution (pós-commit)
     // Falha linguística NÃO invalida ciclo já persistido
     // Fonte: EDGE_EXECUTION_SEQUENCE_SPEC_v1.11.1, PHASE 9
     let llm_response = "";
-    let llm_prompt_hash = "";
     try {
-      const langResult = await executeLlmLanguage(
+      llm_response = await executeLlmLanguage(
         anthropic,
         bound_version,
         core_output.structural_snapshot as unknown as Record<string, unknown>,
@@ -725,31 +512,21 @@ Deno.serve(async (req: Request): Promise<Response> => {
         ragCorpus as RagNode[],
         user_text,
       );
-      llm_response = langResult.text;
-      llm_prompt_hash = langResult.prompt_hash;
     } catch (langErr) {
       // Log mas não abortar — ciclo está persistido
       console.error("LANGUAGE_EXECUTION_ERROR:", langErr);
       llm_response = "[linguistic layer unavailable]";
     }
 
-    // ─── PHASE 9.1 — Persist llm_response + llm_prompt_hash back to cycle
-    // llm_response é computado pós-commit — UPDATE separado permitido pela spec
-    // Fonte: EDGE_EXECUTION_SEQUENCE_SPEC_v1.11.1, PHASE 9
-    // B2.2: Supabase JS não lança exceção em erro — checar { error } explicitamente
-    const { error: llmPersistError } = await supabase
-      .from("cycles")
-      .update({ llm_response, llm_prompt_hash: llm_prompt_hash || null })
-      .eq("id", cycle_id);
-
-    if (llmPersistError) {
-      // Falha não invalida ciclo — mas deve ser logada para observabilidade
-      // Ciclo com llm_response = null é recuperável via /retry-llm (futuro)
-      console.error("LLM_RESPONSE_PERSIST_ERROR:", {
-        cycle_id,
-        error: llmPersistError.message ?? llmPersistError.details ?? String(llmPersistError),
-        code:  llmPersistError.code,
-      });
+    // ─── PHASE 9.1 — Persist llm_response back to cycle
+    // llm_response is computed post-commit; update the persisted cycle
+    try {
+      await supabase
+        .from("cycles")
+        .update({ llm_response })
+        .eq("id", cycle_id);
+    } catch (updateErr) {
+      console.error("LLM_RESPONSE_PERSIST_ERROR:", updateErr);
     }
 
     // ─── PHASE 10 — Response Emission

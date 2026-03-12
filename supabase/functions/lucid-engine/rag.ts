@@ -149,8 +149,7 @@ export function executeRag(input: RagExecutorInput): SelectedNode[] {
       // Verifica se alternativa resolve alguma das restrições
       const altBetter =
         (recentNodeIds.has(principal.node.node_id) && !recentNodeIds.has(c.node.node_id)) ||
-        // BUG-1 fix: comparar source_work do node, não node_id
-        (principal.node.source_work === lastSourceWork && c.node.source_work !== lastSourceWork) ||
+        (principal.node.node_id === lastSourceWork  && c.node.node_id !== lastSourceWork) ||
         (typeRepeatBlocked && c.node.node_type !== lastThreeTypes[0]);
 
       return altBetter;

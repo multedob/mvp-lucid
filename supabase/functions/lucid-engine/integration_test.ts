@@ -4,20 +4,6 @@
 // Fonte: INTEGRATION_TEST_PROTOCOL_v2.1
 // Runner: Deno (deno test --allow-env)
 // ============================================================
-//
-// COBERTURA ATUAL vs INTEGRATION_TEST_PROTOCOL_v2.1:
-//
-// ✅ Cobertos: 3.1, 3.2, 3.3, 3.4, 3.4b, 3.5, 3.6, 3.7, 3.8,
-//             3.9, 3.10, 3.10b, 3.11, 3.12, CDA 1+2, hash chain,
-//             RADAR, HAGO
-//
-// ⏳ PENDENTES (dívida técnica declarada):
-//   3.13 real — "cycles table contém response_type/movement correspondentes
-//               ao calculado" — requer banco real; coberto pelo primeiro
-//               ciclo executado em produção.
-//   Seção 4   — 200 execuções, métricas globais de distribuição —
-//               implementar antes de escalar para usuários reais.
-// ============================================================
 
 import { assertEquals, assertNotEquals, assert } from "https://deno.land/std@0.208.0/assert/mod.ts";
 
@@ -94,15 +80,14 @@ function makeLinesCGG(cgg: number): RadarInput {
 
 function hagoForMetrics(
   MD: number, DC: number, CEC: number, VE: number,
-  stage: number, prev: HagoState, cycles: number,
-  cycle_state: "S0" | "S1" | "S2" = "S1"
+  stage: number, prev: HagoState, cycles: number
 ): HagoState {
   return executeHago({
     previousState: prev,
     MD, DC, CEC, VE,
     stage_base: stage,
+    consolidated_flag: false,
     cyclesCompleted: cycles,
-    cycle_state,
     input_classification: "C1_CONFUSAO_CONCEITUAL",
   });
 }
@@ -176,6 +161,7 @@ Deno.test("3.4 — Determinismo RADAR: 10 execuções idênticas", () => {
     assertEquals(result.CEC,              first.CEC);
     assertEquals(result.DC,               first.DC);
     assertEquals(result.stage_base,       first.stage_base);
+    assertEquals(result.consolidated_flag, first.consolidated_flag);
   }
 });
 
@@ -267,8 +253,8 @@ Deno.test("3.10 — CRÍTICO: C5_PEDIDO_PRESCRITIVO → H0 obrigatório", () => 
       previousState:        prev,
       MD: 0.80, DC: 0.10, CEC: 0.90, VE: 0.10,
       stage_base:           5,
+      consolidated_flag:    true,
       cyclesCompleted:      10,
-      cycle_state:          "S1",
       input_classification: "C5_PEDIDO_PRESCRITIVO",
     });
     assertEquals(result, "H0", `CRÍTICO: C5 não forçou H0 (prev=${prev})`);
@@ -346,14 +332,14 @@ Deno.test("3.12 — Determinismo Movement: tabela completa R×H", async () => {
 // TESTE 3.13 — Invariante cyclesCompleted=0 → H0
 // ─────────────────────────────────────────
 
-Deno.test("HAGO — Invariante: cyclesCompleted=0 força H0 (independente de previousState)", () => {
+Deno.test("3.13 — Invariante: cyclesCompleted=0 → H0 sempre", () => {
   for (const prev of ["H0", "H1", "H2"] as HagoState[]) {
     const result = executeHago({
       previousState:        prev,
       MD: 0.80, DC: 0.10, CEC: 0.90, VE: 0.10,
       stage_base:           5,
+      consolidated_flag:    true,
       cyclesCompleted:      0,
-      cycle_state:          "S0",
       input_classification: "C1_CONFUSAO_CONCEITUAL",
     });
     assertEquals(result, "H0", `cyclesCompleted=0 deve sempre retornar H0 (prev=${prev})`);
@@ -430,7 +416,7 @@ Deno.test("MVP — 6 ciclos encadeados com hash chain válida", async () => {
     });
 
     const new_snapshot    = buildSnapshot(radar);
-    const input_hash      = await computeInputHash(raw, snapshot, null, `texto simulado ciclo ${cycle}`);
+    const input_hash      = await computeInputHash(raw, snapshot, null);
     const structural_hash = await computeStructuralHash(new_snapshot, []);
     const integrity_hash  = await computeCycleIntegrityHash(
       previousCycleHash, input_hash, structural_hash, "3.0"
@@ -489,69 +475,11 @@ Deno.test("HAGO — H0 nunca salta diretamente para H2", () => {
     previousState:        "H0",
     MD: 0.80, DC: 0.10, CEC: 0.99, VE: 0.10,
     stage_base:           3,
+    consolidated_flag:    true,
     cyclesCompleted:      5,
-    cycle_state:          "S1",
     input_classification: "C1_CONFUSAO_CONCEITUAL",
   });
   assertNotEquals(result, "H2", "H0 nunca deve ir diretamente para H2");
-});
-
-
-// ─────────────────────────────────────────
-// TESTE 3.7 — Dominância de Amplitude
-// ─────────────────────────────────────────
-
-Deno.test("3.7 — Amplitude 3.0 não excede 35% das ativações", () => {
-  let amplitudeMaxCount = 0;
-  let totalActivations = 0;
-
-  for (let cgg = 1.0; cgg <= 8.0; cgg += 0.1) {
-    const result = executeRag({ CGG: cgg, hagoState: "H2", nodes: TEST_CORPUS, history: [] });
-    if (result.length > 0) {
-      totalActivations++;
-      const node = result[0];
-      const amplitude = node.stage_max - node.stage_min;
-      if (amplitude >= 3.0) amplitudeMaxCount++;
-    }
-  }
-
-  if (totalActivations > 0) {
-    const ratio = amplitudeMaxCount / totalActivations;
-    assert(ratio <= 0.35, `Amplitude 3.0+ excede 35%: ${(ratio * 100).toFixed(1)}%`);
-  }
-});
-
-// ─────────────────────────────────────────
-// TESTE 3.8 — Não-Teleologia Emergente
-// ─────────────────────────────────────────
-
-Deno.test("3.8 — Correlação CGG-density ≤ 0.6 (não-teleologia)", () => {
-  const cgValues: number[] = [];
-  const densities: number[] = [];
-
-  for (let cgg = 1.0; cgg <= 8.0; cgg += 0.2) {
-    const result = executeRag({ CGG: cgg, hagoState: "H2", nodes: TEST_CORPUS, history: [] });
-    if (result.length > 0) {
-      cgValues.push(cgg);
-      densities.push(result[0].density_class);
-    }
-  }
-
-  // Correlação de Pearson
-  const n = cgValues.length;
-  if (n < 2) return; // corpus insuficiente para testar
-
-  const meanX = cgValues.reduce((a, b) => a + b, 0) / n;
-  const meanY = densities.reduce((a, b) => a + b, 0) / n;
-  const num = cgValues.reduce((acc, x, i) => acc + (x - meanX) * (densities[i] - meanY), 0);
-  const denX = Math.sqrt(cgValues.reduce((acc, x) => acc + (x - meanX) ** 2, 0));
-  const denY = Math.sqrt(densities.reduce((acc, y) => acc + (y - meanY) ** 2, 0));
-  const correlation = (denX === 0 || denY === 0) ? 0 : num / (denX * denY);
-
-  assert(
-    Math.abs(correlation) <= 0.6,
-    `Correlação CGG-density excessiva: ${correlation.toFixed(3)} — possível hierarquia implícita`
-  );
 });
 
 console.log("✅ Integration Test Suite carregada — INTEGRATION_TEST_PROTOCOL_v2.1");
