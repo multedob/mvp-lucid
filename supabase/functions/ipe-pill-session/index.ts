@@ -35,6 +35,32 @@ const VALID_PILLS:   PillId[]    = ["PI", "PII", "PIII", "PIV", "PV", "PVI"];
 const VALID_MOMENTS: PillMoment[] = ["M1", "M2", "M3", "M4", "M5"];
 const ALL_PILLS:     PillId[]    = ["PI", "PII", "PIII", "PIV", "PV", "PVI"];
 
+// C5 — Validação de sequência de momentos
+// Regra: cada momento só pode ser enviado se o anterior já está registrado.
+// M1 → sempre aceito (primeiro momento)
+// M2 → requer M1 (m1_tempo_segundos não nulo)
+// M3 → requer M2 (m2_resposta não nulo)
+// M4 → requer M3 (m3_respostas não nulo)
+// M5 → requer M4 (completed_at não nulo = M4 persistido)
+function validateMomentSequence(
+  moment: PillMoment,
+  existing: Record<string, unknown> | null
+): string | null {
+  if (moment === "M1") return null; // sempre aceito
+  if (!existing) return `Momento ${moment} requer momento anterior — pill_response não iniciada`;
+
+  if (moment === "M2" && existing.m1_tempo_segundos == null)
+    return "M2 requer M1 registrado (m1_tempo_segundos ausente)";
+  if (moment === "M3" && !existing.m2_resposta)
+    return "M3 requer M2 registrado (m2_resposta ausente)";
+  if (moment === "M4" && !existing.m3_respostas)
+    return "M4 requer M3 registrado (m3_respostas ausente)";
+  if (moment === "M5" && !existing.completed_at)
+    return "M5 requer M4 registrado (completed_at ausente)";
+
+  return null;
+}
+
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
   if (req.method !== "POST")    return json({ error: "INVALID_INPUT", message: "Method not allowed" }, 400);
@@ -87,10 +113,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   const { data: existing } = await supabase
     .from("pill_responses")
-    .select("id")
+    .select("id, m1_tempo_segundos, m2_resposta, m3_respostas, m4_resposta, completed_at")
     .eq("ipe_cycle_id", ipe_cycle_id)
     .eq("pill_id", pill_id)
     .maybeSingle();
+
+  // C5 — Validação de sequência de momentos
+  // Garante que momentos dependentes só sejam aceitos após os anteriores estarem registrados.
+  // Sem isso, M4 pode ser enviado sem M3, corrompendo o corpus de scoring.
+  const sequenceError = validateMomentSequence(moment, existing ?? null);
+  if (sequenceError) {
+    return json({ error: "INVALID_INPUT", message: sequenceError }, 400);
+  }
 
   const pill_response_id: string = existing?.id ?? crypto.randomUUID();
 
