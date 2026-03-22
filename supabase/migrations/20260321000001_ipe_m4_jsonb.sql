@@ -7,6 +7,10 @@
 --   PV:  { percepcao, conhecimento_em_campo, presenca_para_outros } ← L4.3 corpus primário
 --   PII/PIII/PIV/PVI: { percepcao, presenca_para_outros }  ← L4.4 transversal
 -- Depende de: 20260321000000_ipe_schema.sql
+--
+-- AFC-PENDING C2/C3: PIPELINE_IMPLEMENTACAO_IPE_MVP v1.0 §3.1 declara m4_resposta TEXT.
+-- Esta migration corrige para JSONB com base nos PILL_I–VI_Prototipo v0.3.
+-- AFC formal deve atualizar PIPELINE §3.1 para declarar m4_resposta JSONB antes da Fase 3.
 -- ============================================================
 
 ALTER TABLE public.pill_responses
