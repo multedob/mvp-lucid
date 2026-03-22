@@ -177,8 +177,16 @@ function buildCorpusText(
 
 // ─────────────────────────────────────────
 // Validação de output do scoring
-// Fonte: PIPELINE §4.5
+// Fonte: PIPELINE §4.5 + SCORING_SPEC v1.3
+// C6: valida não apenas IL e FD, mas também faixa, status_sinal e GCC_por_corte
 // ─────────────────────────────────────────
+
+const VALID_FAIXAS      = new Set(["A", "B", "C", "D", "indeterminada"]);
+const VALID_STATUS      = new Set(["completo", "incompleto"]);
+const VALID_GCC         = new Set(["alto", "medio", "baixo", "insuficiente", "nao_aplicavel"]);
+const VALID_CORTE_DECS  = new Set(["SIM", "NÃO", "INDETERMINADO"]);
+const CORTES_ESPERADOS  = ["2_4", "4_6", "6_8"];
+
 interface ScoringOutput {
   sinais: Record<string, LinhaCorpus>;
   corpus_transversal?: Record<string, unknown>;
@@ -205,13 +213,44 @@ function validateScoringOutput(raw: string): ParseResult {
   }
 
   for (const [lineId, linha] of Object.entries(parsed.sinais)) {
+    // Validar IL
     const il = linha?.IL_sinal?.numerico;
     if (il !== null && il !== undefined && !IL_VALID_VALUES.has(il)) {
       return { success: false, reason: `il_out_of_range for ${lineId}: ${il}` };
     }
+
+    // Validar FD
     const fd = linha?.FD_linha;
     if (typeof fd !== "number" || fd < 0 || fd > 1) {
       return { success: false, reason: `fd_out_of_range for ${lineId}: ${fd}` };
+    }
+
+    // C6 — Validar faixa
+    const faixa = linha?.IL_sinal?.faixa;
+    if (faixa !== undefined && !VALID_FAIXAS.has(faixa as string)) {
+      return { success: false, reason: `faixa_inválida for ${lineId}: ${faixa}` };
+    }
+
+    // C6 — Validar status_sinal
+    const status = linha?.status_sinal;
+    if (status !== undefined && !VALID_STATUS.has(status as string)) {
+      return { success: false, reason: `status_sinal_inválido for ${lineId}: ${status}` };
+    }
+
+    // C6 — Validar GCC_por_corte (estrutura mínima se presente)
+    const gcc = linha?.IL_sinal?.cortes as Record<string, unknown> | undefined;
+    if (gcc) {
+      for (const corte of CORTES_ESPERADOS) {
+        const c = gcc[corte] as Record<string, unknown> | undefined;
+        if (c) {
+          if (!VALID_CORTE_DECS.has(c.decisao as string)) {
+            return { success: false, reason: `gcc_decisao_inválida for ${lineId} corte ${corte}: ${c.decisao}` };
+          }
+          if (!VALID_GCC.has(c.gcc as string)) {
+            return { success: false, reason: `gcc_valor_inválido for ${lineId} corte ${corte}: ${c.gcc}` };
+          }
+        }
+      }
     }
   }
 
