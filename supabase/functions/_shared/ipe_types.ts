@@ -178,7 +178,10 @@ export interface PillResponse {
   // Chaves e subchaves variam por Pill — ver M3ByPill acima
   m4_resposta: M4 | null;
   // JSONB: { percepcao, [pill_specific_field] } — ver M4ByPill acima
-  eco_text: string | null;  // M5: persistido para retomada de sessão (P3 do PIPELINE)
+  // NOTA AFC-PENDING C1/C4: eco_text não consta em PIPELINE v1.0 §3.1.
+  // Adição justificada por P3 (estado server-side) — necessário para retomada de sessão M5
+  // sem rechamar ipe-eco. AFC formal pendente de registro no PIPELINE antes de Fase 3.
+  eco_text: string | null;
   completed_at: string | null;
 }
 
@@ -523,59 +526,50 @@ export function validateM4(pillId: PillId, m4: Record<string, unknown>): string 
 
 // ─────────────────────────────────────────
 // 7. INTERFACE IPE → ENGINE HAGO
-// Fonte: PIPELINE §8.1 + lucid-engine/types.ts RadarInput
+// Fonte: PIPELINE_IMPLEMENTACAO_IPE_MVP v1.0 §5.3 + §8.1
 // ─────────────────────────────────────────
 
+// LuceRawInput — input da integração IPE → Engine HAGO (Fase 6)
+// CORREÇÃO B1: d1/d2/d3/d4 são escalares (médias por dimensão), não arrays de 4.
+// Fonte canônica: PIPELINE §5.3 — computeDimensions retorna number | null por dimensão.
+// O engine HAGO recebe as 4 médias dimensionais, não os 16 ILs individuais.
 export interface LuceRawInput {
-  d1: [number, number, number, number];
-  d2: [number, number, number, number];
-  d3: [number, number, number, number];
-  d4: [number, number, number, number];
+  d1: number | null;
+  d2: number | null;
+  d3: number | null;
+  d4: number | null;
   user_text: string;
 }
 
 // Conversão CanonicalILs → LuceRawInput
-// Fonte: PIPELINE §5.3 + §8.1
+// Fonte: PIPELINE §5.3
 // Comportamento:
-//   - Linhas null dentro de uma dimensão → substituídas pela média da dimensão
-//   - Dimensão com ZERO ILs válidos → substituída pela média global de todas as dimensões
-//   - Todas as 4 dimensões com ZERO ILs válidos → retorna null
-// Nota (R2.6): FD médio para gate IPE1→IPE2 é calculado em shouldRunIPE2 e também
-// retornado por ipe-scoring. Manter lógica centralizada em shouldRunIPE2.
+//   - Dimensão com ZERO ILs válidos → null
+//   - Se ≥2 nulls na mesma dimensão → confianca_por_dimensao = 'baixa' (flag externo)
+//   - Todas as 4 dimensões null → retorna null (inválido para o engine)
+// Nota: FD médio para gate IPE1→IPE2 é calculado em shouldRunIPE2.
+// Nota: Se qualquer dimensão null → flag 'dimensao_incompleta' antes de passar à Luce
+//       (responsabilidade do caller — ver PIPELINE §8.1)
 export function computeLuceInput(
   ils: CanonicalILs,
   user_text: string
 ): LuceRawInput | null {
-  const toValues = (a: ILValue, b: ILValue, c: ILValue, d: ILValue): number[] =>
-    [a, b, c, d].filter((v): v is number => v !== null);
-
-  const d1vals = toValues(ils.l1_1, ils.l1_2, ils.l1_3, ils.l1_4);
-  const d2vals = toValues(ils.l2_1, ils.l2_2, ils.l2_3, ils.l2_4);
-  const d3vals = toValues(ils.l3_1, ils.l3_2, ils.l3_3, ils.l3_4);
-  const d4vals = toValues(ils.l4_1, ils.l4_2, ils.l4_3, ils.l4_4);
-
-  const allVals = [...d1vals, ...d2vals, ...d3vals, ...d4vals];
-  if (allVals.length === 0) return null;
-
-  const globalAvg = allVals.reduce((s, v) => s + v, 0) / allVals.length;
-  const avg = (vals: number[]): number =>
-    vals.length > 0 ? vals.reduce((s, v) => s + v, 0) / vals.length : globalAvg;
-
-  const toQuad = (
-    a: ILValue, b: ILValue, c: ILValue, d: ILValue,
-    dimVals: number[]
-  ): [number, number, number, number] => {
-    const dimAvg = avg(dimVals);
-    return [a ?? dimAvg, b ?? dimAvg, c ?? dimAvg, d ?? dimAvg] as [number, number, number, number];
+  const avg = (values: (ILValue)[]): number | null => {
+    const valid = values.filter((v): v is number => v !== null);
+    return valid.length > 0
+      ? valid.reduce((s, v) => s + v, 0) / valid.length
+      : null;
   };
 
-  return {
-    d1: toQuad(ils.l1_1, ils.l1_2, ils.l1_3, ils.l1_4, d1vals),
-    d2: toQuad(ils.l2_1, ils.l2_2, ils.l2_3, ils.l2_4, d2vals),
-    d3: toQuad(ils.l3_1, ils.l3_2, ils.l3_3, ils.l3_4, d3vals),
-    d4: toQuad(ils.l4_1, ils.l4_2, ils.l4_3, ils.l4_4, d4vals),
-    user_text,
-  };
+  const d1 = avg([ils.l1_1, ils.l1_2, ils.l1_3, ils.l1_4]);
+  const d2 = avg([ils.l2_1, ils.l2_2, ils.l2_3, ils.l2_4]);
+  const d3 = avg([ils.l3_1, ils.l3_2, ils.l3_3, ils.l3_4]);
+  const d4 = avg([ils.l4_1, ils.l4_2, ils.l4_3, ils.l4_4]);
+
+  // Todas as dimensões null → sem dados suficientes para o engine
+  if (d1 === null && d2 === null && d3 === null && d4 === null) return null;
+
+  return { d1, d2, d3, d4, user_text };
 }
 
 // ─────────────────────────────────────────
