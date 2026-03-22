@@ -850,33 +850,56 @@ export function calcMaxPerguntasBloco(
   return max;
 }
 
-// ─────────────────────────────────────────
-// 12. FASE 3 — SCORING STUB (C5)
-// Para testes de sequência sem LLM real
-// SUBSTITUIR por ipe-scoring-block real antes do gate de saída Fase 3
-// ─────────────────────────────────────────
+// ───────────────────────────────────────── //
+// 12. FASE 3 — SCORING STUB (C5)           //
+// Para testes de sequência sem LLM real    //
+// SUBSTITUIR por ipe-scoring-block real    //
+// antes do gate de saída Fase 3            //
+// ───────────────────────────────────────── //
 
-export type StubPersona = 'P2-B' | 'P3-M' | 'P7-A';
+export type StubPersona = 'P2-B' | 'P3-M' | 'P7-A' | 'P5-B' | 'SC-OPD' | 'P4-C';
 
 // Canônicos aprovados por gate D1–D4 (PROJECT_MANIFEST v1.17.0)
+// P5-B: resistente nível baixo — todas Faixa A/B
+//   L2.3 e L3.4 null: linhas sem cobertura primária nas Pills de P5-B
+// SC-OPD: stress case opção D — corpus comprimido, Faixa B em tudo
+// P4-C: caminho limpo — Faixa C convergente, nenhum condicional ativa
 export const STUB_CANONICOS: Record<StubPersona, Partial<Record<LineId, ILValue>>> = {
   'P2-B': {
-    'L1.1': 3.5,  'L1.2': 3.5,  'L1.3': 2.0,  'L1.4': 3.5,
-    'L2.1': 3.5,  'L2.2': 3.5,  'L2.3': null, 'L2.4': 3.5,
-    'L3.1': 2.0,  'L3.2': 3.5,  'L3.3': 2.0,  'L3.4': null,
-    'L4.1': 3.5,  'L4.2': 3.5,  'L4.3': 3.5,  'L4.4': 2.0,
+    'L1.1': 3.5, 'L1.2': 3.5, 'L1.3': 2.0, 'L1.4': 3.5,
+    'L2.1': 3.5, 'L2.2': 3.5, 'L2.3': null, 'L2.4': 3.5,
+    'L3.1': 2.0, 'L3.2': 3.5, 'L3.3': 2.0, 'L3.4': null,
+    'L4.1': 3.5, 'L4.2': 3.5, 'L4.3': 3.5, 'L4.4': 2.0,
   },
   'P3-M': {
-    'L1.1': 4.5,  'L1.2': 4.5,  'L1.3': 4.5,  'L1.4': 4.5,
-    'L2.1': 4.5,  'L2.2': 4.5,  'L2.3': 4.5,  'L2.4': 4.5,
-    'L3.1': 4.5,  'L3.2': 4.5,  'L3.3': 5.5,  'L3.4': 5.5,
-    'L4.1': 4.5,  'L4.2': 4.5,  'L4.3': 3.5,  'L4.4': 4.5,
+    'L1.1': 4.5, 'L1.2': 4.5, 'L1.3': 4.5, 'L1.4': 4.5,
+    'L2.1': 4.5, 'L2.2': 4.5, 'L2.3': 4.5, 'L2.4': 4.5,
+    'L3.1': 4.5, 'L3.2': 4.5, 'L3.3': 5.5, 'L3.4': 5.5,
+    'L4.1': 4.5, 'L4.2': 4.5, 'L4.3': 3.5, 'L4.4': 4.5,
   },
   'P7-A': {
-    'L1.1': 7.5,  'L1.2': 7.5,  'L1.3': 6.5,  'L1.4': 7.5,
-    'L2.1': 6.5,  'L2.2': 7.5,  'L2.3': 6.5,  'L2.4': 7.5,
-    'L3.1': null, 'L3.2': 6.5,  'L3.3': 6.5,  'L3.4': 6.5,
-    'L4.1': 7.5,  'L4.2': 7.5,  'L4.3': 7.5,  'L4.4': 7.5,
+    'L1.1': 7.5, 'L1.2': 7.5, 'L1.3': 6.5, 'L1.4': 7.5,
+    'L2.1': 6.5, 'L2.2': 7.5, 'L2.3': 6.5, 'L2.4': 7.5,
+    'L3.1': null, 'L3.2': 6.5, 'L3.3': 6.5, 'L3.4': 6.5,
+    'L4.1': 7.5, 'L4.2': 7.5, 'L4.3': 7.5, 'L4.4': 7.5,
+  },
+  'P5-B': {
+    'L1.1': 2.0, 'L1.2': 2.0, 'L1.3': 2.0, 'L1.4': 2.0,
+    'L2.1': 2.0, 'L2.2': 2.0, 'L2.3': null, 'L2.4': 2.0,
+    'L3.1': 2.0, 'L3.2': 2.0, 'L3.3': 2.0, 'L3.4': null,
+    'L4.1': 2.0, 'L4.2': 2.0, 'L4.3': 2.0, 'L4.4': 2.0,
+  },
+  'SC-OPD': {
+    'L1.1': 3.5, 'L1.2': 3.5, 'L1.3': 3.5, 'L1.4': 3.5,
+    'L2.1': 3.5, 'L2.2': 3.5, 'L2.3': 3.5, 'L2.4': 3.5,
+    'L3.1': 3.5, 'L3.2': 3.5, 'L3.3': 3.5, 'L3.4': 3.5,
+    'L4.1': 3.5, 'L4.2': 3.5, 'L4.3': 3.5, 'L4.4': 3.5,
+  },
+  'P4-C': {
+    'L1.1': 5.5, 'L1.2': 5.5, 'L1.3': 5.5, 'L1.4': 5.5,
+    'L2.1': 5.5, 'L2.2': 5.5, 'L2.3': 5.5, 'L2.4': 5.5,
+    'L3.1': 5.5, 'L3.2': 5.5, 'L3.3': 5.5, 'L3.4': 5.5,
+    'L4.1': 5.5, 'L4.2': 5.5, 'L4.3': 5.5, 'L4.4': 5.5,
   },
 };
 
@@ -889,10 +912,11 @@ export function stubBlockScoring(
 ): BlockScoringOutput {
   const il = STUB_CANONICOS[persona][block_id] ?? null;
   const faixa: FaixaValue =
-    il === null  ? 'indeterminada' :
-    il <= 2.0    ? 'A' :
-    il <= 4.5    ? 'B' :
-    il <= 6.5    ? 'C' : 'D';
+    il === null ? 'indeterminada'
+    : il <= 2.0  ? 'A'
+    : il <= 4.5  ? 'B'
+    : il <= 6.5  ? 'C'
+    : 'D';
   return {
     block_id,
     il_canonico: il,
@@ -905,7 +929,10 @@ export function stubBlockScoring(
 
 // detectStubPersona — convenção de testes por sufixo no ipe_cycle_id
 export function detectStubPersona(ipe_cycle_id: string): StubPersona {
-  if (ipe_cycle_id.endsWith('-p2b')) return 'P2-B';
-  if (ipe_cycle_id.endsWith('-p7a')) return 'P7-A';
-  return 'P3-M';
+  if (ipe_cycle_id.endsWith('-p2b'))   return 'P2-B';
+  if (ipe_cycle_id.endsWith('-p7a'))   return 'P7-A';
+  if (ipe_cycle_id.endsWith('-p5b'))   return 'P5-B';
+  if (ipe_cycle_id.endsWith('-scopd')) return 'SC-OPD';
+  if (ipe_cycle_id.endsWith('-p4c'))   return 'P4-C';
+  return 'P3-M'; // default
 }
