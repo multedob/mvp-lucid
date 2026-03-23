@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
-import { callEdgeFunction } from '@/lib/api'
+import { callEdgeFunction, getCurrentUserVersion } from '@/lib/api'
 
 // ─────────────────────────────────────────
 // Types
@@ -59,6 +59,7 @@ export default function Reed() {
   const [sending, setSending] = useState(false)
   const [cycleId, setCycleId] = useState<string | null>(null)
   const [cycleNumber, setCycleNumber] = useState(1)
+  const [baseVersion, setBaseVersion] = useState<number | null>(null)
   const [canonicalILs, setCanonicalILs] = useState<CanonicalILs | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -92,6 +93,7 @@ export default function Reed() {
 
       setCycleId(cycle.id)
       setCycleNumber(cycle.cycle_number ?? 1)
+      setBaseVersion(await getCurrentUserVersion())
 
       // ILs canônicos do questionário
       const { data: qState } = await (supabase
@@ -139,14 +141,15 @@ export default function Reed() {
   // ─────────────────────────────────────
   async function sendToReed(
     cid: string,
-    cycleNum: number,
+    baseVer: number,
     ils: CanonicalILs,
-    userText: string
+    userText: string,
+    retryOnConflict = true
   ) {
     try {
-      const data = await callEdgeFunction('lucid-engine', {
+      const data = await callEdgeFunction<Record<string, unknown>>('lucid-engine', {
         ipe_cycle_id: cid,
-        base_version: cycleNum - 1,
+        base_version: baseVer,
         raw_input: {
           d1: ils.d1,
           d2: ils.d2,
@@ -156,9 +159,23 @@ export default function Reed() {
         },
       })
 
+      const nextVersion = data.current_version
+      if (typeof nextVersion === 'number') {
+        setBaseVersion(nextVersion)
+      }
+
       const text = extractResponseText(data)
       if (text) setMessages(prev => [...prev, { role: 'reed', text }])
-    } catch {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+
+      if (retryOnConflict && message.includes('VERSION_CONFLICT')) {
+        const freshVersion = await getCurrentUserVersion()
+        setBaseVersion(freshVersion)
+        await sendToReed(cid, freshVersion, ils, userText, false)
+        return
+      }
+
       setError('reed não respondeu. tenta de novo.')
     }
   }
@@ -167,7 +184,7 @@ export default function Reed() {
   // Enviar mensagem do usuário
   // ─────────────────────────────────────
   async function handleSend() {
-    if (!input.trim() || !cycleId || !canonicalILs || sending) return
+    if (!input.trim() || !cycleId || !canonicalILs || baseVersion === null || sending) return
 
     const userText = input.trim()
     setInput('')
@@ -175,7 +192,7 @@ export default function Reed() {
     setError(null)
 
     setMessages(prev => [...prev, { role: 'user', text: userText }])
-    await sendToReed(cycleId, cycleNumber, canonicalILs, userText)
+    await sendToReed(cycleId, baseVersion, canonicalILs, userText)
 
     setSending(false)
     setTimeout(() => inputRef.current?.focus(), 100)
@@ -297,7 +314,7 @@ export default function Reed() {
           <button
             className={`r-send-dot${input.trim() ? ' active' : ''}`}
             onClick={handleSend}
-            disabled={sending || !input.trim()}
+            disabled={sending || !input.trim() || baseVersion === null}
             aria-label="enviar"
           />
         </div>
