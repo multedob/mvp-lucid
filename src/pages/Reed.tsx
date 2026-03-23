@@ -1,234 +1,317 @@
 // src/pages/Reed.tsx
-import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { getToday } from "@/lib/api";
+// Reed = Luce (user-facing name = Reed, internal = lucid-engine)
+// Chama lucid-engine edge function — NÃO chama Anthropic diretamente
 
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { supabase } from '@/integrations/supabase/client'
+import { callEdgeFunction } from '@/lib/api'
+
+// ─────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────
 interface Message {
-  role: "reed" | "user";
-  text: string;
+  role: 'user' | 'reed'
+  text: string
 }
 
-interface PillEco {
-  pill_id: string;
-  eco_text: string;
+interface CanonicalILs {
+  d1: number[]
+  d2: number[]
+  d3: number[]
+  d4: number[]
 }
 
-const SYSTEM_PROMPT = `You are Reed. You read structure — patterns in how a person encounters decisions, relationships, transitions, and internal conflict.
+// ─────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────
+function extractILs(
+  resultados: Record<string, { il_canonico: number | null }>
+): CanonicalILs {
+  const get = (id: string) => resultados[id]?.il_canonico ?? 4.0
+  return {
+    d1: [get('L1.1'), get('L1.2'), get('L1.3'), get('L1.4')],
+    d2: [get('L2.4'), get('L2.1'), get('L2.2'), get('L2.3')],
+    d3: [get('L3.3'), get('L3.1'), get('L3.2'), get('L3.4')],
+    d4: [get('L4.1'), get('L4.2'), get('L4.3'), get('L4.4')],
+  }
+}
 
-Your role is to help the person see more clearly what they are experiencing. Not to analyze, not to teach, not to fix.
+function extractResponseText(data: unknown): string {
+  if (!data || typeof data !== 'object') return ''
+  const d = data as Record<string, unknown>
+  if (typeof d.response_text === 'string') return d.response_text
+  if (Array.isArray(d.content)) {
+    return d.content
+      .filter((c: unknown) => (c as Record<string, unknown>).type === 'text')
+      .map((c: unknown) => (c as Record<string, unknown>).text as string)
+      .join('')
+  }
+  return ''
+}
 
-VOICE
-- Clear, calm, slightly warm
-- Reflective, not analytical  
-- Never diagnostic, never superior
-- Never prescriptive
-
-LANGUAGE
-- Always respond in the same language the user wrote in
-- Use simple, everyday language
-- Write in natural, connected sentences
-- No bullet points. No numbered lists. No headers.
-- Maximum 2–3 short paragraphs per response
-
-RELATIONAL DISCIPLINE
-- Do not interpret more than the user offered
-- Do not offer reassurance or close a tension prematurely
-- When the user asks a question about their own character, stay with what they said
-- Do not end with a question unless you genuinely need clarification
-- Silence or a precise observation is preferable to a forced question`;
-
+// ─────────────────────────────────────────
+// Component
+// ─────────────────────────────────────────
 export default function Reed() {
-  const navigate = useNavigate();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [cycleDisplay, setCycleDisplay] = useState("");
-  const [ecos, setEcos] = useState<PillEco[]>([]);
-  const [ready, setReady] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate()
+  const bottomRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  useEffect(() => { init(); }, []);
+  const [messages, setMessages] = useState<Message[]>([])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [sending, setSending] = useState(false)
+  const [cycleId, setCycleId] = useState<string | null>(null)
+  const [cycleNumber, setCycleNumber] = useState(1)
+  const [canonicalILs, setCanonicalILs] = useState<CanonicalILs | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
+  useEffect(() => { init() }, [])
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
-  const init = async () => {
+  // ─────────────────────────────────────
+  // Init: carregar ciclo, ILs e histórico
+  // ─────────────────────────────────────
+  async function init() {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return navigate("/auth");
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { navigate('/auth'); return }
 
-      // Ciclo mais recente
       const { data: cycle } = await supabase
-        .from("ipe_cycles")
-        .select("id, cycle_number, started_at")
-        .eq("user_id", session.user.id)
-        .order("cycle_number", { ascending: false })
+        .from('ipe_cycles')
+        .select('id, cycle_number, status')
+        .eq('user_id', session.user.id)
+        .in('status', ['complete', 'questionnaire'])
+        .order('created_at', { ascending: false })
         .limit(1)
-        .maybeSingle();
+        .maybeSingle()
 
-      if (cycle) {
-        const d = new Date(cycle.started_at);
-        const code = String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0");
-        setCycleDisplay(String(cycle.cycle_number).padStart(2, "0") + " · " + code);
+      if (!cycle) { navigate('/home'); return }
 
-        // Carregar ecos para contexto
-        const { data: ecoData } = await supabase
-          .from("pill_responses")
-          .select("pill_id, eco_text")
-          .eq("ipe_cycle_id", cycle.id)
-          .not("eco_text", "is", null);
+      setCycleId(cycle.id)
+      setCycleNumber(cycle.cycle_number ?? 1)
 
-        if (ecoData) setEcos(ecoData);
+      // ILs canônicos do questionário
+      const { data: qState } = await supabase
+        .from('questionnaire_state')
+        .select('resultados_por_bloco')
+        .eq('ipe_cycle_id', cycle.id)
+        .maybeSingle()
+
+      const resultados = (qState?.resultados_por_bloco ?? {}) as Record<
+        string,
+        { il_canonico: number | null }
+      >
+      const ils = extractILs(resultados)
+      setCanonicalILs(ils)
+
+      // Histórico de interações do ciclo
+      const { data: interactions } = await supabase
+        .from('interactions')
+        .select('user_text, response_text, created_at')
+        .eq('ipe_cycle_id', cycle.id)
+        .order('created_at', { ascending: true })
+
+      if (interactions && interactions.length > 0) {
+        const history: Message[] = interactions
+          .flatMap(i => [
+            { role: 'user' as const, text: i.user_text ?? '' },
+            { role: 'reed' as const, text: i.response_text ?? '' },
+          ])
+          .filter(m => m.text)
+        setMessages(history)
+        setLoading(false)
+      } else {
+        // Primeira vez: abertura sem texto do usuário
+        setLoading(false)
+        await sendToReed(cycle.id, cycle.cycle_number ?? 1, ils, '')
       }
 
-      setMessages([{
-        role: "reed",
-        text: "hi.\n\ni read structure. i don't interpret who you are.\n\nwhat brought you here today?",
-      }]);
-      setReady(true);
-    } catch (err) {
-      console.error("Reed init:", err);
-      setMessages([{ role: "reed", text: "hi.\n\nwhat's on your mind?" }]);
-      setReady(true);
+      setTimeout(() => inputRef.current?.focus(), 200)
+    } catch {
+      setError('algo deu errado ao carregar.')
+      setLoading(false)
     }
-  };
+  }
 
-  const buildContext = () => {
-    if (ecos.length === 0) return "";
-    return "\n\nContext from the user's completed pills:\n" +
-      ecos.map(e => `[${e.pill_id}] ${e.eco_text}`).join("\n\n");
-  };
-
-  const send = async () => {
-    const text = input.trim();
-    if (!text || loading) return;
-
-    const userMsg: Message = { role: "user", text };
-    const updatedMessages = [...messages, userMsg];
-    setMessages(updatedMessages);
-    setInput("");
-    if (textareaRef.current) textareaRef.current.style.height = "auto";
-    setLoading(true);
-
+  // ─────────────────────────────────────
+  // Chamar lucid-engine
+  // ─────────────────────────────────────
+  async function sendToReed(
+    cid: string,
+    cycleNum: number,
+    ils: CanonicalILs,
+    userText: string
+  ) {
     try {
-      const history = updatedMessages.map(m => ({
-        role: m.role === "reed" ? "assistant" : "user",
-        content: m.text,
-      }));
+      const data = await callEdgeFunction('lucid-engine', {
+        ipe_cycle_id: cid,
+        base_version: cycleNum - 1,
+        raw_input: {
+          d1: ils.d1,
+          d2: ils.d2,
+          d3: ils.d3,
+          d4: ils.d4,
+          user_text: userText,
+        },
+      })
 
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 512,
-          system: SYSTEM_PROMPT + buildContext(),
-          messages: history,
-        }),
-      });
-
-      const data = await response.json();
-      const replyText = data.content?.[0]?.text || "···";
-
-      setMessages(prev => [...prev, { role: "reed", text: replyText }]);
-    } catch (_) {
-      setMessages(prev => [...prev, {
-        role: "reed",
-        text: "something didn't connect. try again.",
-      }]);
+      const text = extractResponseText(data)
+      if (text) setMessages(prev => [...prev, { role: 'reed', text }])
+    } catch {
+      setError('reed não respondeu. tenta de novo.')
     }
-    setLoading(false);
-  };
+  }
 
-  const handleKey = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      send();
-    }
-  };
+  // ─────────────────────────────────────
+  // Enviar mensagem do usuário
+  // ─────────────────────────────────────
+  async function handleSend() {
+    if (!input.trim() || !cycleId || !canonicalILs || sending) return
 
+    const userText = input.trim()
+    setInput('')
+    setSending(true)
+    setError(null)
+
+    setMessages(prev => [...prev, { role: 'user', text: userText }])
+    await sendToReed(cycleId, cycleNumber, canonicalILs, userText)
+
+    setSending(false)
+    setTimeout(() => inputRef.current?.focus(), 100)
+  }
+
+  const cycleDisplay = `C${cycleNumber}`
+
+  // ─────────────────────────────────────
+  // Render: loading
+  // ─────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="r-screen" style={{ justifyContent: 'center', alignItems: 'center' }}>
+        <span className="r-muted" style={{ fontSize: '0.75rem', letterSpacing: '0.08em' }}>
+          carregando
+        </span>
+      </div>
+    )
+  }
+
+  // ─────────────────────────────────────
+  // Render: chat
+  // ─────────────────────────────────────
   return (
     <div className="r-screen">
-      <div className="r-header">
-        <span className="r-header-label">_rdwth · reed</span>
-        <span className="r-header-date">{getToday()}</span>
-      </div>
+
+      {/* header */}
+      <header className="r-header">
+        <span className="r-wordmark">_rdwth</span>
+        <nav className="r-nav">
+          <button onClick={() => navigate('/home')} className="r-nav">home</button>
+          <button onClick={() => navigate('/context')} className="r-nav">context</button>
+        </nav>
+      </header>
+
       <div className="r-line" />
 
-      <div className="r-scroll" style={{ padding: "24px 24px 8px", display: "flex", flexDirection: "column", gap: 20 }}>
-        {messages.map((msg, i) => (
-          <div key={i} style={{ display: "flex", flexDirection: "column", gap: msg.role === "reed" ? 8 : 0 }}>
-            {msg.role === "reed" && (
-              <div className="r-reed-sig">
-                {cycleDisplay ? `REED · ${cycleDisplay}` : "REED ·"}
-              </div>
-            )}
-            <div style={{
-              fontFamily: "var(--r-font-ed)",
-              fontWeight: msg.role === "reed" ? 800 : 300,
-              fontSize: msg.role === "reed" ? 15 : 14,
-              lineHeight: 1.7,
-              color: msg.role === "reed" ? "var(--r-text)" : "var(--r-dim)",
-              whiteSpace: "pre-line",
-              paddingLeft: msg.role === "user" ? 16 : 0,
-              borderLeft: msg.role === "user" ? "1px solid var(--r-ghost)" : "none",
-            }}>
-              {msg.text}
+      {/* mensagens */}
+      <main
+        className="r-scroll"
+        style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2rem' }}
+      >
+        {messages.map((msg, i) =>
+          msg.role === 'reed' ? (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <span
+                className="r-reed-sig"
+                style={{ fontSize: '0.65rem', opacity: 0.4, marginBottom: '0.25rem' }}
+              >
+                REED · {cycleDisplay}
+              </span>
+              <p className="r-narrative" style={{ whiteSpace: 'pre-wrap' }}>
+                {msg.text}
+              </p>
             </div>
-          </div>
-        ))}
+          ) : (
+            <p
+              key={i}
+              className="r-sub"
+              style={{
+                alignSelf: 'flex-end',
+                maxWidth: '80%',
+                textAlign: 'right',
+                opacity: 0.65,
+                whiteSpace: 'pre-wrap',
+              }}
+            >
+              {msg.text}
+            </p>
+          )
+        )}
 
-        {loading && (
-          <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10, color: "var(--r-ghost)", letterSpacing: "0.06em" }}>
-            ···
+        {/* typing indicator */}
+        {sending && (
+          <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
+            {[0, 1, 2].map(i => (
+              <span
+                key={i}
+                style={{
+                  width: 4, height: 4, borderRadius: '50%',
+                  background: 'var(--r-muted)',
+                  animation: `rdwth-pulse 1.2s ease-in-out ${i * 0.2}s infinite`,
+                }}
+              />
+            ))}
           </div>
         )}
-        <div ref={bottomRef} />
-      </div>
 
+        {error && (
+          <p className="r-sub" style={{ color: 'var(--r-accent)', opacity: 0.8 }}>
+            {error}
+          </p>
+        )}
+
+        <div ref={bottomRef} />
+      </main>
+
+      {/* input */}
       <div className="r-line" />
-      <div style={{ padding: "12px 24px 8px", flexShrink: 0 }}>
+      <div style={{ padding: '1rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         <div className="r-input-wrap">
           <textarea
-            ref={textareaRef}
+            ref={inputRef}
             className="r-textarea"
             value={input}
-            onChange={e => {
-              setInput(e.target.value);
-              if (textareaRef.current) {
-                textareaRef.current.style.height = "auto";
-                textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault()
+                handleSend()
               }
             }}
-            onKeyDown={handleKey}
-            placeholder="anything"
-            rows={1}
-            disabled={!ready || loading}
+            rows={2}
+            disabled={sending || loading}
+            style={{ resize: 'none' }}
           />
-          <div
-            className={`r-send-dot${input.trim() ? " active" : ""}`}
-            onClick={send}
-            style={{ cursor: input.trim() ? "pointer" : "default" }}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            className="r-send-dot"
+            onClick={handleSend}
+            disabled={sending || !input.trim()}
+            aria-label="enviar"
           />
         </div>
       </div>
 
-      <div className="r-line" />
-      <div className="r-nav">
-        {(["pills", "context", "reed"] as const).map(tab => (
-          <span key={tab} className={`r-nav-item${tab === "reed" ? " active" : ""}`}
-            onClick={() => {
-              if (tab === "pills") navigate("/home");
-              if (tab === "context") navigate("/context");
-            }}>
-            {tab}
-          </span>
-        ))}
-        <div className="r-nav-dot" />
-      </div>
+      <style>{`
+        @keyframes rdwth-pulse {
+          0%, 80%, 100% { opacity: 0.25; transform: scale(0.8); }
+          40% { opacity: 0.8; transform: scale(1.1); }
+        }
+      `}</style>
     </div>
-  );
+  )
 }
