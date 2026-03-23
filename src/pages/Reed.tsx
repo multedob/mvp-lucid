@@ -124,9 +124,8 @@ export default function Reed() {
         setMessages(history)
         setLoading(false)
       } else {
-        // Primeira vez: abertura sem texto do usuário
+        // Primeira vez: sem histórico, apenas mostra o chat vazio
         setLoading(false)
-        await sendToReed(cycle.id, cycle.cycle_number ?? 1, ils, '')
       }
 
       setTimeout(() => inputRef.current?.focus(), 200)
