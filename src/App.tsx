@@ -8,9 +8,11 @@ import { supabase } from "@/integrations/supabase/client";
 import Splash from "./pages/Splash";
 import Auth from "./pages/Auth";
 import Home from "./pages/Home";
+import OnboardingLetter from "./pages/OnboardingLetter";
 import PillFlow from "./pages/pill/PillFlow";
 import Context from "./pages/Context";
 import Reed from "./pages/Reed";
+import Questionnaire from "./pages/Questionnaire";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,8 +49,10 @@ function RootRedirect() {
     });
   }, []);
   if (checking) return null;
-  if (authed) return <Navigate to="/home" replace />;
-  return <Splash />;
+  if (!authed) return <Splash />;
+  const seen = localStorage.getItem("rdwth_letter_seen");
+  if (!seen) return <Navigate to="/letter" replace />;
+  return <Navigate to="/home" replace />;
 }
 
 const App = () => (
@@ -58,15 +62,17 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<RootRedirect />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-          <Route path="/pill/:pillId" element={<ProtectedRoute><PillFlow /></ProtectedRoute>} />
-          <Route path="/context" element={<ProtectedRoute><Context /></ProtectedRoute>} />
-          <Route path="/reed" element={<ProtectedRoute><Reed /></ProtectedRoute>} />
-          <Route path="/test" element={<Navigate to="/home" replace />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <Route path="/" element={<RootRedirect />} />
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/letter" element={<OnboardingLetter />} />
+        <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+        <Route path="/pill/:pillId" element={<ProtectedRoute><PillFlow /></ProtectedRoute>} />
+        <Route path="/questionnaire" element={<ProtectedRoute><Questionnaire /></ProtectedRoute>} />
+        <Route path="/context" element={<ProtectedRoute><Context /></ProtectedRoute>} />
+        <Route path="/reed" element={<ProtectedRoute><Reed /></ProtectedRoute>} />
+        <Route path="/test" element={<Navigate to="/home" replace />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
