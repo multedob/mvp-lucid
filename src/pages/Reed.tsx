@@ -184,7 +184,7 @@ export default function Reed() {
   // Enviar mensagem do usuário
   // ─────────────────────────────────────
   async function handleSend() {
-    if (!input.trim() || !cycleId || !canonicalILs || sending) return
+    if (!input.trim() || !cycleId || !canonicalILs || baseVersion === null || sending) return
 
     const userText = input.trim()
     setInput('')
@@ -192,7 +192,7 @@ export default function Reed() {
     setError(null)
 
     setMessages(prev => [...prev, { role: 'user', text: userText }])
-    await sendToReed(cycleId, cycleNumber, canonicalILs, userText)
+    await sendToReed(cycleId, baseVersion, canonicalILs, userText)
 
     setSending(false)
     setTimeout(() => inputRef.current?.focus(), 100)
