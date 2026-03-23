@@ -80,10 +80,10 @@ export default function Reed() {
       // Tenta sessão autenticada primeiro; se não houver, usa query aberta (dev)
       const { data: { session } } = await supabase.auth.getSession()
 
-      let cycleQuery = supabase
-        .from('ipe_cycles')
+      let cycleQuery = (supabase
+        .from('ipe_cycles') as any)
         .select('id, cycle_number, status')
-        .in('status', ['complete', 'questionnaire'])
+        .in('status', ['complete', 'questionnaire', 'pills'])
         .order('created_at', { ascending: false })
         .limit(1)
 
