@@ -199,12 +199,6 @@ export default function Questionnaire() {
         .eq('ipe_cycle_id', cid)
         .single()
 
-      const { data: cycle } = await supabase
-        .from('ipe_cycles')
-        .select('cycle_number')
-        .eq('id', cid)
-        .single()
-
       // Montar raw_input a partir dos ILs canônicos
       const resultados = (qState?.resultados_por_bloco ?? {}) as Record<string, { il_canonico: number | null }>
       const d1 = extractDimensionILs(resultados, ['L1.1', 'L1.2', 'L1.3', 'L1.4'])
@@ -212,14 +206,31 @@ export default function Questionnaire() {
       const d3 = extractDimensionILs(resultados, ['L3.3', 'L3.1', 'L3.2', 'L3.4'])
       const d4 = extractDimensionILs(resultados, ['L4.1', 'L4.2', 'L4.3', 'L4.4'])
 
-      await callEdgeFunction('lucid-engine', {
-        ipe_cycle_id: cid,
-        base_version: (cycle?.cycle_number ?? 1) - 1,
-        raw_input: {
-          d1, d2, d3, d4,
-          user_text: 'questionário concluído',
-        },
-      })
+      let baseVersion = await getCurrentUserVersion()
+
+      try {
+        await callEdgeFunction('lucid-engine', {
+          ipe_cycle_id: cid,
+          base_version: baseVersion,
+          raw_input: {
+            d1, d2, d3, d4,
+            user_text: 'questionário concluído',
+          },
+        })
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        if (!message.includes('VERSION_CONFLICT')) throw err
+
+        baseVersion = await getCurrentUserVersion()
+        await callEdgeFunction('lucid-engine', {
+          ipe_cycle_id: cid,
+          base_version: baseVersion,
+          raw_input: {
+            d1, d2, d3, d4,
+            user_text: 'questionário concluído',
+          },
+        })
+      }
 
       navigate('/reed')
     } catch (e) {
