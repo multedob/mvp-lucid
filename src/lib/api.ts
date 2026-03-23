@@ -41,3 +41,28 @@ export function getToday(): string {
     String(d.getDate()).padStart(2, "0")
   );
 }
+
+export async function getCurrentUserVersion(): Promise<number> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("no session");
+
+  const { data, error } = await (supabase.from("users") as any)
+    .select("version")
+    .eq("id", session.user.id)
+    .maybeSingle();
+
+  if (error) throw new Error(`failed to get user version: ${error.message}`);
+
+  if (!data) {
+    const { error: insertError } = await (supabase.from("users") as any)
+      .insert({ id: session.user.id, version: 0 });
+
+    if (insertError) {
+      throw new Error(`failed to init user version: ${insertError.message}`);
+    }
+
+    return 0;
+  }
+
+  return typeof data.version === "number" ? data.version : 0;
+}

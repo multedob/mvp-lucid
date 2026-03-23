@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
-import { callEdgeFunction } from '@/lib/api'
+import { callEdgeFunction, getCurrentUserVersion } from '@/lib/api'
 
 // ─────────────────────────────────────────
 // Types
