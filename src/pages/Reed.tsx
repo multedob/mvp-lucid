@@ -84,7 +84,7 @@ export default function Reed() {
         .from('ipe_cycles') as any)
         .select('id, cycle_number, status')
         .in('status', ['complete', 'questionnaire', 'pills'])
-        .order('created_at', { ascending: false })
+        .order('cycle_number', { ascending: false })
         .limit(1)
 
       if (session?.user?.id) {
