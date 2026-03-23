@@ -40,13 +40,8 @@ function extractILs(
 function extractResponseText(data: unknown): string {
   if (!data || typeof data !== 'object') return ''
   const d = data as Record<string, unknown>
+  if (typeof d.llm_response === 'string') return d.llm_response
   if (typeof d.response_text === 'string') return d.response_text
-  if (Array.isArray(d.content)) {
-    return d.content
-      .filter((c: unknown) => (c as Record<string, unknown>).type === 'text')
-      .map((c: unknown) => (c as Record<string, unknown>).text as string)
-      .join('')
-  }
   return ''
 }
 
