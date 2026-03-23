@@ -99,8 +99,8 @@ export default function Reed() {
       setCycleNumber(cycle.cycle_number ?? 1)
 
       // ILs canônicos do questionário
-      const { data: qState } = await supabase
-        .from('questionnaire_state')
+      const { data: qState } = await (supabase
+        .from('questionnaire_state') as any)
         .select('resultados_por_bloco')
         .eq('ipe_cycle_id', cycle.id)
         .maybeSingle()
