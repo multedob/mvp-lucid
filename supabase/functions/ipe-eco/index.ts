@@ -313,16 +313,18 @@ function getFallbackEco(lang: "pt" | "en"): string {
 // PERSISTÊNCIA COM DEGRADAÇÃO GRACIOSA
 // Cada operação tratada independentemente — falha de audit não bloqueia eco.
 // ─────────────────────────────────────────
+// deno-lint-ignore no-explicit-any
 async function persistAudit(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   payload: Record<string, unknown>
 ): Promise<void> {
   const { error } = await supabase.from("scoring_audit").insert(payload);
   if (error) console.error("ECO_AUDIT_INSERT_ERROR:", error);
 }
 
+// deno-lint-ignore no-explicit-any
 async function persistEcoText(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   ipe_cycle_id: string,
   pill_id: string,
   eco_text: string
