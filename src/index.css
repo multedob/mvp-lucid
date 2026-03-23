@@ -2,104 +2,460 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
+/* ─── shadcn vars — NÃO ALTERAR — usadas pelo Auth e componentes UI ── */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
+    --background: 0 0% 98%;
+    --foreground: 20 6% 8%;
+    --card: 0 0% 98%;
+    --card-foreground: 20 6% 8%;
+    --popover: 0 0% 98%;
+    --popover-foreground: 20 6% 8%;
+    --primary: 20 6% 8%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 30 5% 92%;
+    --secondary-foreground: 20 6% 8%;
+    --muted: 30 5% 92%;
+    --muted-foreground: 20 4% 55%;
+    --accent: 30 5% 92%;
+    --accent-foreground: 20 6% 8%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 30 8% 88%;
+    --input: 30 8% 88%;
+    --ring: 20 6% 8%;
     --radius: 0.5rem;
-
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
-
     --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
-
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-
     --primary: 210 40% 98%;
     --primary-foreground: 222.2 47.4% 11.2%;
-
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
-
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
-
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
-
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
   }
+
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground; }
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
+/* ─── _rdwth design system — prefixo --r- para não colidir com shadcn ── */
 
-  body {
-    @apply bg-background text-foreground;
-  }
+:root {
+  /* backgrounds */
+  --r-bg:       #FAFAF9;
+  --r-bg-dark:  #121214;
+
+  /* accent */
+  --r-accent:   #C04A30;
+  --r-teal:     #1A9FAA;
+
+  /* text hierarchy */
+  --r-text:     #1A1410;
+  --r-text-dk:  #FAFAF9;
+  --r-muted:    #B8B0A8;
+  --r-muted-dk: #585860;
+  --r-ghost:    #C8C0B8;
+  --r-ghost-dk: #2A2A32;
+  --r-dim:      #8A8078;
+
+  /* fonts */
+  --r-font-sys:  'IBM Plex Mono', monospace;
+  --r-font-ed:   'Urbanist', sans-serif;
+  --r-font-mark: 'VT323', monospace;
+}
+
+/* ─── base ──────────────────────────────────────────────────────── */
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: var(--r-font-sys);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  width: 100%;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── screen shell ──────────────────────────────────────────────── */
+/* overflow não é hidden — permite teclado mobile */
+
+.r-screen {
+  width: 100%;
+  min-height: 100svh;
+  height: 100svh;
+  background: var(--r-bg);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--r-font-sys);
+  position: relative;
+}
+
+.r-line {
+  height: 0.5px;
+  background: var(--r-accent);
+  opacity: 0.2;
+  flex-shrink: 0;
+}
+
+/* ─── header ────────────────────────────────────────────────────── */
+
+.r-header {
+  padding: 18px 24px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.r-header-label {
+  font-family: var(--r-font-sys);
+  font-weight: 300;
+  font-size: 10px;
+  color: var(--r-muted);
+  letter-spacing: 0.08em;
+}
+
+.r-header-date {
+  font-family: var(--r-font-sys);
+  font-size: 9px;
+  color: var(--r-ghost);
+  letter-spacing: 0.06em;
+}
+
+/* ─── footer ────────────────────────────────────────────────────── */
+
+.r-footer {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.r-footer-back {
+  font-family: var(--r-font-sys);
+  font-weight: 300;
+  font-size: 13px;
+  color: var(--r-muted);
+  cursor: pointer;
+  transition: color 0.15s;
+  user-select: none;
+}
+
+.r-footer-sep {
+  font-family: var(--r-font-sys);
+  font-size: 11px;
+  color: #D8D2CC;
+}
+
+.r-footer-action {
+  font-family: var(--r-font-sys);
+  font-weight: 300;
+  font-size: 11px;
+  color: var(--r-muted);
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: color 0.15s;
+  user-select: none;
+}
+
+.r-footer-back:active,
+.r-footer-action:active { color: var(--r-accent); }
+
+.r-footer-ethics {
+  font-family: var(--r-font-sys);
+  font-weight: 300;
+  font-size: 9px;
+  color: var(--r-ghost);
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  margin-left: auto;
+  user-select: none;
+}
+
+/* ─── nav bar ───────────────────────────────────────────────────── */
+
+.r-nav {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 28px;
+  flex-shrink: 0;
+}
+
+.r-nav-item {
+  font-family: var(--r-font-sys);
+  font-weight: 300;
+  font-size: 11px;
+  color: var(--r-muted);
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  user-select: none;
+}
+
+.r-nav-item.active {
+  font-weight: 400;
+  color: var(--r-accent);
+}
+
+.r-nav-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  border: 1px solid var(--r-ghost);
+  background: transparent;
+  cursor: pointer;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* ─── scroll area ───────────────────────────────────────────────── */
+
+.r-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.r-scroll::-webkit-scrollbar { display: none; }
+
+/* ─── wordmark ──────────────────────────────────────────────────── */
+
+.r-wordmark {
+  font-family: var(--r-font-mark);
+  font-size: 52px;
+  letter-spacing: 0.10em;
+  line-height: 1;
+  color: var(--r-text);
+}
+
+/* ─── editorial typography ──────────────────────────────────────── */
+
+.r-impact {
+  font-family: var(--r-font-ed);
+  font-weight: 800;
+  font-size: 22px;
+  line-height: 1.55;
+  color: var(--r-text);
+  letter-spacing: -0.01em;
+}
+
+.r-narrative {
+  font-family: var(--r-font-ed);
+  font-weight: 800;
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--r-text);
+  letter-spacing: 0.01em;
+}
+
+.r-question {
+  font-family: var(--r-font-ed);
+  font-weight: 800;
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--r-text);
+}
+
+.r-sub {
+  font-family: var(--r-font-ed);
+  font-weight: 300;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--r-ghost);
+  line-height: 1.6;
+}
+
+/* ─── tension label ─────────────────────────────────────────────── */
+
+.r-tension {
+  font-family: var(--r-font-sys);
+  font-weight: 300;
+  font-size: 9px;
+  color: var(--r-accent);
+  letter-spacing: 0.12em;
+  opacity: 0.6;
+}
+
+/* ─── reed signature ─────────────────────────────────────────────── */
+
+.r-reed-sig {
+  font-family: var(--r-font-sys);
+  font-weight: 300;
+  font-size: 8px;
+  color: var(--r-accent);
+  letter-spacing: 0.14em;
+  opacity: 0.6;
+}
+
+/* ─── invisible textarea ────────────────────────────────────────── */
+
+.r-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 0.5px solid var(--r-ghost);
+  padding-bottom: 14px;
+}
+
+.r-textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  overflow: hidden;
+  font-family: var(--r-font-ed);
+  font-weight: 300;
+  font-size: 14px;
+  color: var(--r-text);
+  letter-spacing: 0.01em;
+  line-height: 1.6;
+  padding: 0;
+  -webkit-appearance: none;
+}
+
+.r-textarea::placeholder { color: var(--r-ghost); }
+
+.r-send-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--r-ghost);
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.r-send-dot.active {
+  background: var(--r-accent);
+  border-color: var(--r-accent);
+}
+
+/* ─── pill list ─────────────────────────────────────────────────── */
+
+.r-list-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.r-list-bar {
+  width: 1px;
+  height: 12px;
+  background: var(--r-ghost);
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.r-list-bar.done   { background: var(--r-accent); }
+.r-list-bar.active { background: var(--r-accent); opacity: 0.4; }
+
+.r-list-label {
+  font-family: var(--r-font-sys);
+  font-weight: 300;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--r-dim);
+  transition: color 0.2s;
+}
+
+.r-list-label.active {
+  font-weight: 400;
+  color: var(--r-text);
+}
+
+/* ─── scale (régua vertical) ────────────────────────────────────── */
+
+.r-scale-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1px solid var(--r-ghost);
+  background: var(--r-bg);
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.r-scale-dot.selected {
+  width: 9px;
+  height: 9px;
+  background: var(--r-accent);
+  border-color: var(--r-accent);
+}
+
+/* ─── choice options ────────────────────────────────────────────── */
+
+.r-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.r-choice-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  border: 1px solid var(--r-ghost);
+  background: transparent;
+  flex-shrink: 0;
+  margin-top: 5px;
+  transition: all 0.2s;
+}
+
+.r-choice-dot.selected {
+  width: 8px;
+  height: 8px;
+  background: var(--r-accent);
+  border-color: var(--r-accent);
+  margin-top: 4px;
+}
+
+.r-choice-text {
+  font-family: var(--r-font-ed);
+  font-weight: 300;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--r-dim);
+  transition: all 0.2s;
+}
+
+.r-choice-text.selected {
+  font-weight: 800;
+  color: var(--r-text);
 }
