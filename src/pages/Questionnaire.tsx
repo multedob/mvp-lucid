@@ -71,7 +71,7 @@ export default function Questionnaire() {
         .select('id, status')
         .eq('user_id', session.user.id)
         .in('status', ['questionnaire', 'pills'])
-        .order('created_at', { ascending: false })
+        .order('cycle_number', { ascending: false })
         .limit(1)
         .maybeSingle()
 
