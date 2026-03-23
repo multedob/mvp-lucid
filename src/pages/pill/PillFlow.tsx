@@ -11,7 +11,7 @@ type Moment = "M1" | "M2" | "M3_1" | "M3_2" | "M3_3" | "M4" | "M5";
 interface State {
   pillId: PillId;
   moment: Moment;
-  ipeCycleId: string;
+  ipeCycleId: string
   cycleDisplay: string;
   pillResponseId: string | null;
   m1TimerStart: number;
@@ -297,7 +297,12 @@ export default function PillFlow() {
     try {
       await callEdgeFunction("ipe-pill-session", {
         ipe_cycle_id: state.ipeCycleId, pill_id: state.pillId, moment: "M4",
-        payload: { m4: { percepcao: state.m4Input, presenca_deslocamento: state.m4Input } },
+        payload: { m4: (() => {
+      const p = state.m4Input;
+      if (state.pillId === "PI")  return { percepcao: p, presenca_deslocamento: p };
+      if (state.pillId === "PV")  return { percepcao: p, conhecimento_em_campo: p, presenca_para_outros: p };
+      return { percepcao: p, presenca_para_outros: p };
+    })() },
       });
       const eco = await callEdgeFunction<{ eco_text: string }>("ipe-eco", {
         ipe_cycle_id: state.ipeCycleId, pill_id: state.pillId,
