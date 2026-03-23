@@ -302,7 +302,7 @@ export default function Reed() {
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <button
-            className="r-send-dot"
+            className={`r-send-dot${input.trim() ? ' active' : ''}`}
             onClick={handleSend}
             disabled={sending || !input.trim()}
             aria-label="enviar"
