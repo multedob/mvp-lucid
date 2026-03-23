@@ -113,8 +113,8 @@ export default function Reed() {
       setCanonicalILs(ils)
 
       // Histórico de interações do ciclo
-      const { data: interactions } = await (supabase
-        .from('interactions') as any)
+      const { data: interactions } = await (supabase as any)
+        .from('interactions')
         .select('user_text, response_text, created_at')
         .eq('ipe_cycle_id', cycle.id)
         .order('created_at', { ascending: true })
