@@ -742,89 +742,34 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      lucid_persist_cycle:
-        | {
-            Args: {
-              p_base_version: number
-              p_cycle_integrity_hash: string
-              p_hago_state?: string
-              p_input_classification: string
-              p_input_hash: string
-              p_llm_config_hash: string
-              p_llm_model_id: string
-              p_llm_provider: string
-              p_llm_response?: string
-              p_llm_temperature: number
-              p_movement_primary: string
-              p_movement_secondary: string
-              p_node_history_rows: Json
-              p_previous_cycle_hash: string
-              p_raw_input_json: Json
-              p_response_type: string
-              p_snapshot_json: Json
-              p_structural_hash: string
-              p_structural_model_version: string
-              p_structural_trace: Json
-              p_user_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_base_version: number
-              p_cycle_integrity_hash: string
-              p_cycle_state?: string
-              p_hago_state: string
-              p_input_classification: string
-              p_input_hash: string
-              p_llm_config_hash: string
-              p_llm_model_id: string
-              p_llm_provider: string
-              p_llm_response?: string
-              p_llm_temperature: number
-              p_movement_primary: string
-              p_movement_secondary: string
-              p_node_history_rows: Json
-              p_previous_cycle_hash: string
-              p_raw_input_json: Json
-              p_response_type: string
-              p_snapshot_json: Json
-              p_structural_hash: string
-              p_structural_model_version: string
-              p_structural_trace: Json
-              p_user_id: string
-              p_user_text?: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_base_version: number
-              p_cycle_integrity_hash: string
-              p_hago_state: string
-              p_input_classification: string
-              p_input_hash: string
-              p_ipe_cycle_id?: string
-              p_ipe_cycle_number?: number
-              p_llm_config_hash: string
-              p_llm_model_id: string
-              p_llm_provider: string
-              p_llm_response?: string
-              p_llm_temperature: number
-              p_movement_primary: string
-              p_movement_secondary: string
-              p_node_history_rows: Json
-              p_previous_cycle_hash: string
-              p_raw_input_json: Json
-              p_response_type: string
-              p_snapshot_json: Json
-              p_structural_hash: string
-              p_structural_model_version: string
-              p_structural_trace: Json
-              p_user_id: string
-            }
-            Returns: Json
-          }
+      lucid_persist_cycle: {
+        Args: {
+          p_base_version: number
+          p_cycle_integrity_hash: string
+          p_cycle_state?: string
+          p_hago_state: string
+          p_input_classification: string
+          p_input_hash: string
+          p_llm_config_hash: string
+          p_llm_model_id: string
+          p_llm_provider: string
+          p_llm_response?: string
+          p_llm_temperature: number
+          p_movement_primary: string
+          p_movement_secondary: string
+          p_node_history_rows: Json
+          p_previous_cycle_hash: string
+          p_raw_input_json: Json
+          p_response_type: string
+          p_snapshot_json: Json
+          p_structural_hash: string
+          p_structural_model_version: string
+          p_structural_trace: Json
+          p_user_id: string
+          p_user_text?: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
