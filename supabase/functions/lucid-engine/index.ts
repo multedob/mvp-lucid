@@ -493,6 +493,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
       llm_temperature: LLM_TEMPERATURE,
       llm_config_hash,
       audit_trace: core_output.audit_trace,
+      ipe_cycle_id: (body.ipe_cycle_id as string) ?? undefined,
+      ipe_cycle_number: (body.ipe_cycle_number as number) ?? undefined,
+      user_text,
     });
 
     // ─── PHASE 9 — Language Execution (pós-commit)

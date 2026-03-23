@@ -59,6 +59,11 @@ export interface PersistenceInput {
   audit_trace:              AuditTrace;
   // LLM Response
   llm_response?:            string;
+  // IPE context
+  ipe_cycle_id?:            string;
+  ipe_cycle_number?:        number;
+  cycle_state?:             string;
+  user_text?:               string;
 }
 
 // ─────────────────────────────────────────
@@ -144,6 +149,10 @@ export async function persistCycle(
     p_structural_trace:         structural_trace,
     p_hago_state:               input.hago_state,
     p_llm_response:             input.llm_response ?? null,
+    p_cycle_state:              input.cycle_state ?? 'S0',
+    p_user_text:                input.user_text ?? null,
+    p_ipe_cycle_id:             input.ipe_cycle_id ?? null,
+    p_ipe_cycle_number:         input.ipe_cycle_number ?? 1,
   });
 
   if (error) {
