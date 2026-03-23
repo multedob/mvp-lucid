@@ -83,7 +83,7 @@ export default function Questionnaire() {
         ipe_cycle_id: cycle.id,
       })
 
-      setStateId(planRes.questionnaire_state_id)
+      setStateId((planRes as any).questionnaire_state_id)
 
       // Obter primeiro bloco
       await fetchNextBlock(cycle.id, null)
