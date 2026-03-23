@@ -74,7 +74,7 @@ export default function Context() {
         .eq("ipe_cycle_id", cycleId)
         .not("eco_text", "is", null)
         .order("completed_at", { ascending: true });
-      setEcos(data || []);
+      setEcos((data || []) as PillEco[]);
     } catch (err) {
       console.error("loadEcos:", err);
     }
