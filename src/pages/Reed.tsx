@@ -93,6 +93,7 @@ export default function Reed() {
 
       setCycleId(cycle.id)
       setCycleNumber(cycle.cycle_number ?? 1)
+      setBaseVersion(await getCurrentUserVersion())
 
       // ILs canônicos do questionário
       const { data: qState } = await (supabase
