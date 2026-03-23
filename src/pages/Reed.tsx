@@ -141,14 +141,15 @@ export default function Reed() {
   // ─────────────────────────────────────
   async function sendToReed(
     cid: string,
-    cycleNum: number,
+    baseVer: number,
     ils: CanonicalILs,
-    userText: string
+    userText: string,
+    retryOnConflict = true
   ) {
     try {
-      const data = await callEdgeFunction('lucid-engine', {
+      const data = await callEdgeFunction<Record<string, unknown>>('lucid-engine', {
         ipe_cycle_id: cid,
-        base_version: cycleNum - 1,
+        base_version: baseVer,
         raw_input: {
           d1: ils.d1,
           d2: ils.d2,
@@ -158,9 +159,23 @@ export default function Reed() {
         },
       })
 
+      const nextVersion = data.current_version
+      if (typeof nextVersion === 'number') {
+        setBaseVersion(nextVersion)
+      }
+
       const text = extractResponseText(data)
       if (text) setMessages(prev => [...prev, { role: 'reed', text }])
-    } catch {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+
+      if (retryOnConflict && message.includes('VERSION_CONFLICT')) {
+        const freshVersion = await getCurrentUserVersion()
+        setBaseVersion(freshVersion)
+        await sendToReed(cid, freshVersion, ils, userText, false)
+        return
+      }
+
       setError('reed não respondeu. tenta de novo.')
     }
   }
