@@ -107,24 +107,23 @@ export default function Reed() {
       const ils = extractILs(resultados)
       setCanonicalILs(ils)
 
-      // Histórico de interações do ciclo
-      const { data: interactions } = await (supabase as any)
-        .from('interactions')
-        .select('user_text, response_text, created_at')
+      // Histórico de interações do ciclo (from cycles table)
+      const { data: cycleHistory } = await (supabase as any)
+        .from('cycles')
+        .select('user_text, llm_response, created_at')
         .eq('ipe_cycle_id', cycle.id)
         .order('created_at', { ascending: true })
 
-      if (interactions && interactions.length > 0) {
-        const history: Message[] = interactions
-          .flatMap(i => [
+      if (cycleHistory && cycleHistory.length > 0) {
+        const history: Message[] = cycleHistory
+          .flatMap((i: any) => [
             { role: 'user' as const, text: i.user_text ?? '' },
-            { role: 'reed' as const, text: i.response_text ?? '' },
+            { role: 'reed' as const, text: i.llm_response ?? '' },
           ])
-          .filter(m => m.text)
+          .filter((m: Message) => m.text)
         setMessages(history)
         setLoading(false)
       } else {
-        // Primeira vez: sem histórico, apenas mostra o chat vazio
         setLoading(false)
       }
 
