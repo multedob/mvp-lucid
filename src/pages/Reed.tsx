@@ -77,17 +77,21 @@ export default function Reed() {
   // ─────────────────────────────────────
   async function init() {
     try {
+      // Tenta sessão autenticada primeiro; se não houver, usa query aberta (dev)
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { navigate('/auth'); return }
 
-      const { data: cycle } = await supabase
+      let cycleQuery = supabase
         .from('ipe_cycles')
         .select('id, cycle_number, status')
-        .eq('user_id', session.user.id)
         .in('status', ['complete', 'questionnaire'])
         .order('created_at', { ascending: false })
         .limit(1)
-        .maybeSingle()
+
+      if (session?.user?.id) {
+        cycleQuery = cycleQuery.eq('user_id', session.user.id) as typeof cycleQuery
+      }
+
+      const { data: cycle } = await cycleQuery.maybeSingle()
 
       if (!cycle) { navigate('/home'); return }
 
