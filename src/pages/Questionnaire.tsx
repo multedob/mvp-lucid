@@ -206,7 +206,7 @@ export default function Questionnaire() {
         .single()
 
       // Montar raw_input a partir dos ILs canônicos
-      const resultados = qState?.resultados_por_bloco ?? {}
+      const resultados = (qState?.resultados_por_bloco ?? {}) as Record<string, { il_canonico: number | null }>
       const d1 = extractDimensionILs(resultados, ['L1.1', 'L1.2', 'L1.3', 'L1.4'])
       const d2 = extractDimensionILs(resultados, ['L2.4', 'L2.1', 'L2.2', 'L2.3'])
       const d3 = extractDimensionILs(resultados, ['L3.3', 'L3.1', 'L3.2', 'L3.4'])
