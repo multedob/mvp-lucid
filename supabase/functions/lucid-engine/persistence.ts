@@ -59,6 +59,11 @@ export interface PersistenceInput {
   audit_trace:              AuditTrace;
   // LLM Response
   llm_response?:            string;
+  // IPE context
+  ipe_cycle_id?:            string;
+  ipe_cycle_number?:        number;
+  cycle_state?:             string;
+  user_text?:               string;
 }
 
 // ─────────────────────────────────────────
