@@ -56,8 +56,8 @@ export default function Context() {
         .order("cycle_number", { ascending: false });
 
       if (cycleData && cycleData.length > 0) {
-        setCycles(cycleData);
-        setSelectedCycle(cycleData[0]);
+        setCycles(cycleData as Cycle[]);
+        setSelectedCycle(cycleData[0] as Cycle);
         await loadEcos(cycleData[0].id);
       }
     } catch (err) {
@@ -74,7 +74,7 @@ export default function Context() {
         .eq("ipe_cycle_id", cycleId)
         .not("eco_text", "is", null)
         .order("completed_at", { ascending: true });
-      setEcos(data || []);
+      setEcos((data || []) as PillEco[]);
     } catch (err) {
       console.error("loadEcos:", err);
     }
