@@ -59,6 +59,7 @@ export default function Reed() {
   const [sending, setSending] = useState(false)
   const [cycleId, setCycleId] = useState<string | null>(null)
   const [cycleNumber, setCycleNumber] = useState(1)
+  const [baseVersion, setBaseVersion] = useState<number | null>(null)
   const [canonicalILs, setCanonicalILs] = useState<CanonicalILs | null>(null)
   const [error, setError] = useState<string | null>(null)
 
