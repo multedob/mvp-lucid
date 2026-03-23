@@ -80,10 +80,10 @@ export default function Reed() {
       // Tenta sessão autenticada primeiro; se não houver, usa query aberta (dev)
       const { data: { session } } = await supabase.auth.getSession()
 
-      let cycleQuery = supabase
-        .from('ipe_cycles')
+      let cycleQuery = (supabase
+        .from('ipe_cycles') as any)
         .select('id, cycle_number, status')
-        .in('status', ['complete', 'questionnaire'])
+        .in('status', ['complete', 'questionnaire', 'pills'])
         .order('created_at', { ascending: false })
         .limit(1)
 
@@ -99,8 +99,8 @@ export default function Reed() {
       setCycleNumber(cycle.cycle_number ?? 1)
 
       // ILs canônicos do questionário
-      const { data: qState } = await supabase
-        .from('questionnaire_state')
+      const { data: qState } = await (supabase
+        .from('questionnaire_state') as any)
         .select('resultados_por_bloco')
         .eq('ipe_cycle_id', cycle.id)
         .maybeSingle()
@@ -113,7 +113,7 @@ export default function Reed() {
       setCanonicalILs(ils)
 
       // Histórico de interações do ciclo
-      const { data: interactions } = await supabase
+      const { data: interactions } = await (supabase as any)
         .from('interactions')
         .select('user_text, response_text, created_at')
         .eq('ipe_cycle_id', cycle.id)
