@@ -186,8 +186,7 @@ function InvisibleTextarea({
 export default function PillFlow() {
   const navigate = useNavigate();
   const { pillId: rawPillId } = useParams<{ pillId: string }>();
-  const pillId = (rawPillId as PillId) || "PI";
-
+  const pillId: PillId = (rawPillId && rawPillId in PILLS) ? rawPillId as PillId : "PI";
   const [state, setState] = useState<State>({
     pillId, moment: "M1", ipeCycleId: "", cycleDisplay: "",
     pillResponseId: null, m1TimerStart: Date.now(),
