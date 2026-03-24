@@ -22,42 +22,87 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// ─── ProtectedRoute — desabilitado para dev ───────────────────────
-// TODO: reativar antes do lançamento
+// ─── ProtectedRoute — verifica sessão Supabase ───────────────────
 function ProtectedRoute({ children }: { children: ReactNode }) {
-  return <>{children}</>;
-}
-
-// ─── ProtectedRoute — versão produção (descomentar antes do lançamento) ───
-// function ProtectedRoute({ children }: { children: ReactNode }) {
-//   const [checking, setChecking] = useState(true);
-//   const [authed, setAuthed] = useState(false);
-//   useEffect(() => {
-//     supabase.auth.getSession().then(({ data: { session } }) => {
-//       setAuthed(!!session);
-//       setChecking(false);
-//     });
-//   }, []);
-//   if (checking) return null;
-//   if (!authed) return <Navigate to="/auth" replace />;
-//   return <>{children}</>;
-// }
-
-// ─── RootRedirect ─────────────────────────────────────────────────
-function RootRedirect() {
   const [checking, setChecking] = useState(true);
   const [authed, setAuthed] = useState(false);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setAuthed(!!session);
       setChecking(false);
     });
   }, []);
+
+  if (checking) return null;
+  if (!authed) return <Navigate to="/auth" replace />;
+  return <>{children}</>;
+}
+
+// ─── RootRedirect — redireciona com base no estado do ciclo IPE ──
+function RootRedirect() {
+  const [checking, setChecking] = useState(true);
+  const [authed, setAuthed] = useState(false);
+  const [redirectTo, setRedirectTo] = useState("/home");
+
+  useEffect(() => {
+    async function resolve() {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        setChecking(false);
+        return; // não autenticado → mostra Splash
+      }
+
+      setAuthed(true);
+
+      // Checa se já viu a carta de onboarding
+      const seen = localStorage.getItem("rdwth_letter_seen");
+      if (!seen) {
+        setRedirectTo("/letter");
+        setChecking(false);
+        return;
+      }
+
+      // Busca ciclo IPE mais recente do usuário
+      const { data: cycle } = await supabase
+        .from("ipe_cycles")
+        .select("status")
+        .eq("user_id", session.user.id)
+        .order("started_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (cycle) {
+        switch (cycle.status) {
+          case "pills":
+            setRedirectTo("/pills");
+            break;
+          case "questionnaire":
+            setRedirectTo("/questionnaire");
+            break;
+          case "complete":
+            setRedirectTo("/reed");
+            break;
+          case "abandoned":
+            // Ciclo abandonado → home para iniciar novo
+            setRedirectTo("/home");
+            break;
+          default:
+            setRedirectTo("/home");
+        }
+      }
+      // Se não tem ciclo → /home (default)
+
+      setChecking(false);
+    }
+
+    resolve();
+  }, []);
+
   if (checking) return null;
   if (!authed) return <Splash />;
-  const seen = localStorage.getItem("rdwth_letter_seen");
-  if (!seen) return <Navigate to="/letter" replace />;
-  return <Navigate to="/home" replace />;
+  return <Navigate to={redirectTo} replace />;
 }
 
 const App = () => (
