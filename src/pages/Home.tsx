@@ -1,100 +1,71 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { getToday } from "@/lib/api";
+// src/pages/Home.tsx
+// Blank page — header + nav bottom apenas
+// A lista de pills com estado de ciclo fica em /pills
 
-type PillId = "PI" | "PII" | "PIII" | "PIV" | "PV" | "PVI";
-const ALL_PILLS: PillId[] = ["PI", "PII", "PIII", "PIV", "PV", "PVI"];
-const PILL_TENSAO: Record<PillId, string> = {
-  PI: "I ↔ Belonging",
-  PII: "I ↔ Role",
-  PIII: "Presence ↔ Distance",
-  PIV: "Clarity ↔ Action",
-  PV: "Inside ↔ Outside",
-  PVI: "Movement ↔ Pause",
-};
+import { useNavigate } from "react-router-dom";
+import { getToday } from "@/lib/api";
 
 export default function Home() {
   const navigate = useNavigate();
-  const [status, setStatus] = useState<string | null>(null);
-  const [pillsDone, setPillsDone] = useState<PillId[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => { load() }, []);
-
-  async function load() {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const query = (supabase.from('ipe_cycles') as any)
-        .select('status, pills_completed')
-        .in('status', ['pills', 'questionnaire', 'complete'])
-        .order('cycle_number', { ascending: false })
-        .limit(1);
-      if (session?.user?.id) query.eq('user_id', session.user.id);
-      const { data: cycle } = await query.maybeSingle();
-      if (cycle) {
-        setStatus(cycle.status);
-        setPillsDone(cycle.pills_completed ?? []);
-      }
-    } catch {}
-    setLoading(false);
-  }
-
-  const allPillsDone = ALL_PILLS.every(p => pillsDone.includes(p));
 
   return (
     <div className="r-screen">
+
+      {/* Header */}
       <div className="r-header">
         <span className="r-header-label">_rdwth</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 28px" }}>
-        {loading ? null : (
-          <>
-            {ALL_PILLS.map((p) => {
-              const done = pillsDone.includes(p);
-              return (
-                <div
-                  key={p}
-                  className="r-list-item"
-                  onClick={() => !done && navigate(`/pill/${p}`)}
-                  style={{ marginBottom: 12, cursor: done ? "default" : "pointer", opacity: done ? 0.4 : 1 }}
-                >
-                  <div className={`r-list-bar${done ? " done" : ""}`} />
-                  <span className="r-list-label">{PILL_TENSAO[p]}</span>
-                </div>
-              );
-            })}
-            {allPillsDone && (
-              <div
-                className="r-list-item"
-                onClick={() => navigate("/questionnaire")}
-                style={{ marginTop: 24, cursor: "pointer" }}
-              >
-                <div className="r-list-bar done" />
-                <span className="r-list-label" style={{ color: "var(--r-accent)", fontWeight: 400 }}>
-                  begin reading
-                </span>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+
+      {/* Blank */}
+      <div style={{ flex: 1 }} />
+
+      {/* Nav bottom */}
       <div className="r-line" />
-      <div className="r-nav">
-        {(["pills", "context", "reed"] as const).map((tab) => (
+      <div style={{
+        height: 56,
+        display: "flex",
+        alignItems: "center",
+        padding: "0 24px",
+        gap: 28,
+        flexShrink: 0,
+      }}>
+        {[
+          { label: "pills",   path: "/pills" },
+          { label: "context", path: "/context" },
+          { label: "reed",    path: "/reed" },
+        ].map(({ label, path }) => (
           <span
-            key={tab}
-            className={`r-nav-item${tab === "pills" ? " active" : ""}`}
-            onClick={() => {
-              if (tab === "context") navigate("/context");
-              if (tab === "reed") navigate("/reed");
+            key={label}
+            onClick={() => navigate(path)}
+            style={{
+              fontFamily: "var(--r-font-sys)",
+              fontWeight: 300,
+              fontSize: 11,
+              color: "var(--r-muted)",
+              letterSpacing: "0.08em",
+              cursor: "pointer",
             }}
-          >{tab}</span>
+          >
+            {label}
+          </span>
         ))}
-        <div className="r-nav-dot" onClick={() => navigate("/settings")} />
+        <div
+          onClick={() => navigate("/settings")}
+          style={{
+            marginLeft: "auto",
+            width: 6,
+            height: 6,
+            borderRadius: "50%",
+            border: "1px solid var(--r-ghost)",
+            background: "transparent",
+            cursor: "pointer",
+            flexShrink: 0,
+          }}
+        />
       </div>
+
     </div>
   );
 }
