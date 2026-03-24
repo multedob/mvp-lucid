@@ -218,7 +218,7 @@ export default function Context() {
         .from("ipe_cycles")
         .select("id, cycle_number, status")
         .eq("user_id", session.user.id)
-        .in("status", ["complete", "questionnaire"])
+        .in("status", ["pills", "complete", "questionnaire"])
         .order("cycle_number", { ascending: true });
 
       if (!ipeCycles || ipeCycles.length === 0) { setLoading(false); return; }
@@ -237,9 +237,15 @@ export default function Context() {
           const text = hagoCycle?.llm_response ?? "";
           // Dividir em leitura curta (primeiros 2 parágrafos) e deep (resto)
           const paragraphs = text.split("\n\n").filter(Boolean);
-          const description = paragraphs.slice(0, 2).join("\n\n") || "Leitura disponível após o questionário.";
-          const deep = paragraphs.length > 2 ? paragraphs.slice(2).join("\n\n") : paragraphs.join("\n\n");
-
+          const hasPending = !text;
+const description = hasPending
+  ? "Leitura disponível após o questionário."
+  : paragraphs.slice(0, 2).join("\n\n");
+const deep = hasPending
+  ? "Complete o questionário para ver a leitura profunda."
+  : paragraphs.length > 2
+    ? paragraphs.slice(2).join("\n\n")
+    : paragraphs.join("\n\n");
           return {
             id: `C${ipe.cycle_number}`,
             cycleNumber: ipe.cycle_number,
