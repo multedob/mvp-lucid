@@ -31,8 +31,10 @@ const MODEL_CONFIG: Partial<Record<LineId, string>> = {
   // 'L2.4': 'claude-haiku-4-5-20251001',
 };
 const DEFAULT_MODEL = "claude-sonnet-4-20250514";
+const EXTRACTION_MODEL = "claude-haiku-4-5-20251001"; // Stage 1: barato e rápido
 
 const MAX_TOKENS = 1500;
+const EXTRACTION_MAX_TOKENS = 800; // Stage 1 output is smaller
 const TEMPERATURE = 0; // scoring determinístico
 const LLM_TIMEOUT_MS = 30_000;
 const RETRY_BACKOFF_MS = 2_000;
@@ -49,6 +51,204 @@ const VALID_LINE_IDS: readonly LineId[] = [
   "L3.1", "L3.2", "L3.3", "L3.4",
   "L4.1", "L4.2", "L4.3", "L4.4",
 ];
+
+// ─────────────────────────────────────────
+// §2.5 — STAGE 1: DEFINIÇÕES DE CONSTRUTO + EXTRAÇÃO
+// ─────────────────────────────────────────
+
+// Mapa de construtos — descrição concisa do que cada bloco mede
+const CONSTRUCT_DEFINITIONS: Record<LineId, { nome: string; descricao: string; indicadores: string }> = {
+  "L1.1": {
+    nome: "Autoconhecimento Emocional",
+    descricao: "Capacidade de identificar, nomear e diferenciar as próprias emoções com precisão e granularidade.",
+    indicadores: "nomeação de emoções específicas, distinção entre emoções parecidas, reconhecimento de emoções em si mesmo, vocabulário emocional, consciência de estados emocionais no momento"
+  },
+  "L1.2": {
+    nome: "Autoconhecimento Cognitivo",
+    descricao: "Capacidade de identificar os próprios padrões de pensamento, crenças, vieses e estilos cognitivos.",
+    indicadores: "menção a padrões de pensamento, reconhecimento de crenças limitantes, identificação de vieses próprios, consciência de estilo cognitivo, reflexão sobre modo de pensar"
+  },
+  "L1.3": {
+    nome: "Autoconhecimento Relacional",
+    descricao: "Capacidade de reconhecer os próprios padrões de vínculo, estilos de apego e dinâmicas relacionais repetitivas.",
+    indicadores: "padrões em relacionamentos, estilo de apego, papel que assume em relações, consciência de dinâmicas repetitivas, reconhecimento de necessidades relacionais"
+  },
+  "L1.4": {
+    nome: "Autoconhecimento Existencial",
+    descricao: "Capacidade de refletir sobre propósito, valores, significado e relação com finitude.",
+    indicadores: "reflexão sobre sentido da vida, valores pessoais explícitos, consciência de mortalidade, questionamento existencial, busca de propósito"
+  },
+  "L2.1": {
+    nome: "Autorregulação Emocional",
+    descricao: "Capacidade de modular a intensidade e duração das próprias emoções de forma adaptativa.",
+    indicadores: "estratégias de coping, gestão de ansiedade/raiva/tristeza, tolerância ao desconforto emocional, recuperação emocional, modulação consciente de emoções"
+  },
+  "L2.2": {
+    nome: "Autorregulação Cognitiva",
+    descricao: "Capacidade de monitorar e ajustar os próprios processos de pensamento, incluindo metacognição e flexibilidade cognitiva.",
+    indicadores: "metacognição, mudança de perspectiva, questionamento de próprias conclusões, flexibilidade mental, revisão de crenças"
+  },
+  "L2.3": {
+    nome: "Autorregulação Relacional",
+    descricao: "Capacidade de estabelecer e manter limites saudáveis, comunicar necessidades e gerenciar conflitos interpessoais.",
+    indicadores: "estabelecimento de limites, comunicação assertiva, gestão de conflitos, ajuste de comportamento em relações, negociação relacional"
+  },
+  "L2.4": {
+    nome: "Autorregulação Existencial",
+    descricao: "Capacidade de lidar com incerteza, ambiguidade e questões de finitude sem paralisia ou evitação.",
+    indicadores: "tolerância à incerteza, relação com a morte, gestão de crises de sentido, adaptação a mudanças de vida, resiliência existencial"
+  },
+  "L3.1": {
+    nome: "Expressão Emocional",
+    descricao: "Capacidade de comunicar emoções de forma clara, apropriada e vulnerável.",
+    indicadores: "expressão verbal de emoções, vulnerabilidade emocional, compartilhamento de sentimentos, adequação da expressão ao contexto, autenticidade emocional"
+  },
+  "L3.2": {
+    nome: "Expressão Cognitiva",
+    descricao: "Capacidade de articular ideias complexas, argumentar com coerência e comunicar pensamento abstrato.",
+    indicadores: "articulação de ideias, argumentação estruturada, comunicação de conceitos abstratos, clareza explicativa, pensamento articulado"
+  },
+  "L3.3": {
+    nome: "Expressão Relacional",
+    descricao: "Capacidade de demonstrar empatia ativa, reciprocidade e engajamento genuíno com o outro.",
+    indicadores: "empatia demonstrada, reciprocidade, escuta ativa, engajamento relacional, consideração pela perspectiva do outro"
+  },
+  "L3.4": {
+    nome: "Expressão Existencial",
+    descricao: "Capacidade de viver de forma coerente com os próprios valores e articular uma narrativa de vida autêntica.",
+    indicadores: "coerência valores-ações, autenticidade, narrativa de vida integrada, expressão de propósito, agência existencial"
+  },
+  "L4.1": {
+    nome: "Integração Emocional",
+    descricao: "Capacidade de sustentar complexidade emocional, incluindo ambivalência e emoções mistas sem simplificação.",
+    indicadores: "tolerância à ambivalência, emoções mistas aceitas, complexidade emocional, integração de contradições emocionais, maturidade emocional"
+  },
+  "L4.2": {
+    nome: "Integração Cognitiva",
+    descricao: "Capacidade de pensamento sistêmico, integração de paradoxos e síntese de perspectivas contraditórias.",
+    indicadores: "pensamento sistêmico, síntese de paradoxos, integração de perspectivas opostas, pensamento dialético, complexidade cognitiva"
+  },
+  "L4.3": {
+    nome: "Integração Relacional",
+    descricao: "Capacidade de manter diferenciação pessoal enquanto sustenta interdependência saudável nos vínculos.",
+    indicadores: "diferenciação self-outro, interdependência saudável, autonomia dentro de relações, maturidade relacional, equilíbrio eu-outro"
+  },
+  "L4.4": {
+    nome: "Integração Existencial",
+    descricao: "Capacidade de aceitação radical da condição humana e sabedoria prática que emerge da integração das dimensões anteriores.",
+    indicadores: "aceitação radical, sabedoria prática, integração de experiências, paz com imperfeição, maturidade existencial"
+  },
+};
+
+// Template de prompt para Stage 1 (Extração de Evidências)
+function buildExtractionPrompt(blockId: LineId): string {
+  const c = CONSTRUCT_DEFINITIONS[blockId];
+  return `Você é um extrator de evidências textuais para avaliação psicométrica.
+
+CONSTRUTO A AVALIAR: ${c.nome}
+DESCRIÇÃO: ${c.descricao}
+INDICADORES TÍPICOS: ${c.indicadores}
+
+SUA TAREFA:
+Leia a resposta do respondente e extraia TODOS os trechos que possam ser relevantes para avaliar "${c.nome}".
+
+REGRAS ESTRITAS:
+1. Extraia qualquer trecho relevante — mesmo que indiretamente relacionado
+2. Copie o trecho EXATO da resposta, entre aspas
+3. Classifique relevância: alta (evidência direta) | média (evidência indireta) | baixa (tangencial)
+4. Você NÃO avalia o nível — apenas encontra evidências
+5. Extraia de principal_resposta E de variante_resposta se disponível
+6. Se não houver NENHUM trecho relevante, retorne citacoes: []
+7. Seja GENEROSO na extração — é melhor incluir trechos duvidosos do que perder evidência
+
+Responda APENAS com JSON válido:
+{
+  "citacoes": [
+    {"trecho": "texto exato da resposta", "relevancia": "alta|média|baixa", "aspecto": "qual indicador do construto o trecho toca"}
+  ],
+  "tem_evidencia": true,
+  "n_citacoes": 3
+}
+
+Se nenhum trecho for encontrado:
+{
+  "citacoes": [],
+  "tem_evidencia": false,
+  "n_citacoes": 0
+}`;
+}
+
+// Resultado da extração
+interface ExtractionResult {
+  citacoes: Array<{ trecho: string; relevancia: string; aspecto: string }>;
+  tem_evidencia: boolean;
+  n_citacoes: number;
+  extraction_tokens: { input: number; output: number };
+}
+
+// Executar Stage 1
+async function runExtractionStage(
+  anthropic: InstanceType<typeof Anthropic>,
+  blockId: LineId,
+  corpus: string,
+): Promise<ExtractionResult> {
+  const extractionPrompt = buildExtractionPrompt(blockId);
+
+  try {
+    const response = await anthropic.messages.create({
+      model: EXTRACTION_MODEL,
+      max_tokens: EXTRACTION_MAX_TOKENS,
+      temperature: 0,
+      system: extractionPrompt,
+      messages: [{ role: "user", content: corpus }],
+    });
+
+    const rawText = (response.content[0] as { type: string; text: string }).text;
+    const parsed = extractJSON(rawText) as Record<string, unknown>;
+
+    return {
+      citacoes: (parsed.citacoes as ExtractionResult["citacoes"]) ?? [],
+      tem_evidencia: parsed.tem_evidencia === true,
+      n_citacoes: (parsed.n_citacoes as number) ?? 0,
+      extraction_tokens: {
+        input: response.usage?.input_tokens ?? 0,
+        output: response.usage?.output_tokens ?? 0,
+      },
+    };
+  } catch (err) {
+    console.warn(`EXTRACTION_STAGE_ERROR block=${blockId}:`, err);
+    // Fallback: sem citações, segue para Stage 2 normalmente
+    return {
+      citacoes: [],
+      tem_evidencia: false,
+      n_citacoes: 0,
+      extraction_tokens: { input: 0, output: 0 },
+    };
+  }
+}
+
+// Enriquecer corpus com citações extraídas para Stage 2
+function enrichCorpusWithCitations(
+  originalCorpus: string,
+  extraction: ExtractionResult,
+  blockId: LineId,
+): string {
+  const c = CONSTRUCT_DEFINITIONS[blockId];
+
+  if (!extraction.tem_evidencia || extraction.citacoes.length === 0) {
+    return originalCorpus + `\n\nEVIDÊNCIAS PRÉ-EXTRAÍDAS PARA ${c.nome}:
+NENHUMA evidência direta encontrada na resposta. Considere se há evidência INDIRETA ou IMPLÍCITA antes de decidir INDETERMINADO.`;
+  }
+
+  const citacoesStr = extraction.citacoes
+    .map((c, i) => `  ${i + 1}. [${c.relevancia.toUpperCase()}] "${c.trecho}" → ${c.aspecto}`)
+    .join("\n");
+
+  return originalCorpus + `\n\nEVIDÊNCIAS PRÉ-EXTRAÍDAS PARA ${c.nome} (${extraction.n_citacoes} trechos):
+${citacoesStr}
+
+INSTRUÇÃO: As citações acima foram extraídas automaticamente da resposta. USE-AS como base para sua análise dos cortes. Se há citações de relevância alta, é improvável que a decisão seja INDETERMINADO.`;
+}
 
 // ─────────────────────────────────────────
 // CORS + HELPERS
@@ -158,8 +358,7 @@ async function loadPrompt(
     return { text: cached.text, version: cached.version };
   }
 
-  // deno-lint-ignore no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from("prompt_versions")
     .select("prompt_text, version")
     .eq("component", component)
@@ -585,12 +784,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
   );
   const anthropic = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY")! });
 
-  // §3.2 — Montar corpus
-  const corpus = buildCorpus(input);
+  // §3.2 — Montar corpus base
+  const baseCorpus = buildCorpus(input);
 
   // §3.3 — Carregar prompt
-  // deno-lint-ignore no-explicit-any
-  const prompt = await loadPrompt(blockId, supabase as any);
+  const prompt = await loadPrompt(blockId, supabase);
   if (!prompt) {
     return json(
       { error: "INTERNAL_ERROR", message: `No active prompt for scoring_block_${blockId}` },
@@ -598,12 +796,29 @@ Deno.serve(async (req: Request): Promise<Response> => {
     );
   }
 
-  // §3.4 + §3.5 — Chamar LLM + Parsear + Validar (com retry)
+  // ═══════════════════════════════════════════
+  // STAGE 1: EXTRAÇÃO DE EVIDÊNCIAS (Haiku)
+  // ═══════════════════════════════════════════
+  let extraction: ExtractionResult | null = null;
+  let enrichedCorpus = baseCorpus;
+
+  // Stage 1 só roda se tem resposta (não roda para proteção ética)
+  if (input.principal_resposta && !input.protecao_etica) {
+    extraction = await runExtractionStage(anthropic, blockId, baseCorpus);
+    enrichedCorpus = enrichCorpusWithCitations(baseCorpus, extraction, blockId);
+    console.log(
+      `EXTRACTION_STAGE block=${blockId}: tem_evidencia=${extraction.tem_evidencia} n_citacoes=${extraction.n_citacoes} tokens=${extraction.extraction_tokens.input}+${extraction.extraction_tokens.output}`,
+    );
+  }
+
+  // ═══════════════════════════════════════════
+  // STAGE 2: SCORING (Sonnet) — usa corpus enriquecido
+  // ═══════════════════════════════════════════
   const model = MODEL_CONFIG[blockId] ?? DEFAULT_MODEL;
   let output: BlockScoringOutputFull | null = null;
   let lastRawOutput = "";
-  let inputTokens = 0;
-  let outputTokens = 0;
+  let inputTokens = extraction?.extraction_tokens.input ?? 0;
+  let outputTokens = extraction?.extraction_tokens.output ?? 0;
   let retryCount = 0;
   let parseSuccess = false;
   let coherenceWarnings: string[] = [];
@@ -612,11 +827,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
     retryCount = attempt;
 
     try {
-      // Chamar LLM
-      const llmResult = await callLLM(anthropic, model, prompt.text, corpus);
+      // Chamar LLM Stage 2 com corpus enriquecido
+      const llmResult = await callLLM(anthropic, model, prompt.text, enrichedCorpus);
       lastRawOutput = llmResult.rawText;
-      inputTokens = llmResult.inputTokens;
-      outputTokens = llmResult.outputTokens;
+      inputTokens += llmResult.inputTokens;
+      outputTokens += llmResult.outputTokens;
 
       // Parsear JSON
       const parsed = extractJSON(lastRawOutput) as Record<string, unknown>;
@@ -628,11 +843,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
           `SCORING_TYPE_FAIL block=${blockId} attempt=${attempt} errors=${JSON.stringify(typeResult.errors)}`,
         );
         if (attempt < MAX_RETRIES) {
-          // Retry com backoff (§3.5 — erro de formatação pode ser transitório)
           await new Promise((r) => setTimeout(r, RETRY_BACKOFF_MS));
           continue;
         }
-        // Falhou no retry → error output
         break;
       }
 
@@ -643,15 +856,23 @@ Deno.serve(async (req: Request): Promise<Response> => {
         console.warn(
           `SCORING_COHERENCE_WARN block=${blockId} warnings=${JSON.stringify(coherenceWarnings)}`,
         );
-        // Não retry — retornar output com warning flag
         (parsed.flags as Record<string, boolean>).coherence_warning = true;
       }
 
-      // Regra Cardinal — override determinístico (v0.4.2)
-      // Se LLM retornou INDETERMINADO com resposta presente, forçar NÃO
+      // Regra Cardinal — override determinístico (v0.4.2b)
       const cardinalApplied = applyRegraCardinal(parsed, input);
       if (cardinalApplied) {
         console.log(`REGRA_CARDINAL block=${blockId}: INDETERMINADO→NÃO override aplicado`);
+      }
+
+      // Injetar metadata de extração nas flags
+      if (extraction) {
+        const flags = parsed.flags as Record<string, unknown>;
+        if (flags) {
+          flags.extraction_stage = true;
+          flags.extraction_tem_evidencia = extraction.tem_evidencia;
+          flags.extraction_n_citacoes = extraction.n_citacoes;
+        }
       }
 
       // Sucesso: montar output completo
@@ -686,7 +907,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     prompt_version: prompt.version,
     input_tokens: inputTokens,
     output_tokens: outputTokens,
-    raw_input: corpus,
+    raw_input: enrichedCorpus,
     raw_output: lastRawOutput || JSON.stringify(output),
     parsed_output: output,
     parse_success: parseSuccess,
