@@ -395,9 +395,10 @@ function validateCoherence(
 }
 
 // ─────────────────────────────────────────
-// REGRA CARDINAL — Override determinístico (v0.4.2)
-// Se resposta presente e não ética, INDETERMINADO → NÃO com GCC "baixo"
-// Recalcula faixa_questionario, il_questionario e cascata
+// REGRA CARDINAL — Override determinístico (v0.4.2b)
+// Duas fases:
+//   Fase 1: INDETERMINADO → NÃO (case-insensitive) + recalcular
+//   Fase 2: Safety net — se il_canonico ainda null com resposta, forçar score mínimo
 // ─────────────────────────────────────────
 function applyRegraCardinal(
   o: Record<string, unknown>,
@@ -406,88 +407,111 @@ function applyRegraCardinal(
   // Condições de bypass: sem resposta ou proteção ética
   if (!input.principal_resposta || input.protecao_etica) return false;
 
-  const aq = o.analise_questionario as Record<string, unknown> | undefined;
-  if (!aq?.cortes) return false;
-
-  const cortes = aq.cortes as Record<string, Record<string, unknown>>;
-  let modified = false;
-
-  // Override: INDETERMINADO → NÃO com GCC baixo
-  for (const corteId of ["2_4", "4_6", "6_8"]) {
-    const corte = cortes[corteId];
-    if (corte && corte.decisao === "INDETERMINADO") {
-      corte.decisao = "NÃO";
-      corte.gcc = "baixo";
-      corte.evidencia = "Regra Cardinal: resposta presente sem evidência do construto = NÃO";
-      modified = true;
-    }
-  }
-
-  if (!modified) return false;
-
-  // Recalcular faixa_questionario pelo algoritmo A.5
-  const d24 = (cortes["2_4"]?.decisao as string) ?? "NÃO";
-  const d46 = (cortes["4_6"]?.decisao as string) ?? "NÃO";
-  const d68 = (cortes["6_8"]?.decisao as string) ?? "NÃO";
-
-  let newFaixa: string;
-  if (d24 === "NÃO") {
-    newFaixa = "A";
-  } else if (d24 === "SIM" && d46 === "NÃO") {
-    newFaixa = "B";
-  } else if (d46 === "SIM" && d68 === "NÃO") {
-    newFaixa = "C";
-  } else if (d68 === "SIM") {
-    newFaixa = "D";
-  } else {
-    newFaixa = "A"; // Fallback: todos NÃO após override
-  }
-  aq.faixa_questionario = newFaixa;
-
-  // Recalcular il_questionario — valor mínimo da faixa (conservador)
   const isL24 = input.block_id === "L2.4";
   const faixaToMinIL: Record<string, number> = isL24
     ? { A: 1.5, B: 4.0, C: 6.0, D: 7.5 }
     : { A: 1.0, B: 3.5, C: 5.5, D: 7.5 };
-  const newIL = faixaToMinIL[newFaixa] ?? null;
-  aq.il_questionario = newIL;
 
-  // Recalcular il_canonico dependendo do caso_integracao
-  const caso = o.caso_integracao as number;
-  // Em CASO 0 (sem pills), il_canonico = il_questionario
-  if (caso === 0 || caso === 4 || caso === 5) {
-    // Aplicar ceiling por nivel_fallback
-    let finalIL = newIL;
-    const fb = o.nivel_fallback as number;
-    if (fb === 1 && finalIL !== null && finalIL > 4.5) {
-      finalIL = isL24 ? 4.0 : 4.5;
+  const aq = o.analise_questionario as Record<string, unknown> | undefined;
+  let modified = false;
+
+  // ── FASE 1: Override INDETERMINADO → NÃO (case-insensitive) ──
+  if (aq?.cortes) {
+    const cortes = aq.cortes as Record<string, Record<string, unknown>>;
+    for (const corteId of ["2_4", "4_6", "6_8"]) {
+      const corte = cortes[corteId];
+      if (corte) {
+        const decisao = String(corte.decisao ?? "").toUpperCase().trim();
+        if (decisao === "INDETERMINADO") {
+          corte.decisao = "NÃO";
+          corte.gcc = "baixo";
+          corte.evidencia = "Regra Cardinal: resposta presente sem evidência do construto = NÃO";
+          modified = true;
+        }
+      }
     }
-    if (fb === 2 && finalIL !== null && finalIL > 2.0) {
-      finalIL = isL24 ? 1.5 : 2.0;
+
+    if (modified) {
+      // Recalcular faixa_questionario pelo algoritmo A.5
+      const d24 = String(cortes["2_4"]?.decisao ?? "NÃO").toUpperCase();
+      const d46 = String(cortes["4_6"]?.decisao ?? "NÃO").toUpperCase();
+      const d68 = String(cortes["6_8"]?.decisao ?? "NÃO").toUpperCase();
+
+      let newFaixa: string;
+      if (d24 === "NÃO" || d24 === "NAO") {
+        newFaixa = "A";
+      } else if (d24 === "SIM" && (d46 === "NÃO" || d46 === "NAO")) {
+        newFaixa = "B";
+      } else if (d46 === "SIM" && (d68 === "NÃO" || d68 === "NAO")) {
+        newFaixa = "C";
+      } else if (d68 === "SIM") {
+        newFaixa = "D";
+      } else {
+        newFaixa = "A";
+      }
+      aq.faixa_questionario = newFaixa;
+      aq.il_questionario = faixaToMinIL[newFaixa] ?? null;
+
+      // Recalcular il_canonico para CASO 0/4/5
+      const caso = o.caso_integracao as number;
+      if (caso === 0 || caso === 4 || caso === 5) {
+        let finalIL = faixaToMinIL[newFaixa] ?? null;
+        const fb = o.nivel_fallback as number;
+        if (fb === 1 && finalIL !== null && finalIL > 4.5) finalIL = isL24 ? 4.0 : 4.5;
+        if (fb === 2 && finalIL !== null && finalIL > 2.0) finalIL = isL24 ? 1.5 : 2.0;
+        o.il_canonico = finalIL;
+        o.faixa_final = newFaixa;
+        o.confianca = "baixa";
+      }
     }
+  }
+
+  // ── FASE 2: Safety net — il_canonico NUNCA null com resposta presente ──
+  if (o.il_canonico === null || o.il_canonico === undefined) {
+    console.log(`REGRA_CARDINAL_SAFETY block=${input.block_id}: il_canonico still null after Fase 1, forcing minimum score`);
+
+    // Tentar usar faixa_questionario se disponível
+    const faixaQ = aq?.faixa_questionario as string | undefined;
+    // Tentar usar faixa_estimada das pills como backup
+    const faixaPill = input.pill_data?.faixa_estimada as string | undefined;
+
+    let scoreFaixa: string;
+    if (faixaQ && faixaQ !== "indeterminada" && faixaToMinIL[faixaQ]) {
+      scoreFaixa = faixaQ;
+    } else if (faixaPill && faixaPill !== "indeterminada" && faixaToMinIL[faixaPill]) {
+      scoreFaixa = faixaPill;
+    } else {
+      scoreFaixa = "A"; // Último recurso: faixa mínima
+    }
+
+    let finalIL = faixaToMinIL[scoreFaixa]!;
+    const fb = (o.nivel_fallback as number) ?? 0;
+    if (fb === 1 && finalIL > 4.5) finalIL = isL24 ? 4.0 : 4.5;
+    if (fb === 2 && finalIL > 2.0) finalIL = isL24 ? 1.5 : 2.0;
+
     o.il_canonico = finalIL;
-    o.faixa_final = newFaixa;
+    o.faixa_final = scoreFaixa;
     o.confianca = "baixa";
-  }
-  // Em CASO 1/2/3, pill prevalece — não alterar il_canonico
-
-  // Se il_canonico agora tem valor, faixa_final deve ser coerente
-  if (o.il_canonico !== null) {
-    o.faixa_final = newFaixa;
+    modified = true;
   }
 
-  // Marcar flag
-  const flags = o.flags as Record<string, unknown>;
-  if (flags) {
-    flags.regra_cardinal_aplicada = true;
-    flags.baixa_confianca = true;
-    // Remover reask se agora tem score
-    if (o.il_canonico !== null) {
-      flags.reask_recomendado = false;
+  // ── Flags ──
+  if (modified) {
+    const flags = o.flags as Record<string, unknown>;
+    if (flags) {
+      flags.regra_cardinal_aplicada = true;
+      flags.baixa_confianca = true;
+      if (o.il_canonico !== null) {
+        flags.reask_recomendado = false;
+      }
+    }
+    // Garantir faixa_final coerente
+    if (o.il_canonico !== null && o.faixa_final) {
+      // faixa_final já foi setada acima
     }
   }
 
-  return true;
+  return modified;
 }
 
 /** Construir output de erro — il_canonico=null, confianca=baixa, scoring_error=true */
