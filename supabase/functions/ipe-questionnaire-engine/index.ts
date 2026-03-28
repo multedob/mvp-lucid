@@ -23,6 +23,7 @@ import {
   type PillDataAgregado,
   type NextBlockOutput,
   type FaixaValue,
+  type ILValue,
   type CorteId,
   agregarDadosPills,
   defaultPillData,
@@ -288,9 +289,8 @@ function getTipo(line_id: LineId | string, plan: ExecutionPlan): "SEMPRE" | "CON
 // ─────────────────────────────────────────
 // HANDLER: POST /plan
 // ─────────────────────────────────────────
-// deno-lint-ignore no-explicit-any
 async function handlePlan(
-  supabase: any,
+  supabase: ReturnType<typeof createClient>,
   user_id: string,
   ipe_cycle_id: string
 ): Promise<Response> {
@@ -375,9 +375,8 @@ async function handlePlan(
 // ─────────────────────────────────────────
 // HANDLER: POST /next-block
 // ─────────────────────────────────────────
-// deno-lint-ignore no-explicit-any
 async function handleNextBlock(
-  supabase: any,
+  supabase: ReturnType<typeof createClient>,
   user_id: string,
   ipe_cycle_id: string,
   block_response?: Record<string, unknown>
@@ -665,12 +664,12 @@ async function handleNextBlock(
       plan, resultados, flags, current_position,
       orcamento_global, orcamento_d3, contador_d3
     );
-    return await finalizarNextBlock(supabase, state.id, nextAfterLate as { line_id: LineId | null; dimension_transition: string | null }, plan,
+    return await finalizarNextBlock(supabase, state.id, nextAfterLate, plan,
       current_position, orcamento_global, orcamento_d3, contador_d3,
       resultados, flags, (state.last_block_completed as LineId | null));
   }
 
-  return await finalizarNextBlock(supabase, state.id, nextResult as { line_id: LineId | null; dimension_transition: string | null }, plan,
+  return await finalizarNextBlock(supabase, state.id, nextResult, plan,
     current_position, orcamento_global, orcamento_d3, contador_d3,
     resultados, flags, (state.last_block_completed as LineId | null));
 }
@@ -701,7 +700,7 @@ function determinarProximoBloco(
         && !flags.late_activation_l1_3
         && executados.has("L1.1")
         && executados.has("L1.2")) {
-      return { line_id: "L1.3_CHECK" as LineId, dimension_transition: null };
+      return { line_id: "L1.3_CHECK" as unknown as LineId, dimension_transition: null };
     }
 
     const dim = getDimensao(lid);
@@ -727,9 +726,8 @@ function determinarProximoBloco(
 // ─────────────────────────────────────────
 // FINALIZAR next-block: persistir + retornar
 // ─────────────────────────────────────────
-// deno-lint-ignore no-explicit-any
 async function finalizarNextBlock(
-  supabase: any,
+  supabase: ReturnType<typeof createClient>,
   state_id: string,
   nextResult: { line_id: LineId | null; dimension_transition: string | null },
   plan: ExecutionPlan,
@@ -746,6 +744,12 @@ async function finalizarNextBlock(
   // Flag fadiga_extrema
   const totalPerguntas = plan.orcamento_global_inicial - orcamento_global;
   if (totalPerguntas > 25) flags.fadiga_extrema = true;
+
+  // ── Camada 4: Inferência dimensional ao finalizar questionário ──
+  // Se 3+ de 4 linhas de uma dimensão têm IL, estimar a linha faltante
+  if (done) {
+    applyDimensionalInference(resultados, flags);
+  }
 
   await persistState(supabase, state_id, {
     current_position,
@@ -770,11 +774,100 @@ async function finalizarNextBlock(
 }
 
 // ─────────────────────────────────────────
+// CAMADA 4: INFERÊNCIA DIMENSIONAL
+// Se 3+ de 4 linhas de uma dimensão têm IL, estimar a faltante via mediana
+// Fonte: v0.4.2 — 4 camadas anti-null
+// ─────────────────────────────────────────
+const DIMENSAO_LINHAS: Record<string, LineId[]> = {
+  D1: ["L1.1", "L1.2", "L1.3", "L1.4"] as LineId[],
+  D2: ["L2.1", "L2.2", "L2.3", "L2.4"] as LineId[],
+  D3: ["L3.1", "L3.2", "L3.3", "L3.4"] as LineId[],
+  D4: ["L4.1", "L4.2", "L4.3", "L4.4"] as LineId[],
+};
+
+const IL_VALID_STANDARD: ILValue[] = [1.0, 2.0, 3.5, 4.5, 5.5, 6.5, 7.5, 8.0];
+const IL_VALID_L24: ILValue[] = [1.5, 4.0, 6.0, 7.5];
+
+function nearestCanonical(value: number, validSet: ILValue[]): ILValue {
+  let closest = validSet[0]!;
+  let minDist = Math.abs(value - closest);
+  for (const v of validSet) {
+    if (v === null) continue;
+    const dist = Math.abs(value - v);
+    if (dist < minDist) { closest = v; minDist = dist; }
+  }
+  return closest;
+}
+
+function ilToFaixa(il: number, blockId: string): FaixaValue {
+  if (blockId === "L2.4") {
+    if (il === 1.5) return "A";
+    if (il === 4.0) return "B";
+    if (il === 6.0) return "C";
+    if (il === 7.5) return "D";
+  } else {
+    if (il <= 2.0) return "A";
+    if (il <= 4.5) return "B";
+    if (il <= 6.5) return "C";
+    if (il <= 8.0) return "D";
+  }
+  return "indeterminada";
+}
+
+function applyDimensionalInference(
+  resultados: Record<string, ResultadoBloco>,
+  flags: QuestionnaireFlags
+): void {
+  const inferidos: string[] = [];
+
+  for (const [_dim, linhas] of Object.entries(DIMENSAO_LINHAS)) {
+    const withIL: number[] = [];
+    const withoutIL: string[] = [];
+
+    for (const lid of linhas) {
+      const r = resultados[lid];
+      if (r && r.il_canonico !== null && r.il_canonico !== undefined) {
+        withIL.push(r.il_canonico);
+      } else if (r) {
+        // Block was executed but IL is null
+        withoutIL.push(lid);
+      }
+      // If block wasn't executed (conditional skip), skip inference
+    }
+
+    // Only infer if exactly 1 block is null and ≥3 have IL
+    if (withIL.length >= 3 && withoutIL.length === 1) {
+      const nullBlock = withoutIL[0];
+      const sorted = [...withIL].sort((a, b) => a - b);
+      const median = sorted.length === 3
+        ? sorted[1]
+        : (sorted[1] + sorted[2]) / 2;
+
+      const validSet = nullBlock === "L2.4" ? IL_VALID_L24 : IL_VALID_STANDARD;
+      const inferredIL = nearestCanonical(median, validSet);
+
+      // Apply inference — preserve original fields, override IL/faixa/confianca
+      resultados[nullBlock] = {
+        ...resultados[nullBlock],
+        il_canonico: inferredIL,
+        confianca: "baixa",
+        faixa_final: ilToFaixa(inferredIL as number, nullBlock),
+      };
+
+      inferidos.push(nullBlock);
+    }
+  }
+
+  if (inferidos.length > 0) {
+    flags.inferencia_dimensional = inferidos;
+  }
+}
+
+// ─────────────────────────────────────────
 // PERSISTIR ESTADO
 // ─────────────────────────────────────────
-// deno-lint-ignore no-explicit-any
 async function persistState(
-  supabase: any,
+  supabase: ReturnType<typeof createClient>,
   state_id: string,
   updates: Record<string, unknown>
 ): Promise<void> {
@@ -790,9 +883,8 @@ async function persistState(
 // Fonte: PIPELINE_IMPLEMENTACAO §5.1 + DESIGN_ENGINE v1.0 §2.1 (E4)
 // E4: assinatura expandida para BlockScoringInputFull (pill_data + variante_servida)
 // ─────────────────────────────────────────
-// deno-lint-ignore no-explicit-any
 async function callScoringBlock(
-  supabase: any,
+  supabase: ReturnType<typeof createClient>,
   input: BlockScoringInputFull,
 ): Promise<BlockScoringOutputFull> {
   const scoringUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/ipe-scoring-block`;
