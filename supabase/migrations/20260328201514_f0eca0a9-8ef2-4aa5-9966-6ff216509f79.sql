@@ -1,0 +1,1 @@
+UPDATE prompt_versions SET active = false, deprecated_at = NOW() WHERE component LIKE 'scoring_block_%' AND version != 'v0.4.1' AND active = true;
