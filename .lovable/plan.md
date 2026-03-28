@@ -1,44 +1,35 @@
 
 
-## Problem
+# Deploy Migrations and Edge Functions
 
-The `lucid-engine` edge function returns **401 Unauthorized** because it requires an authenticated user (`user_id` from JWT), but there is no authentication system in the app. The `/test` page calls the function without a logged-in session.
+## What needs to happen
 
-## Solution
-
-Two changes are needed:
-
-### 1. Create a simple auth page (`/auth`)
-A basic sign-up / sign-in page using email + password so a user session exists when calling the engine.
-
-### 2. Update the `/test` page
-- Check if the user is logged in before showing the test UI
-- If not logged in, redirect to `/auth`
-- Show a "Logout" button for convenience
-- Display the current `user_id` so it's clear who is calling
-
-### 3. Update routing in `App.tsx`
-- Add the `/auth` route
-
----
+1. **Run migration `20260328000000_scoring_audit_engine_v1.sql`** — adds `raw_input` (TEXT) and `duration_ms` (INTEGER) columns to `scoring_audit` table
+2. **Run migration `20260328000001_scoring_block_prompts_v040.sql`** — inserts 16 scoring block prompts into `prompt_versions` table
+3. **Fix TypeScript build errors in edge functions** before deploying:
+   - `_shared/ipe_types.ts` line 608: type predicate `v is number` conflicts with `ILValue` type — fix by removing the type predicate or casting
+   - `ipe-questionnaire-engine/index.ts`: Supabase client infers table types as `never` — fix by casting the client to `any` for these operations (same pattern used in `ipe-eco`)
+4. **Deploy all edge functions** — ipe-eco, ipe-pill-session, ipe-questionnaire-engine, ipe-scoring-block, ipe-scoring, lucid-engine
 
 ## Technical Details
 
-### Auth page (`src/pages/Auth.tsx`)
-- Two tabs: "Sign In" and "Sign Up"
-- Uses `supabase.auth.signInWithPassword()` and `supabase.auth.signUp()`
-- On success, redirects to `/test`
-- Simple form: email + password
+### ipe_types.ts fix (line 608)
+Change the filter to avoid the type predicate issue:
+```typescript
+const valid = values.filter((v) => v !== null && v !== undefined) as number[];
+```
 
-### Test page updates (`src/pages/Test.tsx`)
-- Uses `supabase.auth.getSession()` on mount to check auth state
-- Listens to `onAuthStateChange` for live updates
-- If no session, redirects to `/auth`
-- Shows user email and a logout button at the top
+### ipe-questionnaire-engine/index.ts fix
+Add `as any` casts on all Supabase `.from()` calls where the generated types don't include the table schema (same pattern already used in `ipe-eco/index.ts`):
+```typescript
+const { data: cycle } = await (supabase as any).from("ipe_cycles")...
+const { data: existingState } = await (supabase as any).from("questionnaire_state")...
+// etc for all .from() calls
+```
 
-### No database changes needed
-The `users` table already exists. Auth will work with the existing setup. No new migration required.
-
-### Email confirmation
-Email confirmation is required by default. After signing up, the user needs to confirm their email before logging in. If you want to skip this for testing, we can enable auto-confirm.
+### Deployment order
+1. Run both SQL migrations via migration tool
+2. Fix TS errors in `_shared/ipe_types.ts` and `ipe-questionnaire-engine/index.ts`
+3. Deploy all 6 edge functions
+4. Test `ipe-questionnaire-engine` with a curl call to verify
 
