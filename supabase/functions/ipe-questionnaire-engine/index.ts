@@ -295,12 +295,13 @@ async function handlePlan(
   ipe_cycle_id: string
 ): Promise<Response> {
   // Verificar ciclo
-  const { data: cycle, error: cycleErr } = await supabase
+  // deno-lint-ignore no-explicit-any
+  const { data: cycle, error: cycleErr } = await (supabase as any)
     .from("ipe_cycles")
     .select("id, status, user_id")
     .eq("id", ipe_cycle_id)
     .eq("user_id", user_id)
-    .single();
+    .single() as { data: any; error: any };
 
   if (cycleErr || !cycle) return json({ error: "NOT_FOUND", message: "Cycle not found" }, 404);
   if (cycle.status === "complete" || cycle.status === "abandoned") {
@@ -308,11 +309,12 @@ async function handlePlan(
   }
 
   // Verificar se plano já existe (idempotência)
-  const { data: existingState } = await supabase
+  // deno-lint-ignore no-explicit-any
+  const { data: existingState } = await (supabase as any)
     .from("questionnaire_state")
     .select("id, execution_plan, status")
     .eq("ipe_cycle_id", ipe_cycle_id)
-    .maybeSingle();
+    .maybeSingle() as { data: any };
 
   if (existingState && existingState.status !== "abandoned") {
     return json({
@@ -323,7 +325,7 @@ async function handlePlan(
   }
 
   // Carregar pill_scoring do ciclo
-  const { data: scorings } = await supabase
+  const { data: scorings } = await (supabase as any)
     .from("pill_scoring")
     .select("*")
     .eq("ipe_cycle_id", ipe_cycle_id);
@@ -333,7 +335,7 @@ async function handlePlan(
 
   // Persistir questionnaire_state
   const stateId = crypto.randomUUID();
-  const { error: insertErr } = await supabase
+  const { error: insertErr } = await (supabase as any)
     .from("questionnaire_state")
     .insert({
       id: stateId,
@@ -360,7 +362,7 @@ async function handlePlan(
   }
 
   // Atualizar ciclo para status questionnaire
-  await supabase
+  await (supabase as any)
     .from("ipe_cycles")
     .update({ status: "questionnaire" })
     .eq("id", ipe_cycle_id);
@@ -384,7 +386,7 @@ async function handleNextBlock(
   // B4 FIX: verificar ownership do ciclo antes de carregar estado
   // Sem isso, qualquer token válido com ipe_cycle_id conhecido pode avançar
   // o questionário de outro usuário (service_role bypassa RLS)
-  const { data: cycleCheck, error: cycleCheckErr } = await supabase
+  const { data: cycleCheck, error: cycleCheckErr } = await (supabase as any)
     .from("ipe_cycles")
     .select("id")
     .eq("id", ipe_cycle_id)
@@ -396,11 +398,14 @@ async function handleNextBlock(
   }
 
   // Carregar estado atual
-  const { data: state, error: stateErr } = await supabase
+  // deno-lint-ignore no-explicit-any
+  const { data: stateRaw, error: stateErr } = await (supabase as any)
     .from("questionnaire_state")
     .select("*")
     .eq("ipe_cycle_id", ipe_cycle_id)
     .single();
+  // deno-lint-ignore no-explicit-any
+  const state = stateRaw as any;
 
   if (stateErr || !state) {
     return json({ error: "NOT_FOUND", message: "questionnaire_state not found — call /plan first" }, 404);
@@ -424,7 +429,7 @@ async function handleNextBlock(
   let _pillScoringsCache: PillScoring[] | null = null;
   async function loadPillScorings(): Promise<PillScoring[]> {
     if (_pillScoringsCache !== null) return _pillScoringsCache;
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from("pill_scoring")
       .select("*")
       .eq("ipe_cycle_id", ipe_cycle_id);
@@ -454,7 +459,7 @@ async function handleNextBlock(
       const principalPendente = flags.principal_resposta_pendente ?? null;
 
       // Persistir block_response com variante
-      await supabase.from("block_responses").upsert({
+      await (supabase as any).from("block_responses").upsert({
         ipe_cycle_id,
         block_id,
         position: current_position,
@@ -520,7 +525,7 @@ async function handleNextBlock(
       const jaProcessado = resultados[block_id];
       if (!jaProcessado) {
         // Persistir block_response (principal apenas por ora)
-        await supabase.from("block_responses").upsert({
+        await (supabase as any).from("block_responses").upsert({
           ipe_cycle_id,
           block_id,
           position: current_position,
@@ -664,14 +669,14 @@ async function handleNextBlock(
       plan, resultados, flags, current_position,
       orcamento_global, orcamento_d3, contador_d3
     );
-    return await finalizarNextBlock(supabase, state.id, nextAfterLate, plan,
+    return await finalizarNextBlock(supabase, (state as any).id, nextAfterLate as { line_id: LineId | null; dimension_transition: string | null }, plan,
       current_position, orcamento_global, orcamento_d3, contador_d3,
-      resultados, flags, (state.last_block_completed as LineId | null));
+      resultados, flags, ((state as any).last_block_completed as LineId | null));
   }
 
-  return await finalizarNextBlock(supabase, state.id, nextResult, plan,
+  return await finalizarNextBlock(supabase, (state as any).id, nextResult as { line_id: LineId | null; dimension_transition: string | null }, plan,
     current_position, orcamento_global, orcamento_d3, contador_d3,
-    resultados, flags, (state.last_block_completed as LineId | null));
+    resultados, flags, ((state as any).last_block_completed as LineId | null));
 }
 
 // ─────────────────────────────────────────
@@ -871,7 +876,7 @@ async function persistState(
   state_id: string,
   updates: Record<string, unknown>
 ): Promise<void> {
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from("questionnaire_state")
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq("id", state_id);
