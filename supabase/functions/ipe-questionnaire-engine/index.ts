@@ -665,12 +665,12 @@ async function handleNextBlock(
       plan, resultados, flags, current_position,
       orcamento_global, orcamento_d3, contador_d3
     );
-    return await finalizarNextBlock(supabase, state.id, nextAfterLate, plan,
+    return await finalizarNextBlock(supabase, state.id, nextAfterLate as { line_id: LineId | null; dimension_transition: string | null }, plan,
       current_position, orcamento_global, orcamento_d3, contador_d3,
       resultados, flags, (state.last_block_completed as LineId | null));
   }
 
-  return await finalizarNextBlock(supabase, state.id, nextResult, plan,
+  return await finalizarNextBlock(supabase, state.id, nextResult as { line_id: LineId | null; dimension_transition: string | null }, plan,
     current_position, orcamento_global, orcamento_d3, contador_d3,
     resultados, flags, (state.last_block_completed as LineId | null));
 }

@@ -30,29 +30,29 @@ import { STATIC_BASE_SNAPSHOT } from "./types.ts";
 
 const TEST_CORPUS: RagNode[] = [
   // F1
-  { node_id: "F1-N001", macro_band: "F1", node_type: "Declarative", density_class: 1, stage_min: 1.0, stage_max: 2.5, teleology_score: 0, prescriptive_score: 0, normative_score: 0, content_text: "F1 Declarative d1" },
-  { node_id: "F1-N002", macro_band: "F1", node_type: "Tension",     density_class: 2, stage_min: 1.5, stage_max: 3.0, teleology_score: 0, prescriptive_score: 0, normative_score: 0, content_text: "F1 Tension d2" },
+  { node_id: "F1-N001", macro_band: "F1", node_type: "Declarative", density_class: 1, stage_min: 1.0, stage_max: 2.5, teleology_score: 0, prescriptive_score: 0, normative_score: 0, content_text: "F1 Declarative d1", source_author: "", source_work: "" },
+  { node_id: "F1-N002", macro_band: "F1", node_type: "Tension",     density_class: 2, stage_min: 1.5, stage_max: 3.0, teleology_score: 0, prescriptive_score: 0, normative_score: 0, content_text: "F1 Tension d2", source_author: "", source_work: "" },
 
   // F2
-  { node_id: "F2-N001", macro_band: "F2", node_type: "Declarative", density_class: 1, stage_min: 2.0, stage_max: 3.5, teleology_score: 0, prescriptive_score: 0, normative_score: 0, content_text: "F2 Declarative d1" },
-  { node_id: "F2-N002", macro_band: "F2", node_type: "Tension",     density_class: 2, stage_min: 2.5, stage_max: 4.0, teleology_score: 0, prescriptive_score: 0, normative_score: 0, content_text: "F2 Tension d2" },
-  { node_id: "F2-N003", macro_band: "F2", node_type: "Contrast",    density_class: 3, stage_min: 3.0, stage_max: 4.5, teleology_score: 0, prescriptive_score: 0, normative_score: 0, content_text: "F2 Contrast d3" },
+  { node_id: "F2-N001", macro_band: "F2", node_type: "Declarative", density_class: 1, stage_min: 2.0, stage_max: 3.5, teleology_score: 0, prescriptive_score: 0, normative_score: 0, content_text: "F2 Declarative d1", source_author: "", source_work: "" },
+  { node_id: "F2-N002", macro_band: "F2", node_type: "Tension",     density_class: 2, stage_min: 2.5, stage_max: 4.0, teleology_score: 0, prescriptive_score: 0, normative_score: 0, content_text: "F2 Tension d2", source_author: "", source_work: "" },
+  { node_id: "F2-N003", macro_band: "F2", node_type: "Contrast",    density_class: 3, stage_min: 3.0, stage_max: 4.5, teleology_score: 0, prescriptive_score: 0, normative_score: 0, content_text: "F2 Contrast d3", source_author: "", source_work: "" },
 
   // F3
-  { node_id: "F3-N001", macro_band: "F3", node_type: "Declarative", density_class: 1, stage_min: 3.0, stage_max: 6.0, teleology_score: 0, prescriptive_score: 0, normative_score: 0, content_text: "F3 Declarative amplitude3" },
-  { node_id: "F3-N002", macro_band: "F3", node_type: "Tension",     density_class: 2, stage_min: 4.0, stage_max: 6.0, teleology_score: 0, prescriptive_score: 0, normative_score: 0, content_text: "F3 Tension d2" },
-  { node_id: "F3-N003", macro_band: "F3", node_type: "Contrast",    density_class: 3, stage_min: 4.5, stage_max: 6.5, teleology_score: 0, prescriptive_score: 0, normative_score: 0, content_text: "F3 Contrast d3" },
+  { node_id: "F3-N001", macro_band: "F3", node_type: "Declarative", density_class: 1, stage_min: 3.0, stage_max: 6.0, teleology_score: 0, prescriptive_score: 0, normative_score: 0, content_text: "F3 Declarative amplitude3", source_author: "", source_work: "" },
+  { node_id: "F3-N002", macro_band: "F3", node_type: "Tension",     density_class: 2, stage_min: 4.0, stage_max: 6.0, teleology_score: 0, prescriptive_score: 0, normative_score: 0, content_text: "F3 Tension d2", source_author: "", source_work: "" },
+  { node_id: "F3-N003", macro_band: "F3", node_type: "Contrast",    density_class: 3, stage_min: 4.5, stage_max: 6.5, teleology_score: 0, prescriptive_score: 0, normative_score: 0, content_text: "F3 Contrast d3", source_author: "", source_work: "" },
 
   // F4 — risk_score = 1
-  { node_id: "F4-N001", macro_band: "F4", node_type: "Declarative", density_class: 1, stage_min: 5.0, stage_max: 7.0, teleology_score: 1, prescriptive_score: 0, normative_score: 0, content_text: "F4 Declarative risk1" },
-  { node_id: "F4-N002", macro_band: "F4", node_type: "Tension",     density_class: 2, stage_min: 5.5, stage_max: 7.5, teleology_score: 0, prescriptive_score: 0, normative_score: 0, content_text: "F4 Tension d2" },
+  { node_id: "F4-N001", macro_band: "F4", node_type: "Declarative", density_class: 1, stage_min: 5.0, stage_max: 7.0, teleology_score: 1, prescriptive_score: 0, normative_score: 0, content_text: "F4 Declarative risk1", source_author: "", source_work: "" },
+  { node_id: "F4-N002", macro_band: "F4", node_type: "Tension",     density_class: 2, stage_min: 5.5, stage_max: 7.5, teleology_score: 0, prescriptive_score: 0, normative_score: 0, content_text: "F4 Tension d2", source_author: "", source_work: "" },
 
   // F5
-  { node_id: "F5-N001", macro_band: "F5", node_type: "Declarative", density_class: 1, stage_min: 6.0, stage_max: 8.0, teleology_score: 0, prescriptive_score: 0, normative_score: 0, content_text: "F5 Declarative d1" },
-  { node_id: "F5-N002", macro_band: "F5", node_type: "Tension",     density_class: 2, stage_min: 6.5, stage_max: 8.0, teleology_score: 0, prescriptive_score: 0, normative_score: 0, content_text: "F5 Tension d2" },
+  { node_id: "F5-N001", macro_band: "F5", node_type: "Declarative", density_class: 1, stage_min: 6.0, stage_max: 8.0, teleology_score: 0, prescriptive_score: 0, normative_score: 0, content_text: "F5 Declarative d1", source_author: "", source_work: "" },
+  { node_id: "F5-N002", macro_band: "F5", node_type: "Tension",     density_class: 2, stage_min: 6.5, stage_max: 8.0, teleology_score: 0, prescriptive_score: 0, normative_score: 0, content_text: "F5 Tension d2", source_author: "", source_work: "" },
 
   // risk_score = 2 — NUNCA deve ser ativado
-  { node_id: "F3-N999", macro_band: "F3", node_type: "Contrast", density_class: 3, stage_min: 1.0, stage_max: 8.0, teleology_score: 2, prescriptive_score: 0, normative_score: 0, content_text: "FORBIDDEN teleology=2" },
+  { node_id: "F3-N999", macro_band: "F3", node_type: "Contrast", density_class: 3, stage_min: 1.0, stage_max: 8.0, teleology_score: 2, prescriptive_score: 0, normative_score: 0, content_text: "FORBIDDEN teleology=2", source_author: "", source_work: "" },
 ];
 
 // ─────────────────────────────────────────
@@ -442,7 +442,7 @@ Deno.test("MVP — 6 ciclos encadeados com hash chain válida", async () => {
 
 Deno.test("RADAR — Piso global CGG respeita min(Dj+1.5)", () => {
   const input = {
-    lines: { d1: [7,7,7,7], d2: [7,7,7,7], d3: [1,1,1,1], d4: [7,7,7,7] },
+    lines: { d1: [7,7,7,7] as [number,number,number,number], d2: [7,7,7,7] as [number,number,number,number], d3: [1,1,1,1] as [number,number,number,number], d4: [7,7,7,7] as [number,number,number,number] },
     previousCGG: 1.0, cyclesCompleted: 0, previousLines: null,
   };
   const result = executeRadar(input);
@@ -455,11 +455,11 @@ Deno.test("RADAR — Piso global CGG respeita min(Dj+1.5)", () => {
 
 Deno.test("RADAR — Penalidade CEC quando D3 < 4.5", () => {
   const withPenalty = executeRadar({
-    lines: { d1: [5,5,5,5], d2: [5,5,5,5], d3: [4,4,4,4], d4: [5,5,5,5] },
+    lines: { d1: [5,5,5,5] as [number,number,number,number], d2: [5,5,5,5] as [number,number,number,number], d3: [4,4,4,4] as [number,number,number,number], d4: [5,5,5,5] as [number,number,number,number] },
     previousCGG: 1.0, cyclesCompleted: 0, previousLines: null,
   });
   const withoutPenalty = executeRadar({
-    lines: { d1: [5,5,5,5], d2: [5,5,5,5], d3: [5,5,5,5], d4: [5,5,5,5] },
+    lines: { d1: [5,5,5,5] as [number,number,number,number], d2: [5,5,5,5] as [number,number,number,number], d3: [5,5,5,5] as [number,number,number,number], d4: [5,5,5,5] as [number,number,number,number] },
     previousCGG: 1.0, cyclesCompleted: 0, previousLines: null,
   });
 
