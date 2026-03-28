@@ -442,7 +442,7 @@ Deno.test("MVP — 6 ciclos encadeados com hash chain válida", async () => {
 
 Deno.test("RADAR — Piso global CGG respeita min(Dj+1.5)", () => {
   const input = {
-    lines: { d1: [7,7,7,7], d2: [7,7,7,7], d3: [1,1,1,1], d4: [7,7,7,7] },
+    lines: { d1: [7,7,7,7] as [number,number,number,number], d2: [7,7,7,7] as [number,number,number,number], d3: [1,1,1,1] as [number,number,number,number], d4: [7,7,7,7] as [number,number,number,number] },
     previousCGG: 1.0, cyclesCompleted: 0, previousLines: null,
   };
   const result = executeRadar(input);
