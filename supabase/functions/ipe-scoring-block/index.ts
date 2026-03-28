@@ -145,9 +145,10 @@ corpus_transversal: ${pd.corpus_transversal ? `"${pd.corpus_transversal}"` : "nu
 // §3.3 — CARREGAR PROMPT (com cache)
 // ─────────────────────────────────────────
 
+// deno-lint-ignore no-explicit-any
 async function loadPrompt(
   blockId: LineId,
-  supabase: ReturnType<typeof createClient>
+  supabase: any
 ): Promise<{ text: string; version: string } | null> {
   const component = `scoring_block_${blockId}`;
   const now = Date.now();
@@ -158,7 +159,8 @@ async function loadPrompt(
     return { text: cached.text, version: cached.version };
   }
 
-  const { data, error } = await supabase
+  // deno-lint-ignore no-explicit-any
+  const { data, error } = await (supabase as any)
     .from("prompt_versions")
     .select("prompt_text, version")
     .eq("component", component)
