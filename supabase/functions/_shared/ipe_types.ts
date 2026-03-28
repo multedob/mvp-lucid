@@ -605,7 +605,7 @@ export function computeLuceInput(
   user_text: string
 ): LuceRawInput | null {
   const avg = (values: ILValue[]): number | null => {
-    const valid = values.filter((v): v is number => v !== null && v !== undefined);
+    const valid = values.filter((v) => v !== null && v !== undefined) as number[];
     return valid.length > 0 ? valid.reduce((s, v) => s + v!, 0) / valid.length : null;
   };
   const d1 = avg([ils.l1_1, ils.l1_2, ils.l1_3, ils.l1_4]);
