@@ -295,12 +295,13 @@ async function handlePlan(
   ipe_cycle_id: string
 ): Promise<Response> {
   // Verificar ciclo
+  // deno-lint-ignore no-explicit-any
   const { data: cycle, error: cycleErr } = await (supabase as any)
     .from("ipe_cycles")
     .select("id, status, user_id")
     .eq("id", ipe_cycle_id)
     .eq("user_id", user_id)
-    .single();
+    .single() as { data: any; error: any };
 
   if (cycleErr || !cycle) return json({ error: "NOT_FOUND", message: "Cycle not found" }, 404);
   if (cycle.status === "complete" || cycle.status === "abandoned") {
