@@ -701,7 +701,7 @@ function determinarProximoBloco(
         && !flags.late_activation_l1_3
         && executados.has("L1.1")
         && executados.has("L1.2")) {
-      return { line_id: "L1.3_CHECK" as unknown as LineId, dimension_transition: null };
+      return { line_id: "L1.3_CHECK" as LineId, dimension_transition: null };
     }
 
     const dim = getDimensao(lid);
