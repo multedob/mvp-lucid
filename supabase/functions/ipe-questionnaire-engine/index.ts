@@ -309,11 +309,12 @@ async function handlePlan(
   }
 
   // Verificar se plano já existe (idempotência)
+  // deno-lint-ignore no-explicit-any
   const { data: existingState } = await (supabase as any)
     .from("questionnaire_state")
     .select("id, execution_plan, status")
     .eq("ipe_cycle_id", ipe_cycle_id)
-    .maybeSingle();
+    .maybeSingle() as { data: any };
 
   if (existingState && existingState.status !== "abandoned") {
     return json({
