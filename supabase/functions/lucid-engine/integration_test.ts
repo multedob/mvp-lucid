@@ -455,11 +455,11 @@ Deno.test("RADAR — Piso global CGG respeita min(Dj+1.5)", () => {
 
 Deno.test("RADAR — Penalidade CEC quando D3 < 4.5", () => {
   const withPenalty = executeRadar({
-    lines: { d1: [5,5,5,5], d2: [5,5,5,5], d3: [4,4,4,4], d4: [5,5,5,5] },
+    lines: { d1: [5,5,5,5] as [number,number,number,number], d2: [5,5,5,5] as [number,number,number,number], d3: [4,4,4,4] as [number,number,number,number], d4: [5,5,5,5] as [number,number,number,number] },
     previousCGG: 1.0, cyclesCompleted: 0, previousLines: null,
   });
   const withoutPenalty = executeRadar({
-    lines: { d1: [5,5,5,5], d2: [5,5,5,5], d3: [5,5,5,5], d4: [5,5,5,5] },
+    lines: { d1: [5,5,5,5] as [number,number,number,number], d2: [5,5,5,5] as [number,number,number,number], d3: [5,5,5,5] as [number,number,number,number], d4: [5,5,5,5] as [number,number,number,number] },
     previousCGG: 1.0, cyclesCompleted: 0, previousLines: null,
   });
 
