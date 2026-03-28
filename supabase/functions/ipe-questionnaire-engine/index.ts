@@ -396,11 +396,14 @@ async function handleNextBlock(
   }
 
   // Carregar estado atual
-  const { data: state, error: stateErr } = await (supabase as any)
+  // deno-lint-ignore no-explicit-any
+  const { data: stateRaw, error: stateErr } = await (supabase as any)
     .from("questionnaire_state")
     .select("*")
     .eq("ipe_cycle_id", ipe_cycle_id)
     .single();
+  // deno-lint-ignore no-explicit-any
+  const state = stateRaw as any;
 
   if (stateErr || !state) {
     return json({ error: "NOT_FOUND", message: "questionnaire_state not found — call /plan first" }, 404);
