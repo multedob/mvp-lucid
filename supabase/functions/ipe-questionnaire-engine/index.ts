@@ -974,12 +974,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (authError || !user) return json({ error: "UNAUTHORIZED", message: "Invalid token" }, 401);
 
   if (path === "plan") {
-    return await handlePlan(supabase, user.id, body.ipe_cycle_id as string);
+    // deno-lint-ignore no-explicit-any
+    return await handlePlan(supabase as any, user.id, body.ipe_cycle_id as string);
   }
 
   // next-block
+  // deno-lint-ignore no-explicit-any
   return await handleNextBlock(
-    supabase,
+    supabase as any,
     user.id,
     body.ipe_cycle_id as string,
     body.block_response as Record<string, unknown> | undefined
