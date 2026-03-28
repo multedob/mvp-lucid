@@ -145,10 +145,9 @@ corpus_transversal: ${pd.corpus_transversal ? `"${pd.corpus_transversal}"` : "nu
 // §3.3 — CARREGAR PROMPT (com cache)
 // ─────────────────────────────────────────
 
-// deno-lint-ignore no-explicit-any
 async function loadPrompt(
   blockId: LineId,
-  supabase: any
+  supabase: ReturnType<typeof createClient>
 ): Promise<{ text: string; version: string } | null> {
   const component = `scoring_block_${blockId}`;
   const now = Date.now();
@@ -159,8 +158,7 @@ async function loadPrompt(
     return { text: cached.text, version: cached.version };
   }
 
-  // deno-lint-ignore no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from("prompt_versions")
     .select("prompt_text, version")
     .eq("component", component)
@@ -396,6 +394,102 @@ function validateCoherence(
   return { valid: errors.length === 0, errors };
 }
 
+// ─────────────────────────────────────────
+// REGRA CARDINAL — Override determinístico (v0.4.2)
+// Se resposta presente e não ética, INDETERMINADO → NÃO com GCC "baixo"
+// Recalcula faixa_questionario, il_questionario e cascata
+// ─────────────────────────────────────────
+function applyRegraCardinal(
+  o: Record<string, unknown>,
+  input: BlockScoringInputFull,
+): boolean {
+  // Condições de bypass: sem resposta ou proteção ética
+  if (!input.principal_resposta || input.protecao_etica) return false;
+
+  const aq = o.analise_questionario as Record<string, unknown> | undefined;
+  if (!aq?.cortes) return false;
+
+  const cortes = aq.cortes as Record<string, Record<string, unknown>>;
+  let modified = false;
+
+  // Override: INDETERMINADO → NÃO com GCC baixo
+  for (const corteId of ["2_4", "4_6", "6_8"]) {
+    const corte = cortes[corteId];
+    if (corte && corte.decisao === "INDETERMINADO") {
+      corte.decisao = "NÃO";
+      corte.gcc = "baixo";
+      corte.evidencia = "Regra Cardinal: resposta presente sem evidência do construto = NÃO";
+      modified = true;
+    }
+  }
+
+  if (!modified) return false;
+
+  // Recalcular faixa_questionario pelo algoritmo A.5
+  const d24 = (cortes["2_4"]?.decisao as string) ?? "NÃO";
+  const d46 = (cortes["4_6"]?.decisao as string) ?? "NÃO";
+  const d68 = (cortes["6_8"]?.decisao as string) ?? "NÃO";
+
+  let newFaixa: string;
+  if (d24 === "NÃO") {
+    newFaixa = "A";
+  } else if (d24 === "SIM" && d46 === "NÃO") {
+    newFaixa = "B";
+  } else if (d46 === "SIM" && d68 === "NÃO") {
+    newFaixa = "C";
+  } else if (d68 === "SIM") {
+    newFaixa = "D";
+  } else {
+    newFaixa = "A"; // Fallback: todos NÃO após override
+  }
+  aq.faixa_questionario = newFaixa;
+
+  // Recalcular il_questionario — valor mínimo da faixa (conservador)
+  const isL24 = input.block_id === "L2.4";
+  const faixaToMinIL: Record<string, number> = isL24
+    ? { A: 1.5, B: 4.0, C: 6.0, D: 7.5 }
+    : { A: 1.0, B: 3.5, C: 5.5, D: 7.5 };
+  const newIL = faixaToMinIL[newFaixa] ?? null;
+  aq.il_questionario = newIL;
+
+  // Recalcular il_canonico dependendo do caso_integracao
+  const caso = o.caso_integracao as number;
+  // Em CASO 0 (sem pills), il_canonico = il_questionario
+  if (caso === 0 || caso === 4 || caso === 5) {
+    // Aplicar ceiling por nivel_fallback
+    let finalIL = newIL;
+    const fb = o.nivel_fallback as number;
+    if (fb === 1 && finalIL !== null && finalIL > 4.5) {
+      finalIL = isL24 ? 4.0 : 4.5;
+    }
+    if (fb === 2 && finalIL !== null && finalIL > 2.0) {
+      finalIL = isL24 ? 1.5 : 2.0;
+    }
+    o.il_canonico = finalIL;
+    o.faixa_final = newFaixa;
+    o.confianca = "baixa";
+  }
+  // Em CASO 1/2/3, pill prevalece — não alterar il_canonico
+
+  // Se il_canonico agora tem valor, faixa_final deve ser coerente
+  if (o.il_canonico !== null) {
+    o.faixa_final = newFaixa;
+  }
+
+  // Marcar flag
+  const flags = o.flags as Record<string, unknown>;
+  if (flags) {
+    flags.regra_cardinal_aplicada = true;
+    flags.baixa_confianca = true;
+    // Remover reask se agora tem score
+    if (o.il_canonico !== null) {
+      flags.reask_recomendado = false;
+    }
+  }
+
+  return true;
+}
+
 /** Construir output de erro — il_canonico=null, confianca=baixa, scoring_error=true */
 function buildErrorOutput(blockId: LineId, auditId: string): BlockScoringOutputFull {
   return {
@@ -525,6 +619,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
         );
         // Não retry — retornar output com warning flag
         (parsed.flags as Record<string, boolean>).coherence_warning = true;
+      }
+
+      // Regra Cardinal — override determinístico (v0.4.2)
+      // Se LLM retornou INDETERMINADO com resposta presente, forçar NÃO
+      const cardinalApplied = applyRegraCardinal(parsed, input);
+      if (cardinalApplied) {
+        console.log(`REGRA_CARDINAL block=${blockId}: INDETERMINADO→NÃO override aplicado`);
       }
 
       // Sucesso: montar output completo
