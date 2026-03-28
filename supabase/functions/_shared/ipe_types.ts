@@ -30,7 +30,9 @@ export type ILStatus = 'válido' | 'insuficiente' | 'aberto';
 // Valores IL válidos — SCORING_SPEC v1.3
 // Nota: TypeScript não distingue representação decimal (1.0 === 1).
 // Validação real ocorre no scoring (edge function) antes de persistir.
-export type ILValue = 1.0 | 2.0 | 3.5 | 4.5 | 5.5 | 6.5 | 7.5 | 8.0 | null;
+// v1.2: Expandido para incluir L2.4 values (1.5, 4.0, 6.0) — DESIGN_ENGINE v1.0 §2, E1
+// Validação runtime distingue por bloco: L2.4 usa {1.5, 4.0, 6.0, 7.5, null}, demais usam set padrão
+export type ILValue = 1.0 | 1.5 | 2.0 | 3.5 | 4.0 | 4.5 | 5.5 | 6.0 | 6.5 | 7.5 | 8.0 | null;
 
 // Linhas canônicas
 export type LineId =
@@ -460,6 +462,72 @@ export interface BlockScoringOutput {
   corte_pendente: CorteId | null;
   faixa_preliminar: FaixaValue;
 }
+
+// ─────────────────────────────────────────
+// 5.4.1 ipe-scoring-block — Engine real (v1.0)
+// Fonte: DESIGN_ENGINE_SCORING_BLOCK v1.0, §2
+// Substitui STUB. BlockScoringOutputFull extends BlockScoringOutput (backward compatible).
+// ─────────────────────────────────────────
+
+// Input expandido — extends BlockScoringInput para manter sincronização
+// Adiciona: variante_servida (decisão do orchestrator) + pill_data (dados agregados)
+export interface BlockScoringInputFull extends BlockScoringInput {
+  variante_servida: 'Origem' | 'Custo' | 'C_D' | null;
+
+  // Dados de Pill agregados — CONVENÇÃO: sempre o objeto, nunca null.
+  // Quando sem pills: n_pills_com_cobertura = 0, demais campos default.
+  // Usar defaultPillData() para garantir a convenção.
+  pill_data: PillDataAgregado;
+}
+
+// Factory para PillDataAgregado vazio — garante convenção §2.1 (sempre objeto, nunca null/undefined)
+// Usar quando DadosPillsAgregados[block_id] retorna undefined (sem cobertura para a linha)
+export function defaultPillData(): PillDataAgregado {
+  return {
+    n_pills_respondidas: 0,
+    n_pills_com_cobertura: 0,
+    il_sinais: [],
+    il_por_pill: {},
+    fd_linha_agregado: 0,
+    gcc_por_corte: { '2_4': null, '4_6': null, '6_8': null },
+    faixa_estimada: 'indeterminada',
+    heterogeneidade: 'baixa',
+    corpus_transversal: null,
+  };
+}
+
+// Análise por corte — retornado pelo LLM dentro de analise_questionario
+export interface CorteAnalise {
+  decisao: 'SIM' | 'NÃO' | 'INDETERMINADO';
+  gcc: 'alto' | 'medio' | 'baixo' | 'nao_aplicavel';
+  evidencia: string;  // ≤40 palavras
+}
+
+// Output expandido — extends BlockScoringOutput para backward compatibility
+// O LLM retorna Omit<BlockScoringOutputFull, 'scoring_audit_id'>
+// O engine injeta scoring_audit_id antes de retornar
+export interface BlockScoringOutputFull extends BlockScoringOutput {
+  faixa_final: FaixaValue;
+  caso_integracao: 0 | 1 | 2 | 3 | 4 | 5 | 6;  // 6 apenas L1.4
+  nivel_fallback: 0 | 1 | 2;
+
+  analise_questionario: {
+    cortes: {
+      '2_4': CorteAnalise;
+      '4_6': CorteAnalise;
+      '6_8': CorteAnalise;
+    };
+    faixa_questionario: FaixaValue;
+    il_questionario: ILValue;
+  };
+
+  nota_auditoria: string;
+  flags: Record<string, boolean>;  // flags variam por bloco — mapa genérico
+}
+
+// Sets de validação IL por bloco — usados pelo engine em runtime (§3.5)
+export const IL_VALID_SET_DEFAULT = [1.0, 2.0, 3.5, 4.5, 5.5, 6.5, 7.5, 8.0, null] as const;
+export const IL_VALID_SET_L24 = [1.5, 4.0, 6.0, 7.5, null] as const;
 
 // 5.5 ipe-eco
 export interface EcoInput {
