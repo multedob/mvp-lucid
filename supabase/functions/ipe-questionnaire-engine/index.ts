@@ -18,10 +18,14 @@ import {
   type ExecutionPlan,
   type ResultadoBloco,
   type BlockScoringOutput,
+  type BlockScoringOutputFull,
+  type BlockScoringInputFull,
+  type PillDataAgregado,
   type NextBlockOutput,
   type FaixaValue,
   type CorteId,
   agregarDadosPills,
+  defaultPillData,
   shouldActivateL13,
   shouldActivateL23,
   shouldActivateL31,
@@ -414,6 +418,26 @@ async function handleNextBlock(
   let contador_d3 = state.contador_d3_blocos ?? 0;
   let current_position = state.current_position ?? 0;
 
+  // E4: Carregar pill_scorings para passar ao scoring-block (lazy — só carrega quando necessário)
+  // O engine real precisa de pill_data por bloco (DESIGN_ENGINE v1.0 §2.1, §3.2)
+  let _pillScoringsCache: PillScoring[] | null = null;
+  async function loadPillScorings(): Promise<PillScoring[]> {
+    if (_pillScoringsCache !== null) return _pillScoringsCache;
+    const { data } = await supabase
+      .from("pill_scoring")
+      .select("*")
+      .eq("ipe_cycle_id", ipe_cycle_id);
+    _pillScoringsCache = (data ?? []) as PillScoring[];
+    return _pillScoringsCache;
+  }
+
+  /** Retorna PillDataAgregado para um bloco — nunca null (convenção §2.1) */
+  async function getPillData(blockId: LineId): Promise<PillDataAgregado> {
+    const scorings = await loadPillScorings();
+    if (scorings.length === 0) return defaultPillData();
+    return agregarDadosPills(scorings, blockId);
+  }
+
   // ── Processar block_response (se presente) ──────────────────
   if (block_response) {
     const block_id = block_response.block_id as string;
@@ -441,15 +465,21 @@ async function handleNextBlock(
       }, { onConflict: "ipe_cycle_id,block_id" });
 
       // Chamar ipe-scoring-block com principal + variante
+      // E4: agora passa pill_data e variante_servida (DESIGN_ENGINE v1.0 §2.1)
       const scoringResult = await callScoringBlock(supabase, {
         ipe_cycle_id,
         block_id: block_id as LineId,
         principal_resposta: principalPendente,
         variante_resposta: variante,
+        variante_servida: (['Origem', 'Custo', 'C_D'].includes(flags.variante_a_servir_pendente as string)
+          ? flags.variante_a_servir_pendente as 'Origem' | 'Custo' | 'C_D'
+          : null),
         protecao_etica: protecao,
+        pill_data: await getPillData(block_id as LineId),
       });
 
       // Persistir resultado final do bloco
+      // R1.1 FIX: usar faixa_final (pós-integração pill↔questionário), não faixa_preliminar
       const resultado: ResultadoBloco = {
         il_canonico: scoringResult.il_canonico,
         confianca: scoringResult.confianca,
@@ -458,7 +488,7 @@ async function handleNextBlock(
         scoring_version: null,
         corte_pendente_apos_principal: flags.bloco_aguardando_variante
           ? (scoringResult.corte_pendente ?? null) : null,
-        faixa_final: scoringResult.faixa_preliminar,
+        faixa_final: scoringResult.faixa_final,
       };
       resultados[block_id] = resultado;
 
@@ -505,12 +535,15 @@ async function handleNextBlock(
         // Objetivo exclusivo: obter corte_pendente + faixa_preliminar para decidir variante.
         // IL definitivo virá do scoring final (principal + variante). Ruído de auditoria
         // aceito para piloto — scoring_audit registra este IL intermediário. AFC após Fase 5.
+        // E4: agora passa pill_data e variante_servida=null (DESIGN_ENGINE v1.0 §2.1)
         const scoringResult = await callScoringBlock(supabase, {
           ipe_cycle_id,
           block_id: block_id as LineId,
           principal_resposta: principal,
           variante_resposta: null,
+          variante_servida: null,
           protecao_etica: protecao,
+          pill_data: await getPillData(block_id as LineId),
         });
 
         const dim = getDimensao(block_id);
@@ -565,6 +598,7 @@ async function handleNextBlock(
         }
 
         // Sem variante — finalizar bloco
+        // R1.1 FIX: usar faixa_final (pós-integração pill↔questionário), não faixa_preliminar
         const resultado: ResultadoBloco = {
           il_canonico: scoringResult.il_canonico,
           confianca: scoringResult.confianca,
@@ -572,7 +606,7 @@ async function handleNextBlock(
           protecao_etica: protecao,
           scoring_version: null,
           corte_pendente_apos_principal: scoringResult.corte_pendente,
-          faixa_final: scoringResult.faixa_preliminar,
+          faixa_final: scoringResult.faixa_final,
         };
         resultados[block_id] = resultado;
 
@@ -605,13 +639,8 @@ async function handleNextBlock(
   // Verificar late activation L1.3 se necessário
   if (nextResult.line_id === "L1.3_CHECK") {
     // Posição 4 — verificar late activation
-    const scorings = await supabase
-      .from("pill_scoring")
-      .select("*")
-      .eq("ipe_cycle_id", ipe_cycle_id);
-    const pillDataL13 = agregarDadosPills(
-      (scorings.data ?? []) as PillScoring[], "L1.3"
-    );
+    // E4: reutiliza cache de pillScorings (evita query duplicada)
+    const pillDataL13 = agregarDadosPills(await loadPillScorings(), "L1.3");
     const lateActivation = checkLateActivationL13(
       resultados as Record<LineId, ResultadoBloco>,
       pillDataL13
@@ -754,18 +783,13 @@ async function persistState(
 
 // ─────────────────────────────────────────
 // CHAMAR ipe-scoring-block (síncrono)
-// Fonte: PIPELINE_IMPLEMENTACAO §5.1 — ciclo request-response por bloco
+// Fonte: PIPELINE_IMPLEMENTACAO §5.1 + DESIGN_ENGINE v1.0 §2.1 (E4)
+// E4: assinatura expandida para BlockScoringInputFull (pill_data + variante_servida)
 // ─────────────────────────────────────────
 async function callScoringBlock(
   supabase: ReturnType<typeof createClient>,
-  input: {
-    ipe_cycle_id: string;
-    block_id: LineId;
-    principal_resposta: string | null;
-    variante_resposta: string | null;
-    protecao_etica: boolean;
-  }
-): Promise<BlockScoringOutput> {
+  input: BlockScoringInputFull,
+): Promise<BlockScoringOutputFull> {
   const scoringUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/ipe-scoring-block`;
   try {
     const resp = await fetch(scoringUrl, {
@@ -777,10 +801,10 @@ async function callScoringBlock(
       body: JSON.stringify(input),
     });
     if (!resp.ok) throw new Error(`ipe-scoring-block HTTP ${resp.status}`);
-    return await resp.json() as BlockScoringOutput;
+    return await resp.json() as BlockScoringOutputFull;
   } catch (err) {
     console.error("SCORING_BLOCK_ERROR:", err);
-    // Degradação graciosa: IL null, sem variante
+    // Degradação graciosa: IL null, sem variante — retorna OutputFull completo
     return {
       block_id: input.block_id,
       il_canonico: null,
@@ -788,6 +812,20 @@ async function callScoringBlock(
       scoring_audit_id: crypto.randomUUID(),
       corte_pendente: null,
       faixa_preliminar: "indeterminada",
+      faixa_final: "indeterminada",
+      caso_integracao: 0,
+      nivel_fallback: 0,
+      analise_questionario: {
+        cortes: {
+          "2_4": { decisao: "INDETERMINADO", gcc: "nao_aplicavel", evidencia: "Scoring error" },
+          "4_6": { decisao: "INDETERMINADO", gcc: "nao_aplicavel", evidencia: "Scoring error" },
+          "6_8": { decisao: "INDETERMINADO", gcc: "nao_aplicavel", evidencia: "Scoring error" },
+        },
+        faixa_questionario: "indeterminada",
+        il_questionario: null,
+      },
+      nota_auditoria: "callScoringBlock fallback — HTTP error or timeout",
+      flags: { scoring_error: true },
     };
   }
 }
