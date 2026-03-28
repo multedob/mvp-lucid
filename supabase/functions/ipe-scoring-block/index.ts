@@ -358,7 +358,8 @@ async function loadPrompt(
     return { text: cached.text, version: cached.version };
   }
 
-  const { data, error } = await supabase
+  // deno-lint-ignore no-explicit-any
+  const { data, error } = await (supabase as any)
     .from("prompt_versions")
     .select("prompt_text, version")
     .eq("component", component)
@@ -788,7 +789,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const baseCorpus = buildCorpus(input);
 
   // §3.3 — Carregar prompt
-  const prompt = await loadPrompt(blockId, supabase);
+  // deno-lint-ignore no-explicit-any
+  const prompt = await loadPrompt(blockId, supabase as any);
   if (!prompt) {
     return json(
       { error: "INTERNAL_ERROR", message: `No active prompt for scoring_block_${blockId}` },
