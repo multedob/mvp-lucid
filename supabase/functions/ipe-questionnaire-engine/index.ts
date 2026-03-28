@@ -288,8 +288,9 @@ function getTipo(line_id: LineId | string, plan: ExecutionPlan): "SEMPRE" | "CON
 // ─────────────────────────────────────────
 // HANDLER: POST /plan
 // ─────────────────────────────────────────
+// deno-lint-ignore no-explicit-any
 async function handlePlan(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   user_id: string,
   ipe_cycle_id: string
 ): Promise<Response> {
@@ -374,8 +375,9 @@ async function handlePlan(
 // ─────────────────────────────────────────
 // HANDLER: POST /next-block
 // ─────────────────────────────────────────
+// deno-lint-ignore no-explicit-any
 async function handleNextBlock(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   user_id: string,
   ipe_cycle_id: string,
   block_response?: Record<string, unknown>
@@ -725,8 +727,9 @@ function determinarProximoBloco(
 // ─────────────────────────────────────────
 // FINALIZAR next-block: persistir + retornar
 // ─────────────────────────────────────────
+// deno-lint-ignore no-explicit-any
 async function finalizarNextBlock(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   state_id: string,
   nextResult: { line_id: LineId | null; dimension_transition: string | null },
   plan: ExecutionPlan,
@@ -769,8 +772,9 @@ async function finalizarNextBlock(
 // ─────────────────────────────────────────
 // PERSISTIR ESTADO
 // ─────────────────────────────────────────
+// deno-lint-ignore no-explicit-any
 async function persistState(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   state_id: string,
   updates: Record<string, unknown>
 ): Promise<void> {
@@ -786,8 +790,9 @@ async function persistState(
 // Fonte: PIPELINE_IMPLEMENTACAO §5.1 + DESIGN_ENGINE v1.0 §2.1 (E4)
 // E4: assinatura expandida para BlockScoringInputFull (pill_data + variante_servida)
 // ─────────────────────────────────────────
+// deno-lint-ignore no-explicit-any
 async function callScoringBlock(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   input: BlockScoringInputFull,
 ): Promise<BlockScoringOutputFull> {
   const scoringUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/ipe-scoring-block`;
