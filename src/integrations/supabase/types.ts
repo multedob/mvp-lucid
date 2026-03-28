@@ -607,6 +607,7 @@ export type Database = {
       scoring_audit: {
         Row: {
           component: string
+          duration_ms: number | null
           id: string
           input_tokens: number | null
           ipe_cycle_id: string | null
@@ -615,12 +616,14 @@ export type Database = {
           parse_success: boolean
           parsed_output: Json | null
           prompt_version: string | null
+          raw_input: string | null
           raw_output: string | null
           retry_count: number
           scored_at: string
         }
         Insert: {
           component: string
+          duration_ms?: number | null
           id?: string
           input_tokens?: number | null
           ipe_cycle_id?: string | null
@@ -629,12 +632,14 @@ export type Database = {
           parse_success?: boolean
           parsed_output?: Json | null
           prompt_version?: string | null
+          raw_input?: string | null
           raw_output?: string | null
           retry_count?: number
           scored_at?: string
         }
         Update: {
           component?: string
+          duration_ms?: number | null
           id?: string
           input_tokens?: number | null
           ipe_cycle_id?: string | null
@@ -643,6 +648,7 @@ export type Database = {
           parse_success?: boolean
           parsed_output?: Json | null
           prompt_version?: string | null
+          raw_input?: string | null
           raw_output?: string | null
           retry_count?: number
           scored_at?: string
