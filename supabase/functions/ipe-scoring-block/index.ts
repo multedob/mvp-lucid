@@ -406,8 +406,8 @@ function applyRegraCardinal(
   o: Record<string, unknown>,
   input: BlockScoringInputFull,
 ): boolean {
-  // Condições de bypass: sem resposta ou proteção ética
-  if (!input.principal_resposta || input.protecao_etica) return false;
+  // Bypass total: sem resposta → nada a fazer
+  if (!input.principal_resposta) return false;
 
   const isL24 = input.block_id === "L2.4";
   const faixaToMinIL: Record<string, number> = isL24
@@ -418,7 +418,8 @@ function applyRegraCardinal(
   let modified = false;
 
   // ── FASE 1: Override INDETERMINADO → NÃO (case-insensitive) ──
-  if (aq?.cortes) {
+  // Pula protecao_etica: variante altera contexto, override de cortes não se aplica
+  if (!input.protecao_etica && aq?.cortes) {
     const cortes = aq.cortes as Record<string, Record<string, unknown>>;
     for (const corteId of ["2_4", "4_6", "6_8"]) {
       const corte = cortes[corteId];
