@@ -1,0 +1,1 @@
+GRANT INSERT, UPDATE, DELETE ON prompt_versions TO sandbox_exec;
