@@ -1,19 +1,21 @@
 // ============================================================
-// ipe-scoring-benchmark/index.ts
-// Benchmark do edge function ipe-scoring contra os 18 corpora canônicos.
-// Fonte: CONSOLIDAÇÃO_CALIBRACAO_PI–PVI + SC-FULL simulações Onda 3
+// ipe-scoring-benchmark/index.ts — v2.0 ASYNC
+// Benchmark assíncrono do edge function ipe-scoring.
+// POST → cria job, retorna job_id imediatamente, processa em background.
+// POST com {"job_id": "..."} → consulta status/resultado.
 //
 // COMO CHAMAR:
-//   curl -X POST \
-//     https://tomtximafvrhmuchjyqt.supabase.co/functions/v1/ipe-scoring-benchmark \
-//     -H "Authorization: Bearer <SUPABASE_ANON_KEY>" \
-//     -H "Content-Type: application/json" \
-//     -d '{"cleanup": true}'
+//   # Disparar benchmark
+//   curl -X POST .../functions/v1/ipe-scoring-benchmark \
+//     -H "Authorization: Bearer <KEY>" -H "Content-Type: application/json" \
+//     -d '{"pills": ["PI"], "cleanup": true}'
+//   → retorna {"job_id": "abc-123", "status": "running"}
 //
-// PARÂMETROS (body JSON, todos opcionais):
-//   pills:    string[]  — filtrar pills, ex: ["PI","PIII"]
-//   personas: string[]  — filtrar personas, ex: ["P2-B","P7-A"]
-//   cleanup:  boolean   — deletar dados de teste ao final (default: true)
+//   # Consultar resultado
+//   curl -X POST .../functions/v1/ipe-scoring-benchmark \
+//     -H "Authorization: Bearer <KEY>" -H "Content-Type: application/json" \
+//     -d '{"job_id": "abc-123"}'
+//   → retorna resultado completo quando status=completed
 // ============================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -32,7 +34,7 @@ function json(body: unknown, status = 200): Response {
 }
 
 const IL_TOLERANCE = 0.5;
-const PAUSE_MS     = 800;   // ms entre chamadas ao ipe-scoring
+const PAUSE_MS     = 800;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CORPUS E CANÔNICOS — embutidos inline
@@ -43,10 +45,6 @@ const CORPUS: any[] = [{"persona":"P2-B","pill":"PI","m1_tempo_segundos":3,"m2_r
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const CANONICALS: Record<string, any> = {"PI":{"status":"APROVADA","prompt_version":"v0.7.4","linhas":["L1.1","L2.1","L3.1","L3.2","L4.4"],"canonicals":{"P2-B":{"L1.1":{"numerico":2.0,"faixa":"A","gcc":"alto"},"L2.1":{"numerico":2.0,"faixa":"A","gcc":"alto"},"L3.1":{"numerico":2.0,"faixa":"A","gcc":"alto"},"L3.2":{"numerico":2.0,"faixa":"A","gcc":"alto"},"L4.4":{"numerico":2.0,"faixa":"A","gcc":"alto"}},"P3-M":{"L1.1":{"numerico":3.5,"faixa":"B","gcc":"medio"},"L2.1":{"numerico":3.5,"faixa":"B","gcc":"medio"},"L3.1":{"numerico":3.5,"faixa":"B","gcc":"medio"},"L3.2":{"numerico":3.5,"faixa":"B","gcc":"medio"},"L4.4":{"numerico":null,"faixa":"B","status_sinal":"incompleto"}},"P7-A":{"L1.1":{"numerico":6.5,"faixa":"C","gcc":"medio"},"L2.1":{"numerico":6.5,"faixa":"C","gcc":"medio"},"L3.1":{"numerico":6.5,"faixa":"C","gcc":"medio"},"L3.2":{"numerico":6.5,"faixa":"C","gcc":"medio"},"L4.4":{"numerico":6.5,"faixa":"C","gcc":"medio"}}}},"PII":{"status":"APROVADA","prompt_version":"v0.2","linhas":["L1.2","L1.3","L1.4","L2.1","L2.3","L3.4"],"canonicals":{"P2-B":{"L1.2":{"numerico":2.0,"faixa":"A","gcc":"alto"},"L1.3":{"numerico":2.0,"faixa":"A","gcc":"alto"},"L1.4":{"numerico":2.0,"faixa":"A","gcc":"alto"},"L2.1":{"numerico":2.0,"faixa":"A","gcc":"alto"},"L2.3":{"numerico":2.0,"faixa":"A","gcc":"alto"},"L3.4":{"numerico":2.0,"faixa":"A","gcc":"alto"}},"P3-M":{"L1.2":{"numerico":3.5,"faixa":"B","gcc":"medio"},"L1.3":{"numerico":3.5,"faixa":"B","gcc":"medio"},"L1.4":{"numerico":4.5,"faixa":"B","gcc":"medio"},"L2.1":{"numerico":3.5,"faixa":"B","gcc":"medio"},"L2.3":{"numerico":4.5,"faixa":"B","gcc":"medio"},"L3.4":{"numerico":4.5,"faixa":"B","gcc":"medio"}},"P7-A":{"L1.2":{"numerico":6.5,"faixa":"C","gcc":"medio"},"L1.3":{"numerico":6.5,"faixa":"C","gcc":"medio"},"L1.4":{"numerico":6.5,"faixa":"C","gcc":"medio"},"L2.1":{"numerico":6.5,"faixa":"C","gcc":"medio"},"L2.3":{"numerico":5.5,"faixa":"C","gcc":"medio"},"L3.4":{"numerico":6.5,"faixa":"C","gcc":"medio"}}}},"PIII":{"status":"APROVADA","prompt_version":"v0.18","linhas":["L1.4","L2.1","L2.2","L3.4","L4.2"],"canonicals":{"P2-B":{"L1.4":{"numerico":2.0,"faixa":"A","gcc":"alto"},"L2.1":{"numerico":2.0,"faixa":"A","gcc":"alto"},"L2.2":{"numerico":2.0,"faixa":"A","gcc":"alto"},"L3.4":{"numerico":2.0,"faixa":"A","gcc":"alto"},"L4.2":{"numerico":2.0,"faixa":"A","gcc":"alto"}},"P3-M":{"L1.4":{"numerico":4.5,"faixa":"B","gcc":"medio"},"L2.1":{"numerico":5.5,"faixa":"B","gcc":"medio"},"L2.2":{"numerico":3.5,"faixa":"B","gcc":"medio"},"L3.4":{"numerico":4.5,"faixa":"B","gcc":"medio"},"L4.2":{"numerico":3.5,"faixa":"B","gcc":"medio"}},"P7-A":{"L1.4":{"numerico":6.5,"faixa":"C","gcc":"medio"},"L2.1":{"numerico":6.5,"faixa":"C","gcc":"medio"},"L2.2":{"numerico":6.5,"faixa":"C","gcc":"medio"},"L3.4":{"numerico":6.5,"faixa":"C","gcc":"medio"},"L4.2":{"numerico":6.5,"faixa":"C","gcc":"medio"}}}},"PIV":{"status":"APROVADA","prompt_version":"v0.2","linhas":["L1.1","L3.2","L3.3","L3.4","L4.1","L4.2"],"linhas_note":"L3.3 is threshold anchor","canonicals":{"P2-B":{"L1.1":{"numerico":3.5,"faixa":"B","gcc":"alto"},"L3.2":{"numerico":2.0,"faixa":"A","gcc":"alto"},"L3.3":{"numerico":null,"faixa":"A","threshold_status":"nao_atingido"},"L3.4":{"numerico":2.0,"faixa":"A","gcc":"alto"},"L4.1":{"numerico":2.0,"faixa":"A","gcc":"alto"},"L4.2":{"numerico":2.0,"faixa":"A","gcc":"alto"}},"P3-M":{"L1.1":{"numerico":5.5,"faixa":"B","gcc":"medio"},"L3.2":{"numerico":4.5,"faixa":"B","gcc":"medio"},"L3.3":{"numerico":5.5,"faixa":"B","gcc":"medio"},"L3.4":{"numerico":4.5,"faixa":"B","gcc":"medio"},"L4.1":{"numerico":4.5,"faixa":"B","gcc":"medio"},"L4.2":{"numerico":4.5,"faixa":"B","gcc":"medio"}},"P7-A":{"L1.1":{"numerico":5.5,"faixa":"C","gcc":"medio"},"L3.2":{"numerico":4.5,"faixa":"B","gcc":"medio"},"L3.3":{"numerico":6.5,"faixa":"C","gcc":"medio"},"L3.4":{"numerico":6.5,"faixa":"C","gcc":"medio"},"L4.1":{"numerico":6.5,"faixa":"C","gcc":"medio"},"L4.2":{"numerico":6.5,"faixa":"C","gcc":"medio"}}}},"PV":{"status":"APROVADA","prompt_version":"v0.1","linhas":["L1.1","L2.2","L4.1","L4.2","L4.3"],"linhas_note":"L4.3 is threshold anchor","canonicals":{"P2-B":{"L1.1":{"numerico":3.5,"faixa":"B","gcc":"medio"},"L2.2":{"numerico":3.5,"faixa":"B","gcc":"medio"},"L4.1":{"numerico":2.0,"faixa":"A","gcc":"alto"},"L4.2":{"numerico":2.0,"faixa":"A","gcc":"alto"},"L4.3":{"numerico":null,"faixa":"A","threshold_status":"nao_atingido"}},"P3-M":{"L1.1":{"numerico":5.5,"faixa":"B","gcc":"medio"},"L2.2":{"numerico":3.5,"faixa":"B","gcc":"medio"},"L4.1":{"numerico":3.5,"faixa":"B","gcc":"medio"},"L4.2":{"numerico":4.5,"faixa":"B","gcc":"medio"},"L4.3":{"numerico":null,"faixa":"B","threshold_status":"nao_atingido"}},"P7-A":{"L1.1":{"numerico":7.5,"faixa":"D","gcc":"alto"},"L2.2":{"numerico":5.5,"faixa":"C","gcc":"medio"},"L4.1":{"numerico":6.5,"faixa":"C","gcc":"medio"},"L4.2":{"numerico":6.5,"faixa":"C","gcc":"medio"},"L4.3":{"numerico":7.5,"faixa":"D","gcc":"alto"}}}},"PVI":{"status":"APROVADA","prompt_version":"v0.3","linhas":["L1.2","L1.3","L1.4","L2.3","L3.1","L4.1","L4.2"],"canonicals":{"P2-B":{"L1.2":{"numerico":2.0,"faixa":"A","gcc":"alto"},"L1.3":{"numerico":2.0,"faixa":"A","gcc":"alto"},"L1.4":{"numerico":3.5,"faixa":"B","gcc":"alto"},"L2.3":{"numerico":2.0,"faixa":"A","gcc":"alto"},"L3.1":{"numerico":3.5,"faixa":"B","gcc":"alto"},"L4.1":{"numerico":2.0,"faixa":"A","gcc":"alto"},"L4.2":{"numerico":2.0,"faixa":"A","gcc":"alto"}},"P3-M":{"L1.2":{"numerico":3.5,"faixa":"B","gcc":"alto"},"L1.3":{"numerico":4.5,"faixa":"B","gcc":"alto"},"L1.4":{"numerico":3.5,"faixa":"B","gcc":"medio"},"L2.3":{"numerico":4.5,"faixa":"B","gcc":"medio"},"L3.1":{"numerico":4.5,"faixa":"B","gcc":"medio"},"L4.1":{"numerico":4.5,"faixa":"B","gcc":"alto"},"L4.2":{"numerico":4.5,"faixa":"B","gcc":"alto"}},"P7-A":{"L1.2":{"numerico":6.5,"faixa":"C","gcc":"alto"},"L1.3":{"numerico":5.5,"faixa":"C","gcc":"alto"},"L1.4":{"numerico":6.5,"faixa":"C","gcc":"alto"},"L2.3":{"numerico":4.5,"faixa":"B","gcc":"alto"},"L3.1":{"numerico":6.5,"faixa":"C","gcc":"alto"},"L4.1":{"numerico":6.5,"faixa":"C","gcc":"alto"},"L4.2":{"numerico":6.5,"faixa":"C","gcc":"alto"}}}},"extraction_timestamp":"2026-03-30","extraction_notes":{"PI":"5 linhas, P3-M L4.4 is null (threshold not met, status_sinal incompleto per SCORING_SPEC v1.3 §9)","PII":"6 linhas, no nulls, P7-A L2.3 is 5.5 (lower than 6.5 due to weaker FD evidence)","PIII":"5 linhas, no nulls, all P7-A are C (no D tier)","PIV":"6 linhas, L3.3 is threshold anchor (null for P2-B per v0.2), corrected canônicos from verified corpora","PV":"5 linhas, L4.3 is threshold anchor (null for P2-B and P3-M), INÉDITO: first pill to approve in v0.1 with P7-A reaching Faixa D","PVI":"7 linhas (most dense), no nulls, no D reached (guarda prevented), 3 iterations due to volume of GCC calibration"}};
-
-// ─────────────────────────────────────────────────────────────────────────────
-// HELPERS
-// ─────────────────────────────────────────────────────────────────────────────
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
@@ -88,25 +86,16 @@ function compareIL(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// HANDLER
+// BENCHMARK RUNNER (executa em background)
 // ─────────────────────────────────────────────────────────────────────────────
 
-Deno.serve(async (req: Request): Promise<Response> => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
-  if (req.method !== "POST")    return json({ error: "Method not allowed" }, 405);
-
-  // Parâmetros opcionais
-  let pillsFilter:    string[] | null = null;
-  let personasFilter: string[] | null = null;
-  let doCleanup = true;
-
-  try {
-    const body = await req.json().catch(() => ({}));
-    if (Array.isArray(body?.pills)    && body.pills.length)    pillsFilter    = body.pills;
-    if (Array.isArray(body?.personas) && body.personas.length) personasFilter = body.personas;
-    if (typeof body?.cleanup === "boolean") doCleanup = body.cleanup;
-  } catch { /* sem body — usar defaults */ }
-
+async function runBenchmark(
+  jobId: string,
+  pillsFilter: string[] | null,
+  personasFilter: string[] | null,
+  doCleanup: boolean,
+) {
+  const startTime = Date.now();
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -115,167 +104,292 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-  // ── Filtrar corpus ──
-  let corpus = CORPUS;
-  if (pillsFilter)    corpus = corpus.filter((c) => pillsFilter!.includes(c.pill));
-  if (personasFilter) corpus = corpus.filter((c) => personasFilter!.includes(c.persona));
-
-  const personas = [...new Set(corpus.map((c) => c.persona as string))];
-
-  // ── 1. Criar usuário temporário ──
-  let userId = "";
-  const email = `benchmark-${crypto.randomUUID().slice(0, 8)}@lucid.internal`;
-  const userResp = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
-    method:  "POST",
-    headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" },
-    body:    JSON.stringify({ email, password: "benchmark-tmp-1!", email_confirm: true }),
-  });
-  if (!userResp.ok) {
-    return json({ error: "Falha ao criar usuário de benchmark", detail: await userResp.text() }, 500);
-  }
-  userId = (await userResp.json()).id as string;
-
-  const cycleIds: Record<string, string> = {};
-  const createdCycleIds: string[] = [];
-  const allResults: unknown[]     = [];
-  const errors:     unknown[]     = [];
-
   try {
-    // ── 2. Criar ipe_cycles por persona ──
-    for (const persona of personas) {
-      const { data: cycle, error: cycleErr } = await supabase
-        .from("ipe_cycles")
-        .insert({ user_id: userId, cycle_number: 1, status: "pills",
-                  pills_completed: [], prompt_version: `benchmark-${persona}` })
-        .select("id").single();
-      if (cycleErr || !cycle) {
-        return json({ error: `Falha ao criar ciclo para ${persona}`, detail: cycleErr?.message }, 500);
-      }
-      cycleIds[persona] = cycle.id;
-      createdCycleIds.push(cycle.id);
-    }
-
-    // ── 3. Inserir pill_responses ──
-    for (const c of corpus) {
-      const { error: prErr } = await supabase.from("pill_responses").insert({
-        ipe_cycle_id:      cycleIds[c.persona],
-        pill_id:           c.pill,
-        m1_tempo_segundos: c.m1_tempo_segundos ?? null,
-        m2_resposta:       c.m2_resposta       ?? null,
-        m2_cal_signals:    c.m2_cal_signals    ?? null,
-        m3_respostas:      c.m3_respostas      ?? null,
-        m4_resposta:       c.m4_resposta       ?? null,
-        completed_at:      new Date().toISOString(),
-      });
-      if (prErr) {
-        return json({ error: `Falha ao inserir ${c.persona}×${c.pill}`, detail: prErr.message }, 500);
-      }
-    }
-
-    // ── 4. Chamar ipe-scoring para cada caso ──
-    for (const c of corpus) {
-      const cycleId = cycleIds[c.persona];
-      try {
-        const scoreResp = await fetch(`${supabaseUrl}/functions/v1/ipe-scoring`, {
-          method:  "POST",
-          headers: { Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" },
-          body:    JSON.stringify({ ipe_cycle_id: cycleId, pill_id: c.pill }),
-        });
-
-        if (!scoreResp.ok) {
-          const errText = await scoreResp.text();
-          errors.push({ persona: c.persona, pill: c.pill, error: `HTTP ${scoreResp.status}: ${errText.slice(0, 200)}` });
-          await sleep(PAUSE_MS);
-          continue;
-        }
-
-        const result     = await scoreResp.json();
-        const linhas     = result.corpus_linhas ?? {};
-        const parseOk    = result.parse_success ?? false;
-
-        if (!parseOk) {
-          errors.push({ persona: c.persona, pill: c.pill, error: "parse_success=false" });
-          await sleep(PAUSE_MS);
-          continue;
-        }
-
-        // Comparar com canônicos
-        const pillCanon    = CANONICALS[c.pill];
-        const personaCanon = pillCanon?.canonicals?.[c.persona];
-
-        if (!personaCanon) {
-          // Sem canônico — registra scored sem comparação
-          for (const [linhaId, ld] of Object.entries(linhas)) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const il = (ld as any)?.IL_sinal ?? {};
-            allResults.push({ persona: c.persona, pill: c.pill, linha: linhaId,
-              canon_num: null, canon_faixa: null,
-              scored_num: il.numerico ?? null, scored_faixa: il.faixa ?? null,
-              il_match: null, faixa_match: null, delta_il: null });
-          }
-        } else {
-          allResults.push(...compareIL(linhas, personaCanon, c.persona, c.pill));
-        }
-      } catch (e) {
-        errors.push({ persona: c.persona, pill: c.pill, error: String(e) });
-      }
-      await sleep(PAUSE_MS);
-    }
-
-  } finally {
-    // ── 5. Cleanup ──
-    if (doCleanup) {
-      for (const cid of createdCycleIds) {
-        await supabase.from("ipe_cycles").delete().eq("id", cid);
-      }
-      await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
-        method:  "DELETE",
-        headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
-      });
-    }
-  }
-
-  // ── 6. Métricas ──
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const comparable = (allResults as any[]).filter((r) => r.il_match !== null);
-  const totalLines = comparable.length;
-  const ilOk       = comparable.filter((r) => r.il_match).length;
-  const faixaOk    = comparable.filter((r) => r.faixa_match).length;
-
-  const pillSummary: Record<string, unknown> = {};
-  for (const pill of ["PI","PII","PIII","PIV","PV","PVI"]) {
+    // ── Filtrar corpus ──
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rows = comparable.filter((r: any) => r.pill === pill);
-    if (!rows.length) continue;
-    pillSummary[pill] = {
-      il_ok:    rows.filter((r) => r.il_match).length,
-      total:    rows.length,
-      il_pct:   Math.round(100 * rows.filter((r) => r.il_match).length / rows.length),
-      faixa_ok: rows.filter((r) => r.faixa_match).length,
-      faixa_pct: Math.round(100 * rows.filter((r) => r.faixa_match).length / rows.length),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      misses: rows.filter((r: any) => !r.il_match || !r.faixa_match).map((r: any) => ({
-        persona: r.persona, linha: r.linha,
-        canon: `${r.canon_num} ${r.canon_faixa}`,
-        scored: `${r.scored_num} ${r.scored_faixa}`,
-        tag: (!r.il_match && !r.faixa_match) ? "IL+Faixa" : !r.il_match ? "IL" : "Faixa",
-      })),
-    };
-  }
+    let corpus = CORPUS as any[];
+    if (pillsFilter)    corpus = corpus.filter((c) => pillsFilter!.includes(c.pill));
+    if (personasFilter) corpus = corpus.filter((c) => personasFilter!.includes(c.persona));
 
-  return json({
-    timestamp:  new Date().toISOString(),
-    casos_rodados:  corpus.length,
-    cleanup_feito:  doCleanup,
-    metrics: {
+    const personas = [...new Set(corpus.map((c) => c.persona as string))];
+
+    // ── 1. Criar usuário temporário ──
+    const email = `benchmark-${crypto.randomUUID().slice(0, 8)}@lucid.internal`;
+    const userResp = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
+      method:  "POST",
+      headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" },
+      body:    JSON.stringify({ email, password: "benchmark-tmp-1!", email_confirm: true }),
+    });
+    if (!userResp.ok) {
+      throw new Error(`Falha ao criar usuário: ${await userResp.text()}`);
+    }
+    const userId = (await userResp.json()).id as string;
+
+    const cycleIds: Record<string, string> = {};
+    const createdCycleIds: string[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const allResults: any[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const errors: any[] = [];
+
+    try {
+      // ── 2. Criar ipe_cycles por persona ──
+      for (const persona of personas) {
+        const { data: cycle, error: cycleErr } = await supabase
+          .from("ipe_cycles")
+          .insert({ user_id: userId, cycle_number: 1, status: "pills",
+                    pills_completed: [], prompt_version: `benchmark-${persona}` })
+          .select("id").single();
+        if (cycleErr || !cycle) {
+          throw new Error(`Falha ao criar ciclo para ${persona}: ${cycleErr?.message}`);
+        }
+        cycleIds[persona] = cycle.id;
+        createdCycleIds.push(cycle.id);
+      }
+
+      // ── 3. Inserir pill_responses ──
+      for (const c of corpus) {
+        const { error: prErr } = await supabase.from("pill_responses").insert({
+          ipe_cycle_id:      cycleIds[c.persona],
+          pill_id:           c.pill,
+          m1_tempo_segundos: c.m1_tempo_segundos ?? null,
+          m2_resposta:       c.m2_resposta       ?? null,
+          m2_cal_signals:    c.m2_cal_signals    ?? null,
+          m3_respostas:      c.m3_respostas      ?? null,
+          m4_resposta:       c.m4_resposta       ?? null,
+          completed_at:      new Date().toISOString(),
+        });
+        if (prErr) {
+          throw new Error(`Falha ao inserir ${c.persona}×${c.pill}: ${prErr.message}`);
+        }
+      }
+
+      // ── 4. Chamar ipe-scoring para cada caso ──
+      for (const c of corpus) {
+        const cycleId = cycleIds[c.persona];
+        try {
+          const scoreResp = await fetch(`${supabaseUrl}/functions/v1/ipe-scoring`, {
+            method:  "POST",
+            headers: { Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" },
+            body:    JSON.stringify({ ipe_cycle_id: cycleId, pill_id: c.pill }),
+          });
+
+          if (!scoreResp.ok) {
+            const errText = await scoreResp.text();
+            errors.push({ persona: c.persona, pill: c.pill, error: `HTTP ${scoreResp.status}: ${errText.slice(0, 200)}` });
+            await sleep(PAUSE_MS);
+            continue;
+          }
+
+          const result     = await scoreResp.json();
+          const linhas     = result.corpus_linhas ?? {};
+          const parseOk    = result.parse_success ?? false;
+
+          if (!parseOk) {
+            errors.push({ persona: c.persona, pill: c.pill, error: "parse_success=false" });
+            await sleep(PAUSE_MS);
+            continue;
+          }
+
+          // Comparar com canônicos
+          const pillCanon    = CANONICALS[c.pill];
+          const personaCanon = pillCanon?.canonicals?.[c.persona];
+
+          if (!personaCanon) {
+            for (const [linhaId, ld] of Object.entries(linhas)) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const il = (ld as any)?.IL_sinal ?? {};
+              allResults.push({ persona: c.persona, pill: c.pill, linha: linhaId,
+                canon_num: null, canon_faixa: null,
+                scored_num: il.numerico ?? null, scored_faixa: il.faixa ?? null,
+                il_match: null, faixa_match: null, delta_il: null });
+            }
+          } else {
+            allResults.push(...compareIL(linhas, personaCanon, c.persona, c.pill));
+          }
+        } catch (e) {
+          errors.push({ persona: c.persona, pill: c.pill, error: String(e) });
+        }
+        await sleep(PAUSE_MS);
+      }
+
+    } finally {
+      // ── 5. Cleanup ──
+      if (doCleanup) {
+        for (const cid of createdCycleIds) {
+          await supabase.from("ipe_cycles").delete().eq("id", cid);
+        }
+        await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
+          method:  "DELETE",
+          headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
+        });
+      }
+    }
+
+    // ── 6. Métricas ──
+    const comparable = allResults.filter((r) => r.il_match !== null);
+    const totalLines = comparable.length;
+    const ilOk       = comparable.filter((r) => r.il_match).length;
+    const faixaOk    = comparable.filter((r) => r.faixa_match).length;
+
+    const pillSummary: Record<string, unknown> = {};
+    for (const pill of ["PI","PII","PIII","PIV","PV","PVI"]) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const rows = comparable.filter((r: any) => r.pill === pill);
+      if (!rows.length) continue;
+      pillSummary[pill] = {
+        il_ok:    rows.filter((r) => r.il_match).length,
+        total:    rows.length,
+        il_pct:   Math.round(100 * rows.filter((r) => r.il_match).length / rows.length),
+        faixa_ok: rows.filter((r) => r.faixa_match).length,
+        faixa_pct: Math.round(100 * rows.filter((r) => r.faixa_match).length / rows.length),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        misses: rows.filter((r: any) => !r.il_match || !r.faixa_match).map((r: any) => ({
+          persona: r.persona, linha: r.linha,
+          canon: `${r.canon_num} ${r.canon_faixa}`,
+          scored: `${r.scored_num} ${r.scored_faixa}`,
+          tag: (!r.il_match && !r.faixa_match) ? "IL+Faixa" : !r.il_match ? "IL" : "Faixa",
+        })),
+      };
+    }
+
+    const metrics = {
       il_ok: ilOk, total: totalLines,
       il_pct:    totalLines > 0 ? Math.round(100 * ilOk    / totalLines) : 0,
       faixa_pct: totalLines > 0 ? Math.round(100 * faixaOk / totalLines) : 0,
       il_passa:    ilOk    / Math.max(totalLines, 1) >= 0.80,
       faixa_passa: faixaOk / Math.max(totalLines, 1) >= 0.90,
-    },
-    por_pill: pillSummary,
-    errors:   errors,
-    detalhes: allResults,
-  });
+    };
+
+    const durationMs = Date.now() - startTime;
+
+    // ── 7. Persistir resultado ──
+    await supabase.from("benchmark_runs").update({
+      status: "completed",
+      metrics,
+      por_pill: pillSummary,
+      detalhes: allResults,
+      errors,
+      casos_rodados: corpus.length,
+      duration_ms: durationMs,
+      completed_at: new Date().toISOString(),
+    }).eq("id", jobId);
+
+    console.log(`BENCHMARK_COMPLETED job=${jobId} duration=${durationMs}ms il_pct=${metrics.il_pct}%`);
+
+  } catch (err) {
+    // Falha geral → marcar job como failed
+    const sb2 = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      { auth: { persistSession: false } },
+    );
+    await sb2.from("benchmark_runs").update({
+      status: "failed",
+      error_message: String(err),
+      duration_ms: Date.now() - startTime,
+      completed_at: new Date().toISOString(),
+    }).eq("id", jobId);
+
+    console.error(`BENCHMARK_FAILED job=${jobId}:`, err);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HANDLER
+// ─────────────────────────────────────────────────────────────────────────────
+
+Deno.serve(async (req: Request): Promise<Response> => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
+  if (req.method !== "POST")    return json({ error: "Method not allowed" }, 405);
+
+  let body: Record<string, unknown> = {};
+  try {
+    body = await req.json().catch(() => ({})) as Record<string, unknown>;
+  } catch { /* sem body */ }
+
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    { auth: { persistSession: false } },
+  );
+
+  // ── MODO CONSULTA: job_id presente → retornar status/resultado ──
+  if (body.job_id && typeof body.job_id === "string") {
+    const { data, error } = await supabase
+      .from("benchmark_runs")
+      .select("*")
+      .eq("id", body.job_id)
+      .maybeSingle();
+
+    if (error || !data) {
+      return json({ error: "Job não encontrado", job_id: body.job_id }, 404);
+    }
+
+    // Se ainda running, retornar status simples
+    if (data.status === "running") {
+      const elapsed = Date.now() - new Date(data.started_at).getTime();
+      return json({
+        job_id: data.id,
+        status: "running",
+        elapsed_ms: elapsed,
+        elapsed_human: `${Math.round(elapsed / 1000)}s`,
+      });
+    }
+
+    // Completed ou failed → retornar tudo
+    return json({
+      job_id:         data.id,
+      status:         data.status,
+      timestamp:      data.completed_at,
+      casos_rodados:  data.casos_rodados,
+      duration_ms:    data.duration_ms,
+      cleanup_feito:  data.cleanup,
+      metrics:        data.metrics,
+      por_pill:       data.por_pill,
+      errors:         data.errors,
+      detalhes:       data.detalhes,
+      error_message:  data.error_message,
+    });
+  }
+
+  // ── MODO DISPARO: criar job e rodar em background ──
+  const pillsFilter    = Array.isArray(body.pills) ? body.pills as string[] : null;
+  const personasFilter = Array.isArray(body.personas) ? body.personas as string[] : null;
+  const doCleanup      = typeof body.cleanup === "boolean" ? body.cleanup : true;
+
+  // Criar registro do job
+  const { data: job, error: jobErr } = await supabase
+    .from("benchmark_runs")
+    .insert({
+      status: "running",
+      pills_filter: pillsFilter,
+      personas_filter: personasFilter,
+      cleanup: doCleanup,
+    })
+    .select("id")
+    .single();
+
+  if (jobErr || !job) {
+    return json({ error: "Falha ao criar job", detail: jobErr?.message }, 500);
+  }
+
+  const jobId = job.id;
+
+  // Disparar em background usando EdgeRuntime.waitUntil
+  // A response é retornada imediatamente, o benchmark continua rodando
+  // @ts-ignore — EdgeRuntime é global no Supabase Edge Runtime
+  if (typeof EdgeRuntime !== "undefined" && EdgeRuntime.waitUntil) {
+    // @ts-ignore
+    EdgeRuntime.waitUntil(runBenchmark(jobId, pillsFilter, personasFilter, doCleanup));
+  } else {
+    // Fallback: rodar sem waitUntil (pode ser cortado pelo timeout)
+    runBenchmark(jobId, pillsFilter, personasFilter, doCleanup);
+  }
+
+  return json({
+    job_id: jobId,
+    status: "running",
+    message: "Benchmark disparado. Consulte o resultado com POST {\"job_id\": \"" + jobId + "\"}",
+  }, 202);
 });
