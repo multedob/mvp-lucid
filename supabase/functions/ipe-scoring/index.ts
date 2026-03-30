@@ -202,7 +202,15 @@ interface ParseResult {
 }
 
 function validateScoringOutput(raw: string): ParseResult {
-  const cleaned = raw.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
+  // Strip markdown fences (```json ... ```) — handles leading/trailing whitespace and text before fence
+  let cleaned = raw.trim();
+  const fenceMatch = cleaned.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
+  if (fenceMatch) {
+    cleaned = fenceMatch[1].trim();
+  } else {
+    // Fallback: try simple strip
+    cleaned = cleaned.replace(/^```(?:json)?\s*/m, "").replace(/\s*```\s*$/m, "").trim();
+  }
 
   let parsed: ScoringOutput;
   try { parsed = JSON.parse(cleaned); }
