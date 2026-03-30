@@ -498,6 +498,12 @@ async function handleNextBlock(
       };
       resultados[block_id] = resultado;
 
+      // Rastrear CASO 3 (divergência extrema pill↔questionário) para auto-flagging
+      if ((scoringResult as BlockScoringOutputFull).caso_integracao === 3) {
+        const c3 = (flags.blocos_caso3 ?? []) as string[];
+        if (!c3.includes(block_id)) flags.blocos_caso3 = [...c3, block_id];
+      }
+
       // Decrementar orçamentos (variante = +1 pergunta)
       orcamento_global -= 1;
       const dim = getDimensao(block_id);
@@ -616,6 +622,12 @@ async function handleNextBlock(
         };
         resultados[block_id] = resultado;
 
+        // Rastrear CASO 3 (divergência extrema pill↔questionário) para auto-flagging
+        if ((scoringResult as BlockScoringOutputFull).caso_integracao === 3) {
+          const c3 = (flags.blocos_caso3 ?? []) as string[];
+          if (!c3.includes(block_id)) flags.blocos_caso3 = [...c3, block_id];
+        }
+
         if (dim === "D3") {
           contador_d3 += 1;
         }
@@ -669,12 +681,12 @@ async function handleNextBlock(
       plan, resultados, flags, current_position,
       orcamento_global, orcamento_d3, contador_d3
     );
-    return await finalizarNextBlock(supabase, (state as any).id, nextAfterLate as { line_id: LineId | null; dimension_transition: string | null }, plan,
+    return await finalizarNextBlock(supabase, (state as any).id, ipe_cycle_id, nextAfterLate as { line_id: LineId | null; dimension_transition: string | null }, plan,
       current_position, orcamento_global, orcamento_d3, contador_d3,
       resultados, flags, ((state as any).last_block_completed as LineId | null));
   }
 
-  return await finalizarNextBlock(supabase, (state as any).id, nextResult as { line_id: LineId | null; dimension_transition: string | null }, plan,
+  return await finalizarNextBlock(supabase, (state as any).id, ipe_cycle_id, nextResult as { line_id: LineId | null; dimension_transition: string | null }, plan,
     current_position, orcamento_global, orcamento_d3, contador_d3,
     resultados, flags, ((state as any).last_block_completed as LineId | null));
 }
@@ -729,11 +741,144 @@ function determinarProximoBloco(
 }
 
 // ─────────────────────────────────────────
+// AUTO-FLAGGING E canonical_ils
+// Produzido quando done=true no questionário
+// Critérios: IL nulo, confiança baixa, proteção ética >50%, inferência dimensional, CASO 3
+// ─────────────────────────────────────────
+
+const LINE_TO_COL: Partial<Record<LineId, string>> = {
+  "L1.1": "l1_1", "L1.2": "l1_2", "L1.3": "l1_3", "L1.4": "l1_4",
+  "L2.1": "l2_1", "L2.2": "l2_2", "L2.3": "l2_3", "L2.4": "l2_4",
+  "L3.1": "l3_1", "L3.2": "l3_2", "L3.3": "l3_3", "L3.4": "l3_4",
+  "L4.1": "l4_1", "L4.2": "l4_2", "L4.3": "l4_3", "L4.4": "l4_4",
+};
+
+const DIM_LINHAS: Record<string, LineId[]> = {
+  D1: ["L1.1", "L1.2", "L1.3", "L1.4"],
+  D2: ["L2.1", "L2.2", "L2.3", "L2.4"],
+  D3: ["L3.1", "L3.2", "L3.3", "L3.4"],
+  D4: ["L4.1", "L4.2", "L4.3", "L4.4"],
+};
+
+function calcDimScore(resultados: Record<string, ResultadoBloco>, linhas: LineId[]): number | null {
+  const vals = linhas
+    .map(lid => resultados[lid]?.il_canonico)
+    .filter((v): v is number => v !== null && v !== undefined);
+  if (vals.length === 0) return null;
+  return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length * 100) / 100;
+}
+
+function computeAutoFlag(
+  resultados: Record<string, ResultadoBloco>,
+  flags: QuestionnaireFlags,
+): { revisao_necessaria: boolean; revisao_motivo: string | null } {
+  const motivos: string[] = [];
+  const executados = Object.entries(resultados);
+
+  // Critério 1: IL nulo em qualquer bloco executado
+  const nullIL = executados.filter(([, r]) => r.il_canonico === null || r.il_canonico === undefined).map(([lid]) => lid);
+  if (nullIL.length > 0) motivos.push(`IL nulo: ${nullIL.join(", ")}`);
+
+  // Critério 2: confiança baixa em qualquer bloco
+  const baixaConf = executados.filter(([, r]) => r.confianca === "baixa").map(([lid]) => lid);
+  if (baixaConf.length > 0) motivos.push(`Confiança baixa: ${baixaConf.join(", ")}`);
+
+  // Critério 3: proteção ética em >50% dos blocos
+  const totalBlocos = executados.length;
+  const protecaoCount = executados.filter(([, r]) => r.protecao_etica).length;
+  if (totalBlocos > 0 && protecaoCount / totalBlocos > 0.5) {
+    motivos.push(`Proteção ética em ${protecaoCount}/${totalBlocos} blocos`);
+  }
+
+  // Critério 4: ILs inferidos por dimensão (não scorados diretamente)
+  const inferidos = flags.inferencia_dimensional as string[] | undefined;
+  if (inferidos && inferidos.length > 0) motivos.push(`Inferência dimensional: ${inferidos.join(", ")}`);
+
+  // Critério 5: divergência extrema (CASO 3) rastreada durante execução
+  const caso3 = flags.blocos_caso3 as string[] | undefined;
+  if (caso3 && caso3.length > 0) motivos.push(`Divergência extrema (CASO 3): ${caso3.join(", ")}`);
+
+  return {
+    revisao_necessaria: motivos.length > 0,
+    revisao_motivo: motivos.length > 0 ? motivos.join(" | ") : null,
+  };
+}
+
+async function buildAndPersistCanonicalILs(
+  supabase: ReturnType<typeof createClient>,
+  ipe_cycle_id: string,
+  resultados: Record<string, ResultadoBloco>,
+  flags: QuestionnaireFlags,
+): Promise<void> {
+  try {
+    // Mapear ILs para colunas
+    const ilCols: Record<string, number | null> = {};
+    const ilStatus: Record<string, string> = {};
+    const confPorLinha: Record<string, string> = {};
+
+    for (const [lid, r] of Object.entries(resultados)) {
+      const col = LINE_TO_COL[lid as LineId];
+      if (!col) continue;
+      ilCols[col] = r.il_canonico as number | null;
+      ilStatus[lid] = r.il_canonico !== null ? "válido" : "insuficiente";
+      confPorLinha[lid] = r.confianca;
+    }
+
+    // Scores dimensionais
+    const d1 = calcDimScore(resultados, DIM_LINHAS.D1);
+    const d2 = calcDimScore(resultados, DIM_LINHAS.D2);
+    const d3 = calcDimScore(resultados, DIM_LINHAS.D3);
+    const d4 = calcDimScore(resultados, DIM_LINHAS.D4);
+
+    // Confiança global: pior caso
+    const confVals = Object.values(confPorLinha);
+    let confiancaGlobal: string | null = null;
+    if (confVals.length > 0) {
+      if (confVals.includes("baixa")) confiancaGlobal = "baixa";
+      else if (confVals.includes("média")) confiancaGlobal = "média";
+      else confiancaGlobal = "alta";
+    }
+
+    // Auto-flagging
+    const { revisao_necessaria, revisao_motivo } = computeAutoFlag(resultados, flags);
+
+    // Flags de ciclo para auditoria
+    const canonicalFlags: Record<string, unknown> = {};
+    if (flags.inferencia_dimensional) canonicalFlags.inferencia_dimensional = flags.inferencia_dimensional;
+    if (flags.degradacao_pc3) canonicalFlags.degradacao_pc3 = flags.degradacao_pc3;
+    if (flags.fadiga_extrema) canonicalFlags.fadiga_extrema = true;
+    if (flags.blocos_caso3) canonicalFlags.blocos_caso3 = flags.blocos_caso3;
+
+    const { error } = await (supabase as any).from("canonical_ils").insert({
+      ipe_cycle_id,
+      ...ilCols,
+      il_status: ilStatus,
+      d1, d2, d3, d4,
+      confianca_global: confiancaGlobal,
+      confianca_por_linha: confPorLinha,
+      flags: canonicalFlags,
+      revisao_necessaria,
+      revisao_motivo,
+    });
+
+    if (error) {
+      console.error("CANONICAL_ILS_INSERT_ERROR:", JSON.stringify(error));
+    } else {
+      console.log(`CANONICAL_ILS_PRODUCED cycle=${ipe_cycle_id} revisao=${revisao_necessaria}`);
+    }
+  } catch (err) {
+    // Degradação graciosa — não bloqueia conclusão do questionário
+    console.error("CANONICAL_ILS_BUILD_ERROR:", err);
+  }
+}
+
+// ─────────────────────────────────────────
 // FINALIZAR next-block: persistir + retornar
 // ─────────────────────────────────────────
 async function finalizarNextBlock(
   supabase: ReturnType<typeof createClient>,
   state_id: string,
+  ipe_cycle_id: string,
   nextResult: { line_id: LineId | null; dimension_transition: string | null },
   plan: ExecutionPlan,
   current_position: number,
@@ -754,6 +899,8 @@ async function finalizarNextBlock(
   // Se 3+ de 4 linhas de uma dimensão têm IL, estimar a linha faltante
   if (done) {
     applyDimensionalInference(resultados, flags);
+    // Produzir canonical_ils com auto-flagging (degradação graciosa se falhar)
+    await buildAndPersistCanonicalILs(supabase, ipe_cycle_id, resultados, flags);
   }
 
   await persistState(supabase, state_id, {
