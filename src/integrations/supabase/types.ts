@@ -664,6 +664,7 @@ export type Database = {
           ipe_cycle_id: string | null
           model: string | null
           output_tokens: number | null
+          parse_reason: string | null
           parse_success: boolean
           parsed_output: Json | null
           prompt_version: string | null
@@ -680,6 +681,7 @@ export type Database = {
           ipe_cycle_id?: string | null
           model?: string | null
           output_tokens?: number | null
+          parse_reason?: string | null
           parse_success?: boolean
           parsed_output?: Json | null
           prompt_version?: string | null
@@ -696,6 +698,7 @@ export type Database = {
           ipe_cycle_id?: string | null
           model?: string | null
           output_tokens?: number | null
+          parse_reason?: string | null
           parse_success?: boolean
           parsed_output?: Json | null
           prompt_version?: string | null
