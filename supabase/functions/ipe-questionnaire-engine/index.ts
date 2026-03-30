@@ -763,9 +763,9 @@ const DIM_LINHAS: Record<string, LineId[]> = {
 function calcDimScore(resultados: Record<string, ResultadoBloco>, linhas: LineId[]): number | null {
   const vals = linhas
     .map(lid => resultados[lid]?.il_canonico)
-    .filter((v): v is number => v !== null && v !== undefined);
+    .filter((v) => v !== null && v !== undefined) as number[];
   if (vals.length === 0) return null;
-  return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length * 100) / 100;
+  return Math.round(vals.reduce((a: number, b: number) => a + b, 0) / vals.length * 100) / 100;
 }
 
 function computeAutoFlag(
