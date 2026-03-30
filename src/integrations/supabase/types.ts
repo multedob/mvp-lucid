@@ -43,6 +43,57 @@ export type Database = {
           },
         ]
       }
+      benchmark_runs: {
+        Row: {
+          casos_rodados: number | null
+          cleanup: boolean
+          completed_at: string | null
+          detalhes: Json | null
+          duration_ms: number | null
+          error_message: string | null
+          errors: Json | null
+          id: string
+          metrics: Json | null
+          personas_filter: string[] | null
+          pills_filter: string[] | null
+          por_pill: Json | null
+          started_at: string
+          status: string
+        }
+        Insert: {
+          casos_rodados?: number | null
+          cleanup?: boolean
+          completed_at?: string | null
+          detalhes?: Json | null
+          duration_ms?: number | null
+          error_message?: string | null
+          errors?: Json | null
+          id?: string
+          metrics?: Json | null
+          personas_filter?: string[] | null
+          pills_filter?: string[] | null
+          por_pill?: Json | null
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          casos_rodados?: number | null
+          cleanup?: boolean
+          completed_at?: string | null
+          detalhes?: Json | null
+          duration_ms?: number | null
+          error_message?: string | null
+          errors?: Json | null
+          id?: string
+          metrics?: Json | null
+          personas_filter?: string[] | null
+          pills_filter?: string[] | null
+          por_pill?: Json | null
+          started_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
       block_responses: {
         Row: {
           answered_at: string
