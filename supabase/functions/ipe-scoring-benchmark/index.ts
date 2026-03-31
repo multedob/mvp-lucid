@@ -200,9 +200,11 @@ async function runBenchmark(
             for (const [linhaId, ld] of Object.entries(linhas)) {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const il = (ld as any)?.IL_sinal ?? {};
+              const ldAny = ld as any;
               allResults.push({ persona: c.persona, pill: c.pill, linha: linhaId,
                 canon_num: null, canon_faixa: null,
-                scored_num: il.numerico ?? null, scored_faixa: il.faixa ?? null,
+                scored_num: il.numerico ?? ldAny?.numerico ?? null,
+                scored_faixa: il.faixa ?? ldAny?.faixa ?? null,
                 il_match: null, faixa_match: null, delta_il: null });
             }
           } else {
