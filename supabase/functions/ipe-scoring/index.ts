@@ -1,7 +1,7 @@
 // ============================================================
 // ipe-scoring/index.ts
 // Fonte: PIPELINE_IMPLEMENTACAO_IPE_MVP v1.0, §4.1–4.5
-//        scoring_pill_PI v0.7.4 — formato de entrada esperado
+//        scoring_pill_PI v0.7.7 — max_tokens 8192, fence handling, parse_reason, IL snap-to-nearest
 // Responsabilidade: scoring Momento 1
 //   Reconstrói corpus no formato exato esperado por cada prompt.
 //   Chama Claude (Sonnet), valida output JSON, persiste pill_scoring.
@@ -29,8 +29,28 @@ function json(body: unknown, status = 200): Response {
 const SCORING_MODEL       = "claude-sonnet-4-20250514";
 const SCORING_TEMPERATURE = 0;   // determinístico — SCORING_SPEC v1.3
 const MAX_RETRIES         = 2;   // PIPELINE §4.5
+const MAX_TOKENS          = 8192; // v0.7.6 — aumentado de 4096 para evitar truncamento
 
-const IL_VALID_VALUES = new Set([1.0, 2.0, 3.5, 4.5, 5.5, 6.5, 7.5, 8.0]);
+const IL_VALID_ARRAY  = [1.0, 2.0, 3.5, 4.5, 5.5, 6.5, 7.5, 8.0];
+const IL_VALID_VALUES = new Set(IL_VALID_ARRAY);
+const IL_SNAP_TOLERANCE = 0.75; // v0.7.7 — snap ILs próximos ao valor válido mais perto
+
+/** Snap IL para o valor válido mais próximo se dentro da tolerância */
+function snapIL(raw: number | null | undefined): number | null | undefined {
+  if (raw === null || raw === undefined) return raw;
+  if (IL_VALID_VALUES.has(raw)) return raw;
+  let best = raw;
+  let bestDist = Infinity;
+  for (const v of IL_VALID_ARRAY) {
+    const d = Math.abs(raw - v);
+    if (d < bestDist || (d === bestDist && v > best)) { bestDist = d; best = v; }
+  }
+  if (bestDist <= IL_SNAP_TOLERANCE) {
+    console.warn(`IL_SNAP: ${raw} → ${best} (dist=${bestDist})`);
+    return best;
+  }
+  return raw; // fora da tolerância — vai falhar na validação (intencional)
+}
 
 const PROMPT_COMPONENT_MAP: Record<PillId, string> = {
   PI:   "scoring_pill_PI",
@@ -202,25 +222,45 @@ interface ParseResult {
 }
 
 function validateScoringOutput(raw: string): ParseResult {
-  // Strip markdown fences (```json ... ```) — handles leading/trailing whitespace and text before fence
+  // v0.7.6 — Extração robusta de JSON: handles fences, truncamento, e texto antes/depois
   let cleaned = raw.trim();
-  const fenceMatch = cleaned.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
-  if (fenceMatch) {
-    cleaned = fenceMatch[1].trim();
+
+  // 1. Fence completa: ```json ... ```
+  const fenceComplete = cleaned.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
+  if (fenceComplete) {
+    cleaned = fenceComplete[1].trim();
   } else {
-    // Fallback: try simple strip
-    cleaned = cleaned.replace(/^```(?:json)?\s*/m, "").replace(/\s*```\s*$/m, "").trim();
+    // 2. Fence aberta sem fechamento (output truncado): ```json ...EOF
+    const fenceOpen = cleaned.match(/```(?:json)?\s*\n?([\s\S]+)$/);
+    if (fenceOpen) {
+      cleaned = fenceOpen[1].trim();
+    } else {
+      // 3. Fallback: strip simples
+      cleaned = cleaned.replace(/^```(?:json)?\s*/m, "").replace(/\s*```\s*$/m, "").trim();
+    }
+  }
+
+  // 4. Extrair bloco JSON por braces se ainda houver texto ao redor
+  const firstBrace = cleaned.indexOf("{");
+  const lastBrace  = cleaned.lastIndexOf("}");
+  if (firstBrace >= 0 && lastBrace > firstBrace) {
+    cleaned = cleaned.slice(firstBrace, lastBrace + 1);
   }
 
   let parsed: ScoringOutput;
   try { parsed = JSON.parse(cleaned); }
-  catch { return { success: false, reason: "invalid_json" }; }
+  catch { return { success: false, reason: `invalid_json (len=${raw.length}, cleaned_len=${cleaned.length})` }; }
 
   if (!parsed.sinais || typeof parsed.sinais !== "object") {
     return { success: false, reason: "schema_violation: missing sinais" };
   }
 
   for (const [lineId, linha] of Object.entries(parsed.sinais)) {
+    // v0.7.7 — Snap IL antes de validar
+    if (linha?.IL_sinal?.numerico !== null && linha?.IL_sinal?.numerico !== undefined) {
+      linha.IL_sinal.numerico = snapIL(linha.IL_sinal.numerico) as number;
+    }
+
     // Validar IL
     const il = linha?.IL_sinal?.numerico;
     if (il !== null && il !== undefined && !IL_VALID_VALUES.has(il)) {
@@ -365,6 +405,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   let retry_count                 = 0;
   let input_tokens                = 0;
   let output_tokens               = 0;
+  let last_parse_reason           = "";  // v0.7.6 — diagnóstico
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     retry_count = attempt;
@@ -375,7 +416,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
       const response = await anthropic.messages.create({
         model:       SCORING_MODEL,
-        max_tokens:  4096,
+        max_tokens:  MAX_TOKENS,
         temperature: SCORING_TEMPERATURE,
         system:      promptRow.prompt_text,
         messages:    [{ role: "user", content: userMessage }],
@@ -385,15 +426,24 @@ Deno.serve(async (req: Request): Promise<Response> => {
       output_tokens   = response.usage?.output_tokens ?? 0;
       last_raw_output = (response.content[0] as { type: string; text: string }).text;
 
+      // v0.7.6 — detectar truncamento por stop_reason
+      const stopReason = response.stop_reason;
+      if (stopReason === "max_tokens") {
+        console.warn(`SCORING_TRUNCATED attempt=${attempt} output_tokens=${output_tokens}`);
+      }
+
       const result = validateScoringOutput(last_raw_output);
       if (result.success && result.data) {
         finalOutput   = result.data;
         parse_success = true;
+        last_parse_reason = "";
         break;
       }
-      console.warn(`SCORING_PARSE_FAIL attempt=${attempt} reason=${result.reason}`);
+      last_parse_reason = result.reason ?? "unknown";
+      console.warn(`SCORING_PARSE_FAIL attempt=${attempt} reason=${result.reason} stop=${stopReason}`);
     } catch (err) {
       console.error(`SCORING_LLM_ERROR attempt=${attempt}:`, err);
+      last_parse_reason = `llm_error: ${(err as Error).message}`;
       if (attempt === MAX_RETRIES) break;
     }
   }
@@ -410,6 +460,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     raw_output:     last_raw_output,
     parsed_output:  parse_success ? finalOutput : null,
     parse_success,
+    parse_reason:   last_parse_reason || null,  // v0.7.6 — diagnóstico de falha
     retry_count,
     model:          SCORING_MODEL,
   });
