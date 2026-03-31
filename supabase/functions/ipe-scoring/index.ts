@@ -259,7 +259,7 @@ function buildCorpusText(
 
 const VALID_FAIXAS      = new Set(["A", "B", "C", "D", "indeterminada"]);
 const VALID_STATUS      = new Set(["completo", "incompleto"]);
-const VALID_GCC         = new Set(["alto", "medio", "baixo", "insuficiente", "nao_aplicavel"]);
+const VALID_GCC         = new Set(["alto", "medio", "baixo", "insuficiente", "nao_aplicavel", "não_aplicável"]);
 const VALID_CORTE_DECS  = new Set(["SIM", "NÃO", "INDETERMINADO"]);
 const CORTES_ESPERADOS  = ["2_4", "4_6", "6_8"];
 
@@ -369,9 +369,14 @@ function validateScoringOutput(raw: string): ParseResult {
             return { success: false, reason: `gcc_decisao_inválida for ${lineId} corte ${corte}: ${decisao}` };
           }
           // v0.7.8 — Aceitar "gcc" ou "GCC" (case-insensitive)
+          // v0.7.9 — Aceitar variantes com acento: "não_aplicável" → "nao_aplicavel"
           const gccVal = (c.gcc ?? c.GCC) as string | undefined;
-          if (gccVal && !VALID_GCC.has(gccVal.toLowerCase())) {
-            return { success: false, reason: `gcc_valor_inválido for ${lineId} corte ${corte}: ${gccVal}` };
+          if (gccVal) {
+            const gccNorm = gccVal.toLowerCase()
+              .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // strip accents
+            if (!VALID_GCC.has(gccNorm) && !VALID_GCC.has(gccVal.toLowerCase())) {
+              return { success: false, reason: `gcc_valor_inválido for ${lineId} corte ${corte}: ${gccVal}` };
+            }
           }
         }
       }
