@@ -1,7 +1,7 @@
 // ============================================================
 // ipe-scoring/index.ts
 // Fonte: PIPELINE_IMPLEMENTACAO_IPE_MVP v1.0, §4.1–4.5
-//        v0.7.8 — multi-pill compat: sinais/linhas, decisao/decisão, gcc/GCC, FD flexível
+//        v0.7.9 — IL_sinal normalization: always ensure IL_sinal.numerico + IL_sinal.faixa
 // Responsabilidade: scoring Momento 1
 //   Reconstrói corpus no formato exato esperado por cada prompt.
 //   Chama Claude (Sonnet), valida output JSON, persiste pill_scoring.
@@ -50,6 +50,62 @@ function snapIL(raw: number | null | undefined): number | null | undefined {
     return best;
   }
   return raw; // fora da tolerância — vai falhar na validação (intencional)
+}
+
+// ── v0.7.9 — Faixa lookup table ──
+const FAIXA_MAP: Record<string, [number, number]> = {
+  A: [1.0, 2.0],
+  B: [3.5, 4.5],
+  C: [5.5, 6.5],
+  D: [7.5, 8.0],
+};
+
+/**
+ * v0.7.9 — Derive faixa from corte decisions.
+ * Cortes "2_4", "4_6", "6_8" represent boundary crossings.
+ * Highest SIM corte determines the faixa.
+ */
+function deriveFaixaFromCortes(cortes: Record<string, unknown>): string | null {
+  const getDecision = (corte: Record<string, unknown> | undefined): string => {
+    if (!corte) return "NÃO";
+    const d = (corte.decisao ?? corte["decisão"] ?? corte.decisão ?? "NÃO") as string;
+    return d.toUpperCase();
+  };
+
+  const c68 = cortes["6_8"] as Record<string, unknown> | undefined;
+  const c46 = cortes["4_6"] as Record<string, unknown> | undefined;
+  const c24 = cortes["2_4"] as Record<string, unknown> | undefined;
+
+  if (getDecision(c68) === "SIM") return "D";
+  if (getDecision(c46) === "SIM") return "C";
+  if (getDecision(c24) === "SIM") return "B";
+  return "A";
+}
+
+/**
+ * v0.7.9 — Derive numerico from faixa + GCC of determining corte.
+ * Within each faixa, GCC=alto → upper value, else → lower value.
+ */
+function deriveNumericoFromFaixa(faixa: string, cortes?: Record<string, unknown>): number {
+  const range = FAIXA_MAP[faixa];
+  if (!range) return 2.0; // fallback
+
+  if (!cortes) return range[0]; // default to lower value
+
+  // Find the determining corte's GCC
+  let determiningCorte: Record<string, unknown> | undefined;
+  switch (faixa) {
+    case "D": determiningCorte = cortes["6_8"] as Record<string, unknown> | undefined; break;
+    case "C": determiningCorte = cortes["4_6"] as Record<string, unknown> | undefined; break;
+    case "B": determiningCorte = cortes["2_4"] as Record<string, unknown> | undefined; break;
+    case "A": determiningCorte = cortes["2_4"] as Record<string, unknown> | undefined; break;
+  }
+
+  if (!determiningCorte) return range[0];
+
+  const gcc = ((determiningCorte.gcc ?? determiningCorte.GCC) as string ?? "").toLowerCase();
+  // alto → upper value in faixa, else → lower value
+  return gcc === "alto" ? range[1] : range[0];
 }
 
 const PROMPT_COMPONENT_MAP: Record<PillId, string> = {
@@ -259,6 +315,8 @@ function validateScoringOutput(raw: string): ParseResult {
   }
   // Normalizar para "sinais" no parsed output
   parsed.sinais = sinaisData;
+  // Limpar chave "linhas" duplicada se existir
+  delete (parsed as Record<string, unknown>).linhas;
 
   for (const [lineId, linha] of Object.entries(parsed.sinais)) {
     // v0.7.7 — Snap IL antes de validar
@@ -316,6 +374,56 @@ function validateScoringOutput(raw: string): ParseResult {
             return { success: false, reason: `gcc_valor_inválido for ${lineId} corte ${corte}: ${gccVal}` };
           }
         }
+      }
+    }
+  }
+
+  // ── v0.7.9 — NORMALIZAÇÃO PÓS-VALIDAÇÃO ──
+  // Garante que TODA linha tenha IL_sinal: { numerico, faixa }
+  // Isso permite que o benchmark leia sempre no mesmo path.
+  for (const [lineId, linha] of Object.entries(parsed.sinais)) {
+    if (!linha) continue;
+
+    // Caso 1: IL_sinal já existe com numerico e faixa → OK
+    if (linha.IL_sinal?.numerico !== undefined && linha.IL_sinal?.faixa !== undefined) {
+      continue;
+    }
+
+    // Caso 2: numerico/faixa existem diretamente na linha (sem wrapper IL_sinal)
+    const directNum   = (linha as any).numerico;
+    const directFaixa = (linha as any).faixa;
+
+    if (directNum !== undefined || directFaixa !== undefined) {
+      if (!linha.IL_sinal) {
+        (linha as any).IL_sinal = {};
+      }
+      if (directNum !== undefined && linha.IL_sinal.numerico === undefined) {
+        const snapped = snapIL(directNum);
+        linha.IL_sinal.numerico = snapped !== undefined && snapped !== null ? snapped : directNum;
+      }
+      if (directFaixa !== undefined && linha.IL_sinal.faixa === undefined) {
+        linha.IL_sinal.faixa = directFaixa;
+      }
+      console.warn(`IL_NORMALIZE ${lineId}: direct → IL_sinal (num=${linha.IL_sinal.numerico}, faixa=${linha.IL_sinal.faixa})`);
+      continue;
+    }
+
+    // Caso 3: Sem numerico/faixa explícitos, mas tem cortes → derivar
+    const cortes = (linha.IL_sinal?.cortes ?? (linha as any).cortes) as Record<string, unknown> | undefined;
+    if (cortes) {
+      const derivedFaixa = deriveFaixaFromCortes(cortes);
+      if (derivedFaixa) {
+        const derivedNum = deriveNumericoFromFaixa(derivedFaixa, cortes);
+        if (!linha.IL_sinal) {
+          (linha as any).IL_sinal = {};
+        }
+        if (linha.IL_sinal.numerico === undefined) {
+          linha.IL_sinal.numerico = derivedNum;
+        }
+        if (linha.IL_sinal.faixa === undefined) {
+          linha.IL_sinal.faixa = derivedFaixa;
+        }
+        console.warn(`IL_DERIVE ${lineId}: cortes → IL_sinal (num=${derivedNum}, faixa=${derivedFaixa})`);
       }
     }
   }
