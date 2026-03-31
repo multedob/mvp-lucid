@@ -63,9 +63,10 @@ function compareIL(
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const linhaData   = (scoredLinhas[linhaId] ?? {}) as any;
+    // v2.1 — Fallback: check IL_sinal first, then direct fields on the line
     const ilSinal     = linhaData?.IL_sinal ?? {};
-    const scoredNum   = ilSinal?.numerico   ?? null;
-    const scoredFaixa = ilSinal?.faixa      ?? null;
+    const scoredNum   = ilSinal?.numerico   ?? linhaData?.numerico   ?? null;
+    const scoredFaixa = ilSinal?.faixa      ?? linhaData?.faixa      ?? null;
 
     let ilMatch: boolean;
     if (canonNum === null)       ilMatch = (scoredNum === null);
