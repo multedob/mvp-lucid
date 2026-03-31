@@ -63,9 +63,10 @@ function compareIL(
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const linhaData   = (scoredLinhas[linhaId] ?? {}) as any;
+    // v2.1 — Fallback: check IL_sinal first, then direct fields on the line
     const ilSinal     = linhaData?.IL_sinal ?? {};
-    const scoredNum   = ilSinal?.numerico   ?? null;
-    const scoredFaixa = ilSinal?.faixa      ?? null;
+    const scoredNum   = ilSinal?.numerico   ?? linhaData?.numerico   ?? null;
+    const scoredFaixa = ilSinal?.faixa      ?? linhaData?.faixa      ?? null;
 
     let ilMatch: boolean;
     if (canonNum === null)       ilMatch = (scoredNum === null);
@@ -199,9 +200,11 @@ async function runBenchmark(
             for (const [linhaId, ld] of Object.entries(linhas)) {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const il = (ld as any)?.IL_sinal ?? {};
+              const ldAny = ld as any;
               allResults.push({ persona: c.persona, pill: c.pill, linha: linhaId,
                 canon_num: null, canon_faixa: null,
-                scored_num: il.numerico ?? null, scored_faixa: il.faixa ?? null,
+                scored_num: il.numerico ?? ldAny?.numerico ?? null,
+                scored_faixa: il.faixa ?? ldAny?.faixa ?? null,
                 il_match: null, faixa_match: null, delta_il: null });
             }
           } else {
