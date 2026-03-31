@@ -1,7 +1,7 @@
 // ============================================================
 // ipe-scoring/index.ts
 // Fonte: PIPELINE_IMPLEMENTACAO_IPE_MVP v1.0, §4.1–4.5
-//        scoring_pill_PI v0.7.7 — max_tokens 8192, fence handling, parse_reason, IL snap-to-nearest
+//        v0.7.8 — multi-pill compat: sinais/linhas, decisao/decisão, gcc/GCC, FD flexível
 // Responsabilidade: scoring Momento 1
 //   Reconstrói corpus no formato exato esperado por cada prompt.
 //   Chama Claude (Sonnet), valida output JSON, persiste pill_scoring.
@@ -251,30 +251,43 @@ function validateScoringOutput(raw: string): ParseResult {
   try { parsed = JSON.parse(cleaned); }
   catch { return { success: false, reason: `invalid_json (len=${raw.length}, cleaned_len=${cleaned.length})` }; }
 
-  if (!parsed.sinais || typeof parsed.sinais !== "object") {
-    return { success: false, reason: "schema_violation: missing sinais" };
+  // v0.7.8 — Aceitar tanto "sinais" quanto "linhas" como chave principal
+  // PI usa "sinais", PII+ pode usar "linhas" dependendo do prompt
+  const sinaisData = parsed.sinais ?? (parsed as Record<string, unknown>).linhas as Record<string, LinhaCorpus> | undefined;
+  if (!sinaisData || typeof sinaisData !== "object") {
+    return { success: false, reason: "schema_violation: missing sinais/linhas" };
   }
+  // Normalizar para "sinais" no parsed output
+  parsed.sinais = sinaisData;
 
   for (const [lineId, linha] of Object.entries(parsed.sinais)) {
     // v0.7.7 — Snap IL antes de validar
-    if (linha?.IL_sinal?.numerico !== null && linha?.IL_sinal?.numerico !== undefined) {
-      linha.IL_sinal.numerico = snapIL(linha.IL_sinal.numerico) as number;
+    // v0.7.8 — Aceitar IL_sinal ou acesso direto a campos de corte
+    const ilSinal = linha?.IL_sinal ?? linha;
+    const numerico = ilSinal?.numerico;
+    if (numerico !== null && numerico !== undefined) {
+      const snapped = snapIL(numerico) as number;
+      if (linha?.IL_sinal) {
+        linha.IL_sinal.numerico = snapped;
+      }
     }
 
     // Validar IL
-    const il = linha?.IL_sinal?.numerico;
+    const il = linha?.IL_sinal?.numerico ?? linha?.numerico;
     if (il !== null && il !== undefined && !IL_VALID_VALUES.has(il)) {
       return { success: false, reason: `il_out_of_range for ${lineId}: ${il}` };
     }
 
-    // Validar FD
-    const fd = linha?.FD_linha;
-    if (typeof fd !== "number" || fd < 0 || fd > 1) {
-      return { success: false, reason: `fd_out_of_range for ${lineId}: ${fd}` };
+    // Validar FD — aceitar FD_linha ou fd_linha
+    const fd = linha?.FD_linha ?? linha?.fd_linha;
+    if (fd !== undefined && fd !== null) {
+      if (typeof fd !== "number" || fd < 0 || fd > 1) {
+        return { success: false, reason: `fd_out_of_range for ${lineId}: ${fd}` };
+      }
     }
 
     // C6 — Validar faixa
-    const faixa = linha?.IL_sinal?.faixa;
+    const faixa = linha?.IL_sinal?.faixa ?? linha?.faixa;
     if (faixa !== undefined && !VALID_FAIXAS.has(faixa as string)) {
       return { success: false, reason: `faixa_inválida for ${lineId}: ${faixa}` };
     }
@@ -286,16 +299,21 @@ function validateScoringOutput(raw: string): ParseResult {
     }
 
     // C6 — Validar GCC_por_corte (estrutura mínima se presente)
-    const gcc = linha?.IL_sinal?.cortes as Record<string, unknown> | undefined;
+    // v0.7.8 — Aceitar "cortes" em IL_sinal ou diretamente na linha
+    const gcc = (linha?.IL_sinal?.cortes ?? linha?.cortes) as Record<string, unknown> | undefined;
     if (gcc) {
       for (const corte of CORTES_ESPERADOS) {
         const c = gcc[corte] as Record<string, unknown> | undefined;
         if (c) {
-          if (!VALID_CORTE_DECS.has(c.decisao as string)) {
-            return { success: false, reason: `gcc_decisao_inválida for ${lineId} corte ${corte}: ${c.decisao}` };
+          // v0.7.8 — Aceitar "decisao" ou "decisão" (com acento), case-insensitive
+          const decisao = (c.decisao ?? c["decisão"]) as string | undefined;
+          if (decisao && !VALID_CORTE_DECS.has(decisao.toUpperCase())) {
+            return { success: false, reason: `gcc_decisao_inválida for ${lineId} corte ${corte}: ${decisao}` };
           }
-          if (!VALID_GCC.has(c.gcc as string)) {
-            return { success: false, reason: `gcc_valor_inválido for ${lineId} corte ${corte}: ${c.gcc}` };
+          // v0.7.8 — Aceitar "gcc" ou "GCC" (case-insensitive)
+          const gccVal = (c.gcc ?? c.GCC) as string | undefined;
+          if (gccVal && !VALID_GCC.has(gccVal.toLowerCase())) {
+            return { success: false, reason: `gcc_valor_inválido for ${lineId} corte ${corte}: ${gccVal}` };
           }
         }
       }
