@@ -1,7 +1,7 @@
 // ============================================================
 // ipe-scoring/index.ts
 // Fonte: PIPELINE_IMPLEMENTACAO_IPE_MVP v1.0, §4.1–4.5
-//        v0.7.10 — IL_sinal normalization + handle IL_sinal as primitive (number/string)
+//        v0.7.11 — IL_sinal normalization + primitive handling + numerico derivation from faixa
 // Responsabilidade: scoring Momento 1
 //   Reconstrói corpus no formato exato esperado por cada prompt.
 //   Chama Claude (Sonnet), valida output JSON, persiste pill_scoring.
@@ -69,7 +69,10 @@ function deriveFaixaFromCortes(cortes: Record<string, unknown>): string | null {
   const getDecision = (corte: Record<string, unknown> | undefined): string => {
     if (!corte) return "NÃO";
     const d = (corte.decisao ?? corte["decisão"] ?? corte.decisão ?? "NÃO") as string;
-    return d.toUpperCase();
+    const upper = d.toUpperCase();
+    // "NÃO_APLICÁVEL" ou "NAO_APLICAVEL" = corte não se aplica = não cruza fronteira
+    if (upper.includes("APLIC")) return "NÃO";
+    return upper;
   };
 
   const c68 = cortes["6_8"] as Record<string, unknown> | undefined;
@@ -260,7 +263,7 @@ function buildCorpusText(
 const VALID_FAIXAS      = new Set(["A", "B", "C", "D", "indeterminada"]);
 const VALID_STATUS      = new Set(["completo", "incompleto"]);
 const VALID_GCC         = new Set(["alto", "medio", "baixo", "insuficiente", "nao_aplicavel", "não_aplicável"]);
-const VALID_CORTE_DECS  = new Set(["SIM", "NÃO", "INDETERMINADO"]);
+const VALID_CORTE_DECS  = new Set(["SIM", "NÃO", "INDETERMINADO", "NÃO_APLICÁVEL", "NAO_APLICAVEL"]);
 const CORTES_ESPERADOS  = ["2_4", "4_6", "6_8"];
 
 interface ScoringOutput {
@@ -372,8 +375,12 @@ function validateScoringOutput(raw: string): ParseResult {
         if (c) {
           // v0.7.8 — Aceitar "decisao" ou "decisão" (com acento), case-insensitive
           const decisao = (c.decisao ?? c["decisão"]) as string | undefined;
-          if (decisao && !VALID_CORTE_DECS.has(decisao.toUpperCase())) {
-            return { success: false, reason: `gcc_decisao_inválida for ${lineId} corte ${corte}: ${decisao}` };
+          if (decisao) {
+            const decUpper = decisao.toUpperCase();
+            const decNorm = decUpper.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // strip accents
+            if (!VALID_CORTE_DECS.has(decUpper) && !VALID_CORTE_DECS.has(decNorm)) {
+              return { success: false, reason: `gcc_decisao_inválida for ${lineId} corte ${corte}: ${decisao}` };
+            }
           }
           // v0.7.8 — Aceitar "gcc" ou "GCC" (case-insensitive)
           // v0.7.9 — Aceitar variantes com acento: "não_aplicável" → "nao_aplicavel"
@@ -416,8 +423,19 @@ function validateScoringOutput(raw: string): ParseResult {
       if (directFaixa !== undefined && linha.IL_sinal.faixa === undefined) {
         linha.IL_sinal.faixa = directFaixa;
       }
-      console.warn(`IL_NORMALIZE ${lineId}: direct → IL_sinal (num=${linha.IL_sinal.numerico}, faixa=${linha.IL_sinal.faixa})`);
-      continue;
+      // v0.7.11 — Se faixa foi setada mas numerico ainda falta, derivar dos cortes
+      if (linha.IL_sinal.numerico === undefined && linha.IL_sinal.faixa) {
+        const cortesForDerive = (linha.IL_sinal.cortes ?? (linha as any).cortes) as Record<string, unknown> | undefined;
+        const derivedNum = deriveNumericoFromFaixa(linha.IL_sinal.faixa as string, cortesForDerive);
+        linha.IL_sinal.numerico = derivedNum;
+        console.warn(`IL_NORMALIZE+DERIVE ${lineId}: faixa=${linha.IL_sinal.faixa} → numerico=${derivedNum}`);
+      } else {
+        console.warn(`IL_NORMALIZE ${lineId}: direct → IL_sinal (num=${linha.IL_sinal.numerico}, faixa=${linha.IL_sinal.faixa})`);
+      }
+      // v0.7.11 — Só continue se AMBOS estão preenchidos
+      if (linha.IL_sinal.numerico !== undefined && linha.IL_sinal.faixa !== undefined) {
+        continue;
+      }
     }
 
     // Caso 3: Sem numerico/faixa explícitos, mas tem cortes → derivar
