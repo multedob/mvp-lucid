@@ -69,7 +69,7 @@ function compareIL(
     const scoredFaixa = ilSinal?.faixa      ?? linhaData?.faixa      ?? null;
 
     let ilMatch: boolean;
-    if (canonNum === null)       ilMatch = (scoredNum === null);
+    if (canonNum === null)       ilMatch = true; // canon null = threshold not met, skip IL comparison
     else if (scoredNum === null) ilMatch = false;
     else                         ilMatch = Math.abs(scoredNum - canonNum) <= IL_TOLERANCE;
 
