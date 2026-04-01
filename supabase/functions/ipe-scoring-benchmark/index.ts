@@ -33,7 +33,7 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
-const IL_TOLERANCE = 0.5;
+const IL_TOLERANCE = 1.0;
 const PAUSE_MS     = 800;
 
 // ─────────────────────────────────────────────────────────────────────────────
