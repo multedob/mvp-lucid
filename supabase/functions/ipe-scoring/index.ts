@@ -1,7 +1,7 @@
 // ============================================================
 // ipe-scoring/index.ts
 // Fonte: PIPELINE_IMPLEMENTACAO_IPE_MVP v1.0, §4.1–4.5
-//        v0.7.9 — IL_sinal normalization: always ensure IL_sinal.numerico + IL_sinal.faixa
+//        v0.7.10 — IL_sinal normalization + handle IL_sinal as primitive (number/string)
 // Responsabilidade: scoring Momento 1
 //   Reconstrói corpus no formato exato esperado por cada prompt.
 //   Chama Claude (Sonnet), valida output JSON, persiste pill_scoring.
@@ -319,19 +319,26 @@ function validateScoringOutput(raw: string): ParseResult {
   delete (parsed as Record<string, unknown>).linhas;
 
   for (const [lineId, linha] of Object.entries(parsed.sinais)) {
+    // v0.7.10 — Se IL_sinal é um primitivo (número), converter para objeto
+    if (linha?.IL_sinal !== undefined && linha?.IL_sinal !== null && typeof linha.IL_sinal !== "object") {
+      const primitiveVal = linha.IL_sinal;
+      (linha as any).IL_sinal = { numerico: typeof primitiveVal === "number" ? primitiveVal : undefined };
+      console.warn(`IL_PRIMITIVE ${lineId}: IL_sinal was ${typeof primitiveVal} (${primitiveVal}), converted to object`);
+    }
+
     // v0.7.7 — Snap IL antes de validar
     // v0.7.8 — Aceitar IL_sinal ou acesso direto a campos de corte
-    const ilSinal = linha?.IL_sinal ?? linha;
+    const ilSinal = (linha?.IL_sinal && typeof linha.IL_sinal === "object") ? linha.IL_sinal : linha;
     const numerico = ilSinal?.numerico;
     if (numerico !== null && numerico !== undefined) {
       const snapped = snapIL(numerico) as number;
-      if (linha?.IL_sinal) {
+      if (linha?.IL_sinal && typeof linha.IL_sinal === "object") {
         linha.IL_sinal.numerico = snapped;
       }
     }
 
     // Validar IL
-    const il = linha?.IL_sinal?.numerico ?? linha?.numerico;
+    const il = (linha?.IL_sinal && typeof linha.IL_sinal === "object") ? linha.IL_sinal.numerico : linha?.numerico;
     if (il !== null && il !== undefined && !IL_VALID_VALUES.has(il)) {
       return { success: false, reason: `il_out_of_range for ${lineId}: ${il}` };
     }
@@ -345,7 +352,7 @@ function validateScoringOutput(raw: string): ParseResult {
     }
 
     // C6 — Validar faixa
-    const faixa = linha?.IL_sinal?.faixa ?? linha?.faixa;
+    const faixa = (linha?.IL_sinal && typeof linha.IL_sinal === "object") ? linha.IL_sinal.faixa : linha?.faixa;
     if (faixa !== undefined && !VALID_FAIXAS.has(faixa as string)) {
       return { success: false, reason: `faixa_inválida for ${lineId}: ${faixa}` };
     }
@@ -358,7 +365,7 @@ function validateScoringOutput(raw: string): ParseResult {
 
     // C6 — Validar GCC_por_corte (estrutura mínima se presente)
     // v0.7.8 — Aceitar "cortes" em IL_sinal ou diretamente na linha
-    const gcc = (linha?.IL_sinal?.cortes ?? linha?.cortes) as Record<string, unknown> | undefined;
+    const gcc = ((linha?.IL_sinal && typeof linha.IL_sinal === "object" ? linha.IL_sinal.cortes : undefined) ?? linha?.cortes) as Record<string, unknown> | undefined;
     if (gcc) {
       for (const corte of CORTES_ESPERADOS) {
         const c = gcc[corte] as Record<string, unknown> | undefined;
