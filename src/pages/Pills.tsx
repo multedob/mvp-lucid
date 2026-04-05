@@ -1,9 +1,7 @@
 // src/pages/Pills.tsx
 // Lista de pills com estado de ciclo
 // Pills feitas → line-through + opacidade reduzida + não clicáveis
-// Após as 6 feitas:
-//   - status=questionnaire → "begin questionnaire" → /questionnaire
-//   - status=complete      → "begin reading" → /reed
+// Após as 6 feitas → "begin reading" → /questionnaire
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -11,7 +9,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { getToday } from "@/lib/api";
 
 type PillId = "PI" | "PII" | "PIII" | "PIV" | "PV" | "PVI";
-type CycleStatus = "pills" | "questionnaire" | "complete" | "abandoned";
 
 const PILL_ORDER: PillId[] = ["PI", "PII", "PIII", "PIV", "PV", "PVI"];
 
@@ -27,7 +24,6 @@ const PILL_TENSAO: Record<PillId, string> = {
 export default function Pills() {
   const navigate = useNavigate();
   const [pillsDone, setPillsDone] = useState<PillId[]>([]);
-  const [cycleStatus, setCycleStatus] = useState<CycleStatus>("pills");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { loadCycle(); }, []);
@@ -44,21 +40,12 @@ export default function Pills() {
         .order("cycle_number", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (cycle) {
-        setPillsDone((cycle.pills_completed as PillId[]) ?? []);
-        setCycleStatus(cycle.status as CycleStatus);
-      }
+      if (cycle) setPillsDone((cycle.pills_completed as PillId[]) ?? []);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   }
 
   const allDone = PILL_ORDER.every(p => pillsDone.includes(p));
-
-  // FIX: distinguir destino após pills concluídas
-  // - questionnaire: pills prontas mas questionário pendente → /questionnaire
-  // - complete: ciclo inteiro encerrado → /reed
-  const allDoneLabel = cycleStatus === "complete" ? "begin reading" : "begin questionnaire";
-  const allDonePath  = cycleStatus === "complete" ? "/reed" : "/questionnaire";
 
   return (
     <div className="r-screen">
@@ -111,7 +98,7 @@ export default function Pills() {
 
             {allDone && (
               <div
-                onClick={() => navigate(allDonePath)}
+                onClick={() => navigate("/questionnaire")}
                 style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginTop: 12 }}
               >
                 <div style={{ width: 1, height: 14, background: "var(--r-accent)", flexShrink: 0 }} />
@@ -122,7 +109,7 @@ export default function Pills() {
                   letterSpacing: "0.08em",
                   color: "var(--r-text)",
                 }}>
-                  {allDoneLabel}
+                  begin reading
                 </span>
               </div>
             )}
