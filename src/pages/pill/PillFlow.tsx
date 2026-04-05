@@ -1,5 +1,5 @@
 // src/pages/pill/PillFlow.tsx
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunction, getToday } from "@/lib/api";
@@ -196,13 +196,16 @@ export default function PillFlow() {
     m3_3_condicao: "", m4Input: "", ecoText: "", loading: false,
   });
 
-  useEffect(() => { initCycle(); }, []);
+  const initRef = useRef(false);
 
-  const initCycle = async () => {
+  const initCycle = useCallback(async () => {
+    if (initRef.current) return;          // ← guard: impede dupla execução (StrictMode)
+    initRef.current = true;
+
     setState(s => ({ ...s, loading: true }));
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return navigate("/auth");
+      if (!session) { initRef.current = false; return navigate("/auth"); }
 
       let { data: cycle } = await supabase
         .from("ipe_cycles").select("*")
@@ -222,16 +225,19 @@ export default function PillFlow() {
         cycle = newCycle;
       }
 
-      if (!cycle) return;
+      if (!cycle) { initRef.current = false; return; }
       const d = new Date(cycle.started_at || new Date());
       const code = String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0");
       const display = String(cycle.cycle_number).padStart(2, "0") + " · " + code;
       setState(s => ({ ...s, ipeCycleId: cycle.id, cycleDisplay: display, loading: false, m1TimerStart: Date.now() }));
     } catch (err) {
-      console.error(err);
+      console.error("[PillFlow] initCycle error:", err);
+      initRef.current = false;
       setState(s => ({ ...s, loading: false }));
     }
-  };
+  }, [navigate]);
+
+  useEffect(() => { initCycle(); }, [initCycle]);
 
   const advance = (to?: Moment) => setState(s => {
     if (to) return { ...s, moment: to };
@@ -304,11 +310,25 @@ export default function PillFlow() {
       return { percepcao: p, presenca_para_outros: p };
     })() },
       });
-      const eco = await callEdgeFunction<{ eco_text: string }>("ipe-eco", {
-        ipe_cycle_id: state.ipeCycleId, pill_id: state.pillId,
-      });
-      setState(s => ({ ...s, ecoText: eco.eco_text || "", moment: "M5", loading: false }));
-    } catch { setState(s => ({ ...s, moment: "M5", loading: false })); }
+
+      // ipe-eco: tentativa com fallback — não bloqueia M5 mas loga o erro
+      let ecoText = "";
+      try {
+        const eco = await callEdgeFunction<{ eco_text: string }>("ipe-eco", {
+          ipe_cycle_id: state.ipeCycleId, pill_id: state.pillId,
+        });
+        ecoText = eco.eco_text || "";
+      } catch (ecoErr) {
+        console.error("[PillFlow] ipe-eco failed:", ecoErr);
+        // eco é UX-only, não impede avanço — mas logamos para diagnóstico
+      }
+
+      setState(s => ({ ...s, ecoText, moment: "M5", loading: false }));
+    } catch (err) {
+      console.error("[PillFlow] submitM4 failed:", err);
+      // M4 persistence falhou — NÃO avança para M5
+      setState(s => ({ ...s, loading: false }));
+    }
   };
 
   const pill = PILLS[pillId];
