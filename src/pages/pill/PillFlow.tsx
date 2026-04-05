@@ -199,7 +199,7 @@ export default function PillFlow() {
   const initRef = useRef(false);
 
   const initCycle = useCallback(async () => {
-    if (initRef.current) return;          // ← guard: impede dupla execução (StrictMode)
+    if (initRef.current) return;          // guard: impede dupla execução (StrictMode)
     initRef.current = true;
 
     setState(s => ({ ...s, loading: true }));
@@ -207,10 +207,32 @@ export default function PillFlow() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { initRef.current = false; return navigate("/auth"); }
 
+      // FIX: buscar ciclo ativo (pills OU questionnaire) — evita criar ciclo duplicado
+      // quando o usuário completou todas as pills e o status já avançou para questionnaire
       let { data: cycle } = await supabase
         .from("ipe_cycles").select("*")
-        .eq("user_id", session.user.id).eq("status", "pills").maybeSingle();
+        .eq("user_id", session.user.id)
+        .in("status", ["pills", "questionnaire"])
+        .order("cycle_number", { ascending: false })
+        .limit(1).maybeSingle();
 
+      // Se o ciclo já está em questionnaire, redirecionar — pills já concluídas
+      if (cycle?.status === "questionnaire") {
+        initRef.current = false;
+        return navigate("/questionnaire");
+      }
+
+      // Verificar se a pill que está sendo acessada já foi completada neste ciclo
+      if (cycle?.status === "pills") {
+        const pillsDone: string[] = cycle.pills_completed ?? [];
+        if (pillsDone.includes(pillId)) {
+          // Pill já feita — redirecionar para lista de pills
+          initRef.current = false;
+          return navigate("/pills");
+        }
+      }
+
+      // Criar novo ciclo apenas se não existe nenhum ciclo ativo
       if (!cycle) {
         const { data: last } = await supabase
           .from("ipe_cycles").select("cycle_number")
@@ -220,7 +242,13 @@ export default function PillFlow() {
         const nextNum = (last?.cycle_number ?? 0) + 1;
         const { data: newCycle } = await supabase
           .from("ipe_cycles")
-          .insert({ user_id: session.user.id, status: "pills", cycle_number: nextNum, prompt_version: null, pills_completed: [] })
+          .insert({
+            user_id: session.user.id,
+            status: "pills",
+            cycle_number: nextNum,
+            prompt_version: null,
+            pills_completed: [],
+          })
           .select().single();
         cycle = newCycle;
       }
@@ -235,7 +263,7 @@ export default function PillFlow() {
       initRef.current = false;
       setState(s => ({ ...s, loading: false }));
     }
-  }, [navigate]);
+  }, [navigate, pillId]);
 
   useEffect(() => { initCycle(); }, [initCycle]);
 
@@ -320,7 +348,7 @@ export default function PillFlow() {
         ecoText = eco.eco_text || "";
       } catch (ecoErr) {
         console.error("[PillFlow] ipe-eco failed:", ecoErr);
-        // eco é UX-only, não impede avanço — mas logamos para diagnóstico
+        // eco é UX-only, não impede avanço
       }
 
       setState(s => ({ ...s, ecoText, moment: "M5", loading: false }));
@@ -342,7 +370,7 @@ export default function PillFlow() {
         <div className="r-tension" style={{ marginTop: 14 }}>{pill.tensao}</div>
       </div>
       <div style={{ flex: 1 }} />
-      <Footer onBack={() => navigate("/home")} onContinue={submitM1}
+      <Footer onBack={() => navigate("/pills")} onContinue={submitM1}
         continueLabel={state.loading ? "..." : "begin"}
         showEthics onEthics={() => handleEthics("M1")}
         disabled={state.loading || !state.ipeCycleId} />
@@ -362,7 +390,8 @@ export default function PillFlow() {
       </div>
       <Footer onBack={() => setState(s => ({ ...s, moment: "M1" }))} onContinue={submitM2}
         continueLabel={state.loading ? "..." : "continue"}
-        showEthics onEthics={() => handleEthics("M2")} disabled={state.loading} />
+        showEthics onEthics={() => handleEthics("M2")}
+        disabled={state.loading || !state.m2Input.trim()} />
     </div>
   );
 
@@ -475,7 +504,7 @@ export default function PillFlow() {
     </div>
   );
 
-  // M5
+  // M5 — eco + navegação para lista de pills (não para reed — ciclo ainda não terminou)
   return (
     <div className="r-screen">
       <Header moment="M5" />
@@ -489,8 +518,9 @@ export default function PillFlow() {
           <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10, color: "var(--r-ghost)", letterSpacing: "0.06em" }}>···</div>
         )}
       </div>
+      {/* FIX: volta para /pills, não para /reed — o usuário pode ter outras pills pendentes */}
       <Footer onBack={() => setState(s => ({ ...s, moment: "M4" }))}
-        onContinue={() => navigate("/reed")} continueLabel="talk to reed" showEthics={false} />
+        onContinue={() => navigate("/pills")} continueLabel="back to pills" showEthics={false} />
     </div>
   );
 }
