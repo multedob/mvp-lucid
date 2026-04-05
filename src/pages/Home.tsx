@@ -1,12 +1,62 @@
 // src/pages/Home.tsx
-// Blank page — header + nav bottom apenas
-// A lista de pills com estado de ciclo fica em /pills
+// CTA adaptado ao estado do ciclo IPE ativo:
+//   sem ciclo           → "begin pills"       → /pills
+//   status=pills        → "continue pills"    → /pills
+//   status=questionnaire → "begin questionnaire" → /questionnaire
+//   status=complete     → "read"              → /reed
 
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { getToday } from "@/lib/api";
+
+type CycleStatus = "pills" | "questionnaire" | "complete" | "abandoned" | null;
+
+interface CTA {
+  label: string;
+  path: string;
+}
+
+function resolveCTA(status: CycleStatus): CTA {
+  switch (status) {
+    case "pills":          return { label: "continue pills",      path: "/pills" };
+    case "questionnaire":  return { label: "begin questionnaire", path: "/questionnaire" };
+    case "complete":       return { label: "read",                path: "/reed" };
+    default:               return { label: "begin pills",         path: "/pills" };
+  }
+}
 
 export default function Home() {
   const navigate = useNavigate();
+  const [cycleStatus, setCycleStatus] = useState<CycleStatus>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) { setReady(true); return; }
+
+        const { data: cycle } = await supabase
+          .from("ipe_cycles")
+          .select("status")
+          .eq("user_id", session.user.id)
+          .in("status", ["pills", "questionnaire", "complete"])
+          .order("cycle_number", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        setCycleStatus((cycle?.status as CycleStatus) ?? null);
+      } catch (err) {
+        console.error("[Home] load error:", err);
+      } finally {
+        setReady(true);
+      }
+    }
+    load();
+  }, []);
+
+  const cta = resolveCTA(cycleStatus);
 
   return (
     <div className="r-screen">
@@ -32,23 +82,25 @@ export default function Home() {
         >
           ready when you are.
         </div>
-        <div
-          onClick={() => navigate("/pills")}
-          style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
-        >
-          <div style={{ width: 1, height: 14, background: "var(--r-accent)", flexShrink: 0 }} />
-          <span
-            style={{
-              fontFamily: "var(--r-font-sys)",
-              fontWeight: 300,
-              fontSize: 11,
-              color: "var(--r-text)",
-              letterSpacing: "0.08em",
-            }}
+        {ready && (
+          <div
+            onClick={() => navigate(cta.path)}
+            style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
           >
-            begin pills
-          </span>
-        </div>
+            <div style={{ width: 1, height: 14, background: "var(--r-accent)", flexShrink: 0 }} />
+            <span
+              style={{
+                fontFamily: "var(--r-font-sys)",
+                fontWeight: 300,
+                fontSize: 11,
+                color: "var(--r-text)",
+                letterSpacing: "0.08em",
+              }}
+            >
+              {cta.label}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Nav bottom */}
