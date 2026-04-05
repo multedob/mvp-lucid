@@ -237,7 +237,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       promptVersion = pv?.version ?? null;
     }
 
-    await supabase
+    const { error: cycleUpdateErr } = await supabase
       .from("ipe_cycles")
       .update({
         pills_completed: Array.from(completedSet),
@@ -245,6 +245,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
         ...(promptVersion ? { prompt_version: promptVersion } : {}),
       })
       .eq("id", ipe_cycle_id);
+
+    if (cycleUpdateErr) {
+      console.error("CYCLE_UPDATE_ERROR:", cycleUpdateErr, { ipe_cycle_id, pill_id, completedSet: Array.from(completedSet) });
+      return json({ error: "CYCLE_UPDATE_FAILED", message: "pills_completed update failed" }, 500);
+    }
   }
 
   // ─── Disparar ipe-scoring (fire-and-forget após M4)
