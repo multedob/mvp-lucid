@@ -1,11 +1,11 @@
 // src/pages/Questionnaire.tsx
 // Fluxo: /plan → /next-block loop → lucid-engine
-// Design system: _rdwth (prefixo --r-)
+// Design system: _rdwth — mesmo padrão visual das Pills (header-label + date, Footer component)
 
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
-import { callEdgeFunction, getCurrentUserVersion } from '@/lib/api'
+import { callEdgeFunction, getCurrentUserVersion, getToday } from '@/lib/api'
 import { QUESTIONS, getQuestionText, type BlockId } from '@/data/questions'
 
 // ─────────────────────────────────────────
@@ -21,51 +21,202 @@ interface NextBlockResponse {
 }
 
 type Phase =
-  | 'loading'       // carregando plano
-  | 'question'      // respondendo pergunta principal
-  | 'variant'       // respondendo variante
-  | 'fallback'      // sem episódio — exibindo fallback
-  | 'subfallback'   // segundo nível de fallback
-  | 'transition'    // pausa entre dimensões
-  | 'done'          // questionário encerrado
+  | 'loading'
+  | 'question'
+  | 'variant'
+  | 'fallback'
+  | 'subfallback'
+  | 'transition'
+  | 'done'
+
+// ─────────────────────────────────────────
+// Subcomponents — mesmo padrão do PillFlow
+// ─────────────────────────────────────────
+
+function Header() {
+  return (
+    <>
+      <div className="r-header">
+        <span className="r-header-label">_rdwth · questionário</span>
+        <span className="r-header-date">{getToday()}</span>
+      </div>
+      <div className="r-line" />
+    </>
+  )
+}
+
+function Footer({
+  onContinue,
+  continueLabel = "send",
+  onFallback,
+  fallbackLabel,
+  onEthics,
+  disabled = false,
+}: {
+  onContinue?: () => void
+  continueLabel?: string
+  onFallback?: () => void
+  fallbackLabel?: string
+  onEthics?: () => void
+  disabled?: boolean
+}) {
+  return (
+    <>
+      <div className="r-line" />
+      <div className="r-footer">
+        {onFallback && fallbackLabel && (
+          <span className="r-footer-action" onClick={onFallback}>
+            {fallbackLabel}
+          </span>
+        )}
+        {onContinue && (
+          <span
+            className="r-footer-action"
+            onClick={disabled ? undefined : onContinue}
+            style={{
+              opacity: disabled ? 0.3 : 1,
+              cursor: disabled ? 'default' : 'pointer',
+              marginLeft: onFallback ? 0 : undefined,
+            }}
+          >
+            {continueLabel}
+          </span>
+        )}
+        {onEthics && (
+          <span className="r-footer-ethics" onClick={onEthics}>
+            i'd rather not
+          </span>
+        )}
+      </div>
+    </>
+  )
+}
+
+function InvisibleTextarea({
+  value,
+  onChange,
+  disabled = false,
+  onCmdEnter,
+}: {
+  value: string
+  onChange: (v: string) => void
+  disabled?: boolean
+  onCmdEnter?: () => void
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+  const valueRef = useRef(value)
+  const recogRef = useRef<any>(null)
+  const [listening, setListening] = useState(false)
+
+  useEffect(() => { valueRef.current = value }, [value])
+
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.style.height = 'auto'
+      ref.current.style.height = ref.current.scrollHeight + 'px'
+    }
+  }, [value])
+
+  useEffect(() => {
+    setTimeout(() => ref.current?.focus(), 100)
+  }, [])
+
+  function toggleMic() {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SR) return
+    if (listening) {
+      recogRef.current?.stop()
+      setListening(false)
+      return
+    }
+    const r = new SR()
+    r.lang = 'pt-BR'
+    r.continuous = true
+    r.interimResults = false
+    r.onresult = (e: any) => {
+      const transcript = Array.from(e.results)
+        .slice(e.resultIndex)
+        .map((res: any) => res[0].transcript)
+        .join(' ')
+      const prev = valueRef.current
+      onChange((prev ? prev + ' ' : '') + transcript)
+    }
+    r.onend = () => setListening(false)
+    r.onerror = () => setListening(false)
+    r.start()
+    recogRef.current = r
+    setListening(true)
+  }
+
+  const hasSpeech = typeof window !== 'undefined' && (
+    !!(window as any).SpeechRecognition || !!(window as any).webkitSpeechRecognition
+  )
+
+  return (
+    <div className="r-input-wrap">
+      <textarea
+        ref={ref}
+        className="r-textarea"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        onKeyDown={e => {
+          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+            onCmdEnter?.()
+          }
+        }}
+        placeholder=""
+        rows={1}
+        disabled={disabled}
+      />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {hasSpeech && (
+          <div
+            onClick={disabled ? undefined : toggleMic}
+            title={listening ? 'parar gravação' : 'falar resposta'}
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              border: listening ? 'none' : '0.5px solid var(--r-dim)',
+              background: listening ? 'var(--r-accent)' : 'transparent',
+              cursor: disabled ? 'default' : 'pointer',
+              flexShrink: 0,
+              transition: 'background 0.2s, border 0.2s',
+            }}
+          />
+        )}
+        <div className={`r-send-dot${value.trim().length >= 2 ? ' active' : ''}`} />
+      </div>
+    </div>
+  )
+}
 
 // ─────────────────────────────────────────
 // Component
 // ─────────────────────────────────────────
 export default function Questionnaire() {
   const navigate = useNavigate()
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const [phase, setPhase] = useState<Phase>('loading')
   const [cycleId, setCycleId] = useState<string | null>(null)
   const [stateId, setStateId] = useState<string | null>(null)
 
-  // bloco atual
   const [currentBlock, setCurrentBlock] = useState<string | null>(null)
   const [currentVariant, setCurrentVariant] = useState<string | null>(null)
   const [dimensionTransition, setDimensionTransition] = useState<string | null>(null)
 
-  // resposta
   const [answer, setAnswer] = useState('')
   const [startTime, setStartTime] = useState<number>(Date.now())
-
-  // erro
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  // ─────────────────────────────────────
-  // Inicialização: obter ciclo ativo e chamar /plan
-  // ─────────────────────────────────────
-  useEffect(() => {
-    init()
-  }, [])
+  useEffect(() => { init() }, [])
 
   async function init() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { navigate('/auth'); return }
 
-      // Buscar ciclo ativo (status = 'questionnaire' ou 'pills')
       const { data: cycle } = await supabase
         .from('ipe_cycles')
         .select('id, status')
@@ -78,27 +229,18 @@ export default function Questionnaire() {
       if (!cycle) { navigate('/home'); return }
       setCycleId(cycle.id)
 
-      // Chamar /plan
       const planRes = await callEdgeFunction('ipe-questionnaire-engine/plan', {
         ipe_cycle_id: cycle.id,
       })
-
       setStateId((planRes as any).questionnaire_state_id)
 
-      // Obter primeiro bloco
       await fetchNextBlock(cycle.id, null)
     } catch (e) {
       setError('algo deu errado ao iniciar. tenta de novo.')
     }
   }
 
-  // ─────────────────────────────────────
-  // Obter próximo bloco do engine
-  // ─────────────────────────────────────
-  async function fetchNextBlock(
-    cid: string,
-    blockResponse: object | null
-  ) {
+  async function fetchNextBlock(cid: string, blockResponse: object | null) {
     try {
       const body: Record<string, unknown> = { ipe_cycle_id: cid }
       if (blockResponse) body.block_response = blockResponse
@@ -110,7 +252,6 @@ export default function Questionnaire() {
 
       if (res.done) {
         setPhase('done')
-        // Chamar lucid-engine com canonical ILs
         await callLucidEngine(cid)
         return
       }
@@ -119,12 +260,10 @@ export default function Questionnaire() {
       setCurrentVariant(res.aguardando_variante ? res.variante_a_servir : null)
       setAnswer('')
       setStartTime(Date.now())
-      focusTextarea()
 
       if (res.dimension_transition) {
         setDimensionTransition(res.dimension_transition)
         setPhase('transition')
-        // Pausa de 1.2s e avança
         setTimeout(() => {
           setDimensionTransition(null)
           setPhase(res.aguardando_variante ? 'variant' : 'question')
@@ -137,9 +276,6 @@ export default function Questionnaire() {
     }
   }
 
-  // ─────────────────────────────────────
-  // Submeter resposta
-  // ─────────────────────────────────────
   async function handleSubmit(protecao = false) {
     if (!cycleId || !currentBlock || submitting) return
     if (!protecao && answer.trim().length < 2) return
@@ -169,37 +305,27 @@ export default function Questionnaire() {
     setSubmitting(false)
   }
 
-  // ─────────────────────────────────────
-  // Fallback: trocar texto da pergunta
-  // ─────────────────────────────────────
   function handleFallback() {
     if (phase === 'question') {
       setPhase('fallback')
       setAnswer('')
-      focusTextarea()
     } else if (phase === 'fallback') {
       const block = QUESTIONS[currentBlock as BlockId]
       if (block?.subfallback) {
         setPhase('subfallback')
         setAnswer('')
-        focusTextarea()
       }
     }
   }
 
-  // ─────────────────────────────────────
-  // Chamar lucid-engine após conclusão
-  // ─────────────────────────────────────
   async function callLucidEngine(cid: string) {
     try {
-      // Buscar canonical ILs do ciclo
       const { data: qState } = await supabase
         .from('questionnaire_state')
         .select('resultados_por_bloco')
         .eq('ipe_cycle_id', cid)
         .single()
 
-      // Montar raw_input a partir dos ILs canônicos
       const resultados = (qState?.resultados_por_bloco ?? {}) as Record<string, { il_canonico: number | null }>
       const d1 = extractDimensionILs(resultados, ['L1.1', 'L1.2', 'L1.3', 'L1.4'])
       const d2 = extractDimensionILs(resultados, ['L2.4', 'L2.1', 'L2.2', 'L2.3'])
@@ -212,29 +338,21 @@ export default function Questionnaire() {
         await callEdgeFunction('lucid-engine', {
           ipe_cycle_id: cid,
           base_version: baseVersion,
-          raw_input: {
-            d1, d2, d3, d4,
-            user_text: 'questionário concluído',
-          },
+          raw_input: { d1, d2, d3, d4, user_text: 'questionário concluído' },
         })
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
         if (!message.includes('VERSION_CONFLICT')) throw err
-
         baseVersion = await getCurrentUserVersion()
         await callEdgeFunction('lucid-engine', {
           ipe_cycle_id: cid,
           base_version: baseVersion,
-          raw_input: {
-            d1, d2, d3, d4,
-            user_text: 'questionário concluído',
-          },
+          raw_input: { d1, d2, d3, d4, user_text: 'questionário concluído' },
         })
       }
 
       navigate('/reed')
     } catch (e) {
-      // Mesmo com erro no lucid-engine, redireciona para o Reed
       navigate('/reed')
     }
   }
@@ -246,22 +364,12 @@ export default function Questionnaire() {
     return lineIds.map(id => resultados[id]?.il_canonico ?? 4.0)
   }
 
-  function focusTextarea() {
-    setTimeout(() => textareaRef.current?.focus(), 100)
-  }
-
-  // ─────────────────────────────────────
-  // Texto exibido para a pergunta atual
-  // ─────────────────────────────────────
   function getDisplayText(): string {
     if (!currentBlock) return ''
     const block = QUESTIONS[currentBlock as BlockId]
     if (!block) return ''
-
-    if (phase === 'variant' && currentVariant) {
-      return block.variantes[currentVariant] ?? block.principal
-    }
-    if (phase === 'fallback') return block.fallback ?? block.principal
+    if (phase === 'variant' && currentVariant) return block.variantes[currentVariant] ?? block.principal
+    if (phase === 'fallback')    return block.fallback    ?? block.principal
     if (phase === 'subfallback') return block.subfallback ?? block.fallback ?? block.principal
     return block.principal
   }
@@ -272,145 +380,72 @@ export default function Questionnaire() {
   }
 
   const canFallback =
-    (phase === 'question' && !!QUESTIONS[currentBlock as BlockId]?.fallback) ||
-    (phase === 'fallback' && !!QUESTIONS[currentBlock as BlockId]?.subfallback)
+    (phase === 'question'  && !!QUESTIONS[currentBlock as BlockId]?.fallback) ||
+    (phase === 'fallback'  && !!QUESTIONS[currentBlock as BlockId]?.subfallback)
 
-  // ─────────────────────────────────────
-  // Render
-  // ─────────────────────────────────────
+  const fallbackLabel =
+    phase === 'question'  ? 'outro exemplo' :
+    phase === 'fallback'  ? 'outro exemplo' : undefined
 
-  // Loading
-  if (phase === 'loading') {
-    return (
-      <div className="r-screen" style={{ justifyContent: 'center', alignItems: 'center' }}>
-        <span className="r-muted" style={{ fontSize: '0.75rem', letterSpacing: '0.08em' }}>
-          carregando
-        </span>
-      </div>
-    )
-  }
+  if (phase === 'loading') return (
+    <div className="r-screen" style={{ justifyContent: 'center', alignItems: 'center' }}>
+      <span className="r-header-label">carregando</span>
+    </div>
+  )
 
-  // Transição entre dimensões — pausa visual
-  if (phase === 'transition') {
-    return (
-      <div className="r-screen" style={{ justifyContent: 'center', alignItems: 'center' }}>
-        <div style={{ width: 32, height: 1, background: 'var(--r-line)' }} />
-      </div>
-    )
-  }
+  if (phase === 'transition') return (
+    <div className="r-screen" style={{ justifyContent: 'center', alignItems: 'center' }}>
+      <div style={{ width: 32, height: 0.5, background: 'var(--r-line)' }} />
+    </div>
+  )
 
-  // Concluído — aguardando redirecionamento
-  if (phase === 'done') {
-    return (
-      <div className="r-screen" style={{ justifyContent: 'center', alignItems: 'center' }}>
-        <span className="r-muted" style={{ fontSize: '0.75rem', letterSpacing: '0.08em' }}>
-          pronto
-        </span>
-      </div>
-    )
-  }
+  if (phase === 'done') return (
+    <div className="r-screen" style={{ justifyContent: 'center', alignItems: 'center' }}>
+      <span className="r-header-label">pronto</span>
+    </div>
+  )
 
-  // Pergunta (principal, variante, fallback, subfallback)
   return (
     <div className="r-screen">
-      {/* header */}
-      <header className="r-header">
-        <span className="r-wordmark">_rdwth</span>
-      </header>
 
-      {/* linha divisória */}
-      <div className="r-line" />
+      <Header />
 
-      {/* conteúdo */}
-      <main className="r-scroll" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-
-        {/* bloco da pergunta */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          <p className="r-question" style={{ whiteSpace: 'pre-line' }}>
-            {getDisplayText()}
+      <div className="r-scroll" style={{ padding: '24px 24px 0' }}>
+        <p className="r-question" style={{ whiteSpace: 'pre-line' }}>
+          {getDisplayText()}
+        </p>
+        {getHintText() && (
+          <p className="r-sub" style={{ marginTop: 12 }}>
+            {getHintText()}
           </p>
-          {getHintText() && (
-            <p className="r-sub" style={{ opacity: 0.6 }}>
-              {getHintText()}
-            </p>
-          )}
-        </div>
-
-        {/* textarea */}
-        <div className="r-input-wrap">
-          <textarea
-            ref={textareaRef}
-            className="r-textarea"
-            value={answer}
-            onChange={e => setAnswer(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                handleSubmit()
-              }
-            }}
-            placeholder=""
-            rows={4}
-            disabled={submitting}
-          />
-        </div>
-
-        {/* erro */}
+        )}
         {error && (
-          <p className="r-sub" style={{ color: 'var(--r-accent)' }}>
+          <p className="r-sub" style={{ color: 'var(--r-accent)', marginTop: 12 }}>
             {error}
           </p>
         )}
+        <div style={{ height: 24 }} />
+      </div>
 
-        {/* ações */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-
-          {/* enviar */}
-          <button
-            className="r-send-dot"
-            onClick={() => handleSubmit()}
-            disabled={submitting || answer.trim().length < 2}
-            aria-label="enviar"
-          />
-
-          {/* linha de ações secundárias */}
-          <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.25rem' }}>
-            {canFallback && (
-              <button
-                onClick={handleFallback}
-                disabled={submitting}
-                style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: 'var(--r-dim)', fontSize: '0.7rem',
-                  letterSpacing: '0.06em', padding: 0,
-                }}
-              >
-                outro exemplo
-              </button>
-            )}
-            <button
-              onClick={() => handleSubmit(true)}
-              disabled={submitting}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                color: 'var(--r-dim)', fontSize: '0.7rem',
-                letterSpacing: '0.06em', padding: 0,
-                marginLeft: canFallback ? 0 : 'auto',
-              }}
-            >
-              i'd rather not
-            </button>
-          </div>
-        </div>
-
-      </main>
-
-      {/* footer */}
       <div className="r-line" />
-      <footer className="r-footer">
-        <span className="r-sub" style={{ opacity: 0.4, fontSize: '0.65rem' }}>
-          {currentBlock?.toLowerCase()}
-        </span>
-      </footer>
+      <div style={{ padding: '12px 24px 10px', flexShrink: 0 }}>
+        <InvisibleTextarea
+          value={answer}
+          onChange={setAnswer}
+          disabled={submitting}
+          onCmdEnter={() => handleSubmit()}
+        />
+      </div>
+
+      <Footer
+        onContinue={() => handleSubmit()}
+        continueLabel={submitting ? '...' : 'send'}
+        disabled={submitting || answer.trim().length < 2}
+        onFallback={canFallback ? handleFallback : undefined}
+        fallbackLabel={fallbackLabel}
+        onEthics={() => handleSubmit(true)}
+      />
+
     </div>
   )
 }
