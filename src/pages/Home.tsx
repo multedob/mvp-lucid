@@ -1,106 +1,276 @@
 // src/pages/Home.tsx
-// CTA adaptado ao estado do ciclo IPE ativo:
-//   sem ciclo           → "begin pills"       → /pills
-//   status=pills        → "continue pills"    → /pills
-//   status=questionnaire → "begin questionnaire" → /questionnaire
-//   status=complete     → "read"              → /reed
+// Tela inicial com animação de morphing de fontes no _rdwth
+// Cada letra tem seu próprio pool de fontes e ritmo independente
+// Efeito: pixelação SVG coarse→fine enquanto troca a fonte
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { getToday } from "@/lib/api";
 
-type CycleStatus = "pills" | "questionnaire" | "complete" | "abandoned" | null;
+// ─── Font pools — um pool por letra ──────────────────────────────
+const FONT_POOLS: Record<string, Array<{ f: string; w: number; sz?: number }>> = {
+  r: [
+    { f: "'IBM Plex Mono', monospace",         w: 700 },
+    { f: "'Press Start 2P', monospace",         w: 400 },
+    { f: "'Rozha One', serif",                  w: 400 },
+    { f: "'Graduate', serif",                   w: 400 },
+    { f: "'Epilogue', sans-serif",              w: 900 },
+    { f: "'Fraunces', serif",                   w: 900 },
+    { f: "'Space Mono', monospace",             w: 700 },
+  ],
+  d: [
+    { f: "'Bodoni Moda', serif",                w: 900 },
+    { f: "'Gloock', serif",                     w: 400 },
+    { f: "'Playfair Display', serif",           w: 900 },
+    { f: "'Cormorant Garamond', serif",         w: 700 },
+    { f: "'Abril Fatface', serif",              w: 400 },
+    { f: "'DM Mono', monospace",                w: 700 },
+    { f: "'Literata', serif",                   w: 900 },
+  ],
+  w: [
+    { f: "'Press Start 2P', monospace",         w: 400, sz: 0.72 },
+    { f: "'Teko', sans-serif",                  w: 700 },
+    { f: "'Saira Condensed', sans-serif",       w: 900 },
+    { f: "'Big Shoulders Display', sans-serif", w: 900 },
+    { f: "'IBM Plex Mono', monospace",          w: 700 },
+    { f: "'Epilogue', sans-serif",              w: 900 },
+    { f: "'Space Mono', monospace",             w: 700, sz: 0.85 },
+  ],
+  t: [
+    { f: "'Saira Condensed', sans-serif",       w: 900 },
+    { f: "'Bodoni Moda', serif",                w: 900 },
+    { f: "'IBM Plex Mono', monospace",          w: 700 },
+    { f: "'Teko', sans-serif",                  w: 700 },
+    { f: "'Gloock', serif",                     w: 400 },
+    { f: "'Fraunces', serif",                   w: 900 },
+    { f: "'DM Mono', monospace",                w: 700 },
+  ],
+  h: [
+    { f: "'Gloock', serif",                     w: 400 },
+    { f: "'Alfa Slab One', serif",              w: 400 },
+    { f: "'Big Shoulders Display', sans-serif", w: 900 },
+    { f: "'Abril Fatface', serif",              w: 400 },
+    { f: "'Cormorant Garamond', serif",         w: 700 },
+    { f: "'Press Start 2P', monospace",         w: 400, sz: 0.72 },
+    { f: "'Playfair Display', serif",           w: 900 },
+  ],
+};
 
-interface CTA {
-  label: string;
-  path: string;
-}
+// Font inicial (visual estático canônico)
+const INITIAL_FONTS: Record<string, { f: string; w: number; sz?: number }> = {
+  r: { f: "'IBM Plex Mono', monospace",         w: 700 },
+  d: { f: "'Bodoni Moda', serif",               w: 900 },
+  w: { f: "'Press Start 2P', monospace",         w: 400, sz: 0.72 },
+  t: { f: "'Saira Condensed', sans-serif",       w: 900 },
+  h: { f: "'Gloock', serif",                     w: 400 },
+};
 
-function resolveCTA(status: CycleStatus): CTA {
-  switch (status) {
-    case "pills":          return { label: "continue pills",      path: "/pills" };
-    case "questionnaire":  return { label: "begin questionnaire", path: "/questionnaire" };
-    case "complete":       return { label: "read",                path: "/reed" };
-    default:               return { label: "begin pills",         path: "/pills" };
+// Ritmo independente por letra (ms base — delay real = base + random*base)
+const LETTER_RHYTHM: Record<string, number> = { r: 700, d: 1200, w: 950, t: 1500, h: 800 };
+const START_OFFSETS: Record<string, number>  = { r: 0,   d: 300,  w: 150, t: 500, h: 80  };
+const MORPH_STEPS = ["morph-0","morph-1","morph-2","morph-3","morph-4","morph-5","morph-6",null];
+const STEP_DURATION = 28; // ms por step
+
+// Google Fonts URL — todos os pesos e famílias
+const FONTS_URL =
+  "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@700" +
+  "&family=Bodoni+Moda:opsz,wght@6..96,900" +
+  "&family=Press+Start+2P" +
+  "&family=Saira+Condensed:wght@900" +
+  "&family=Gloock" +
+  "&family=Rozha+One" +
+  "&family=Cormorant+Garamond:wght@700" +
+  "&family=Teko:wght@700" +
+  "&family=DM+Mono:wght@700" +
+  "&family=Abril+Fatface" +
+  "&family=Graduate" +
+  "&family=Alfa+Slab+One" +
+  "&family=Big+Shoulders+Display:wght@900" +
+  "&family=Literata:opsz,wght@7..72,900" +
+  "&family=Epilogue:wght@900" +
+  "&family=Space+Mono:wght@700" +
+  "&family=Playfair+Display:wght@900" +
+  "&family=Fraunces:opsz,wght@9..144,900" +
+  "&family=Barlow:wght@300;700" +
+  "&display=swap";
+
+// ─── Helpers ─────────────────────────────────────────────────────
+function applyFont(letter: string, fontDef: { f: string; w: number; sz?: number }) {
+  const el = document.getElementById("rl-" + letter);
+  if (!el) return;
+  el.style.fontFamily = fontDef.f;
+  el.style.fontWeight = String(fontDef.w);
+  if (fontDef.sz) {
+    el.style.fontSize = `calc(var(--rdwth-size) * ${fontDef.sz})`;
+    el.style.paddingBottom = "0.06em";
+  } else {
+    el.style.fontSize = "";
+    el.style.paddingBottom = "";
   }
 }
 
+// ─── Component ───────────────────────────────────────────────────
 export default function Home() {
   const navigate = useNavigate();
-  const [cycleStatus, setCycleStatus] = useState<CycleStatus>(null);
-  const [ready, setReady] = useState(false);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const stateRef    = useRef<Record<string, number>>({ r: 0, d: 0, w: 0, t: 0, h: 0 });
 
   useEffect(() => {
-    async function load() {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) { setReady(true); return; }
-
-        const { data: cycle } = await supabase
-          .from("ipe_cycles")
-          .select("status")
-          .eq("user_id", session.user.id)
-          .in("status", ["pills", "questionnaire", "complete"])
-          .order("cycle_number", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        setCycleStatus((cycle?.status as CycleStatus) ?? null);
-      } catch (err) {
-        console.error("[Home] load error:", err);
-      } finally {
-        setReady(true);
-      }
+    // Injetar Google Fonts uma vez
+    if (!document.getElementById("rdwth-fonts")) {
+      const link = document.createElement("link");
+      link.id   = "rdwth-fonts";
+      link.rel  = "stylesheet";
+      link.href = FONTS_URL;
+      document.head.appendChild(link);
     }
-    load();
-  }, []);
 
-  const cta = resolveCTA(cycleStatus);
+    // Aplicar fontes iniciais
+    Object.entries(INITIAL_FONTS).forEach(([letter, fontDef]) => {
+      applyFont(letter, fontDef);
+    });
+
+    // Função de morph de uma letra
+    function morphLetter(letter: string) {
+      const el = document.getElementById("rl-" + letter);
+      if (!el) return;
+      const pool = FONT_POOLS[letter];
+
+      // Próxima fonte (diferente da atual)
+      let nextIdx: number;
+      do {
+        nextIdx = Math.floor(Math.random() * pool.length);
+      } while (nextIdx === stateRef.current[letter]);
+
+      let step = 0;
+
+      function runStep() {
+        if (MORPH_STEPS[step] === null) {
+          if (el) el.style.filter = "none";
+          return;
+        }
+        if (el) el.style.filter = `url(#${MORPH_STEPS[step]})`;
+
+        // Troca a fonte no meio da pixelação
+        if (step === Math.floor(MORPH_STEPS.length / 2)) {
+          stateRef.current[letter] = nextIdx;
+          applyFont(letter, pool[nextIdx]);
+        }
+
+        step++;
+        const t = setTimeout(runStep, STEP_DURATION);
+        timeoutsRef.current.push(t);
+      }
+
+      runStep();
+    }
+
+    // Agendar morphs em ritmo independente por letra
+    function scheduleMorph(letter: string) {
+      const base  = LETTER_RHYTHM[letter];
+      const delay = base + Math.random() * base;
+      const t = setTimeout(() => {
+        morphLetter(letter);
+        scheduleMorph(letter);
+      }, delay);
+      timeoutsRef.current.push(t);
+    }
+
+    // Iniciar com stagger
+    Object.entries(START_OFFSETS).forEach(([letter, offset]) => {
+      const t = setTimeout(() => scheduleMorph(letter), offset);
+      timeoutsRef.current.push(t);
+    });
+
+    // Cleanup
+    return () => {
+      timeoutsRef.current.forEach(clearTimeout);
+      timeoutsRef.current = [];
+    };
+  }, []);
 
   return (
     <div className="r-screen">
 
-      {/* Header */}
+      {/* CSS var para tamanho das letras — responsivo */}
+      <style>{`
+        :root { --rdwth-size: clamp(60px, 18vw, 88px); }
+        .rdwth-word { display: flex; align-items: flex-end; gap: 0; line-height: 1; }
+        .rdwth-letter {
+          display: inline-block;
+          font-size: var(--rdwth-size);
+          color: var(--r-text);
+          line-height: 1;
+          transition: filter 0s;
+          user-select: none;
+        }
+        .rdwth-tagline {
+          font-family: 'Barlow', var(--r-font-ed), sans-serif;
+          font-weight: 700;
+          font-size: clamp(13px, 3.5vw, 18px);
+          color: var(--r-accent);
+          letter-spacing: 0.08em;
+          margin-top: 10px;
+          display: block;
+        }
+      `}</style>
+
+      {/* SVG filters — pixelação progressiva coarse→fine */}
+      <svg width="0" height="0" style={{ position: "absolute" }}>
+        <defs>
+          <filter id="morph-0" x="0%" y="0%" width="100%" height="100%">
+            <feComponentTransfer><feFuncR type="discrete" tableValues="0 1"/><feFuncG type="discrete" tableValues="0 1"/><feFuncB type="discrete" tableValues="0 1"/></feComponentTransfer>
+            <feMorphology operator="dilate" radius="18"/><feMorphology operator="erode" radius="16"/>
+          </filter>
+          <filter id="morph-1" x="0%" y="0%" width="100%" height="100%">
+            <feComponentTransfer><feFuncR type="discrete" tableValues="0 1"/><feFuncG type="discrete" tableValues="0 1"/><feFuncB type="discrete" tableValues="0 1"/></feComponentTransfer>
+            <feMorphology operator="dilate" radius="12"/><feMorphology operator="erode" radius="10"/>
+          </filter>
+          <filter id="morph-2" x="0%" y="0%" width="100%" height="100%">
+            <feComponentTransfer><feFuncR type="discrete" tableValues="0 1"/><feFuncG type="discrete" tableValues="0 1"/><feFuncB type="discrete" tableValues="0 1"/></feComponentTransfer>
+            <feMorphology operator="dilate" radius="7"/><feMorphology operator="erode" radius="5"/>
+          </filter>
+          <filter id="morph-3" x="0%" y="0%" width="100%" height="100%">
+            <feComponentTransfer><feFuncR type="discrete" tableValues="0 1"/><feFuncG type="discrete" tableValues="0 1"/><feFuncB type="discrete" tableValues="0 1"/></feComponentTransfer>
+            <feMorphology operator="dilate" radius="4"/><feMorphology operator="erode" radius="3"/>
+          </filter>
+          <filter id="morph-4" x="0%" y="0%" width="100%" height="100%">
+            <feComponentTransfer><feFuncR type="discrete" tableValues="0 1"/><feFuncG type="discrete" tableValues="0 1"/><feFuncB type="discrete" tableValues="0 1"/></feComponentTransfer>
+            <feMorphology operator="dilate" radius="2"/><feMorphology operator="erode" radius="2"/>
+          </filter>
+          <filter id="morph-5" x="0%" y="0%" width="100%" height="100%">
+            <feComponentTransfer><feFuncR type="discrete" tableValues="0 1"/><feFuncG type="discrete" tableValues="0 1"/><feFuncB type="discrete" tableValues="0 1"/></feComponentTransfer>
+            <feMorphology operator="dilate" radius="1"/>
+          </filter>
+          <filter id="morph-6" x="0%" y="0%" width="100%" height="100%">
+            <feComponentTransfer><feFuncR type="discrete" tableValues="0 1"/><feFuncG type="discrete" tableValues="0 1"/><feFuncB type="discrete" tableValues="0 1"/></feComponentTransfer>
+          </filter>
+        </defs>
+      </svg>
+
+      {/* Header — só a data, o rdwth abaixo é o logo */}
       <div className="r-header">
-        <span className="r-header-label">_rdwth</span>
+        <span className="r-header-label" style={{ opacity: 0 }}>_rdwth</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
 
-      {/* CTA */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 24px" }}>
-        <div
-          style={{
-            fontFamily: "var(--r-font-ed)",
-            fontWeight: 800,
-            fontSize: 16,
-            color: "var(--r-dim)",
-            letterSpacing: "-0.01em",
-            marginBottom: 20,
-          }}
-        >
-          ready when you are.
+      {/* Centro — rdwth + tagline */}
+      <div style={{
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        padding: "0 24px",
+      }}>
+        <div className="rdwth-word">
+          <span className="rdwth-letter" id="rl-r">r</span>
+          <span className="rdwth-letter" id="rl-d">d</span>
+          <span className="rdwth-letter" id="rl-w">w</span>
+          <span className="rdwth-letter" id="rl-t">t</span>
+          <span className="rdwth-letter" id="rl-h">h</span>
         </div>
-        {ready && (
-          <div
-            onClick={() => navigate(cta.path)}
-            style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
-          >
-            <div style={{ width: 1, height: 14, background: "var(--r-accent)", flexShrink: 0 }} />
-            <span
-              style={{
-                fontFamily: "var(--r-font-sys)",
-                fontWeight: 300,
-                fontSize: 11,
-                color: "var(--r-text)",
-                letterSpacing: "0.08em",
-              }}
-            >
-              {cta.label}
-            </span>
-          </div>
-        )}
+        <span className="rdwth-tagline">read with</span>
       </div>
 
       {/* Nav bottom */}
@@ -114,9 +284,9 @@ export default function Home() {
         flexShrink: 0,
       }}>
         {[
-          { label: "pills",   path: "/pills" },
+          { label: "pills",   path: "/pills"   },
           { label: "context", path: "/context" },
-          { label: "reed",    path: "/reed" },
+          { label: "reed",    path: "/reed"    },
         ].map(({ label, path }) => (
           <span
             key={label}
