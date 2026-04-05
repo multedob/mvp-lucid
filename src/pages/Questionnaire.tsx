@@ -107,6 +107,7 @@ function InvisibleTextarea({
   const valueRef = useRef(value)
   const recogRef = useRef<any>(null)
   const [listening, setListening] = useState(false)
+  const [interimText, setInterimText] = useState('')
 
   useEffect(() => { valueRef.current = value }, [value])
 
@@ -127,22 +128,31 @@ function InvisibleTextarea({
     if (listening) {
       recogRef.current?.stop()
       setListening(false)
+      setInterimText('')
       return
     }
     const r = new SR()
     r.lang = 'pt-BR'
     r.continuous = true
-    r.interimResults = false
+    r.interimResults = true
     r.onresult = (e: any) => {
-      const transcript = Array.from(e.results)
-        .slice(e.resultIndex)
-        .map((res: any) => res[0].transcript)
-        .join(' ')
-      const prev = valueRef.current
-      onChange((prev ? prev + ' ' : '') + transcript)
+      let finalStr = ''
+      let interimStr = ''
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) {
+          finalStr += e.results[i][0].transcript
+        } else {
+          interimStr += e.results[i][0].transcript
+        }
+      }
+      if (finalStr) {
+        const prev = valueRef.current
+        onChange((prev ? prev + ' ' : '') + finalStr)
+      }
+      setInterimText(interimStr)
     }
-    r.onend = () => setListening(false)
-    r.onerror = () => setListening(false)
+    r.onend = () => { setListening(false); setInterimText('') }
+    r.onerror = () => { setListening(false); setInterimText('') }
     r.start()
     recogRef.current = r
     setListening(true)
@@ -168,7 +178,20 @@ function InvisibleTextarea({
         rows={1}
         disabled={disabled}
       />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      {listening && interimText && (
+        <div style={{
+          fontFamily: 'var(--r-font-sys)',
+          fontSize: 11,
+          fontWeight: 300,
+          color: 'var(--r-ghost)',
+          letterSpacing: '0.02em',
+          lineHeight: 1.6,
+          padding: '6px 0 2px',
+        }}>
+          {interimText}
+        </div>
+      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
         {hasSpeech && (
           <div
             onClick={disabled ? undefined : toggleMic}
@@ -181,7 +204,9 @@ function InvisibleTextarea({
               background: listening ? 'var(--r-accent)' : 'transparent',
               cursor: disabled ? 'default' : 'pointer',
               flexShrink: 0,
-              transition: 'background 0.2s, border 0.2s',
+              transition: 'all 0.2s',
+              outline: listening ? '2px solid var(--r-accent)' : 'none',
+              outlineOffset: '3px',
             }}
           />
         )}
@@ -210,6 +235,9 @@ export default function Questionnaire() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
+  // ─────────────────────────────────────
+  // Init
+  // ─────────────────────────────────────
   useEffect(() => { init() }, [])
 
   async function init() {
@@ -240,6 +268,9 @@ export default function Questionnaire() {
     }
   }
 
+  // ─────────────────────────────────────
+  // Next block
+  // ─────────────────────────────────────
   async function fetchNextBlock(cid: string, blockResponse: object | null) {
     try {
       const body: Record<string, unknown> = { ipe_cycle_id: cid }
@@ -276,6 +307,9 @@ export default function Questionnaire() {
     }
   }
 
+  // ─────────────────────────────────────
+  // Submit
+  // ─────────────────────────────────────
   async function handleSubmit(protecao = false) {
     if (!cycleId || !currentBlock || submitting) return
     if (!protecao && answer.trim().length < 2) return
@@ -305,6 +339,9 @@ export default function Questionnaire() {
     setSubmitting(false)
   }
 
+  // ─────────────────────────────────────
+  // Fallback
+  // ─────────────────────────────────────
   function handleFallback() {
     if (phase === 'question') {
       setPhase('fallback')
@@ -318,6 +355,9 @@ export default function Questionnaire() {
     }
   }
 
+  // ─────────────────────────────────────
+  // Lucid engine
+  // ─────────────────────────────────────
   async function callLucidEngine(cid: string) {
     try {
       const { data: qState } = await supabase
@@ -364,6 +404,9 @@ export default function Questionnaire() {
     return lineIds.map(id => resultados[id]?.il_canonico ?? 4.0)
   }
 
+  // ─────────────────────────────────────
+  // Display text
+  // ─────────────────────────────────────
   function getDisplayText(): string {
     if (!currentBlock) return ''
     const block = QUESTIONS[currentBlock as BlockId]
@@ -386,6 +429,10 @@ export default function Questionnaire() {
   const fallbackLabel =
     phase === 'question'  ? 'outro exemplo' :
     phase === 'fallback'  ? 'outro exemplo' : undefined
+
+  // ─────────────────────────────────────
+  // Render
+  // ─────────────────────────────────────
 
   if (phase === 'loading') return (
     <div className="r-screen" style={{ justifyContent: 'center', alignItems: 'center' }}>
@@ -410,6 +457,7 @@ export default function Questionnaire() {
 
       <Header />
 
+      {/* Pergunta */}
       <div className="r-scroll" style={{ padding: '24px 24px 0' }}>
         <p className="r-question" style={{ whiteSpace: 'pre-line' }}>
           {getDisplayText()}
@@ -427,6 +475,7 @@ export default function Questionnaire() {
         <div style={{ height: 24 }} />
       </div>
 
+      {/* Input — mesmo padrão das pills */}
       <div className="r-line" />
       <div style={{ padding: '12px 24px 10px', flexShrink: 0 }}>
         <InvisibleTextarea
@@ -437,6 +486,7 @@ export default function Questionnaire() {
         />
       </div>
 
+      {/* Footer — mesmo padrão das pills */}
       <Footer
         onContinue={() => handleSubmit()}
         continueLabel={submitting ? '...' : 'send'}
