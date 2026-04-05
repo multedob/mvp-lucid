@@ -1,7 +1,7 @@
 // src/pages/OnboardingLetter.tsx
-// Exibida uma única vez após primeiro login.
+// Exibida uma única vez após consentimento.
 // Persiste flag em localStorage: "rdwth_letter_seen"
-// Após "Begin" → navegação para /home
+// Após "Begin" → /onboarding (coleta de nome)
 
 import { useNavigate } from "react-router-dom";
 import { getToday } from "@/lib/api";
@@ -11,7 +11,7 @@ export default function OnboardingLetter() {
 
   const handleBegin = () => {
     localStorage.setItem("rdwth_letter_seen", "1");
-    navigate("/age");
+    navigate("/onboarding");
   };
 
   return (
