@@ -1,32 +1,195 @@
 // src/pages/Splash.tsx
-import { useEffect, useState } from "react";
+// Tela de abertura — animação _rdwth com morphing de fontes
+// Auto-avança para /auth após 4s. Clique antecipa.
+
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getToday } from "@/lib/api";
 
+type LetterKey = "r" | "d" | "w" | "t" | "h";
+interface FontDef { f: string; w: number; sz?: number }
+
+const FONT_URL =
+  "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@700" +
+  "&family=Bodoni+Moda:opsz,wght@6..96,900" +
+  "&family=Press+Start+2P" +
+  "&family=Saira+Condensed:wght@900" +
+  "&family=Gloock" +
+  "&family=Rozha+One" +
+  "&family=Cormorant+Garamond:wght@700" +
+  "&family=Teko:wght@700" +
+  "&family=DM+Mono:wght@700" +
+  "&family=Abril+Fatface" +
+  "&family=Graduate" +
+  "&family=Alfa+Slab+One" +
+  "&family=Big+Shoulders+Display:wght@900" +
+  "&family=Literata:opsz,wght@7..72,900" +
+  "&family=Epilogue:wght@900" +
+  "&family=Space+Mono:wght@700" +
+  "&family=Playfair+Display:wght@900" +
+  "&family=Fraunces:opsz,wght@9..144,900" +
+  "&family=Barlow:wght@700" +
+  "&display=swap";
+
+const FONT_POOLS: Record<LetterKey, FontDef[]> = {
+  r: [
+    { f: "'IBM Plex Mono', monospace",   w: 700 },
+    { f: "'Press Start 2P', monospace",   w: 400 },
+    { f: "'Rozha One', serif",            w: 400 },
+    { f: "'Graduate', serif",             w: 400 },
+    { f: "'Epilogue', sans-serif",        w: 900 },
+    { f: "'Fraunces', serif",             w: 900 },
+    { f: "'Space Mono', monospace",       w: 700 },
+  ],
+  d: [
+    { f: "'Bodoni Moda', serif",          w: 900 },
+    { f: "'Gloock', serif",               w: 400 },
+    { f: "'Playfair Display', serif",     w: 900 },
+    { f: "'Cormorant Garamond', serif",   w: 700 },
+    { f: "'Abril Fatface', serif",        w: 400 },
+    { f: "'DM Mono', monospace",          w: 700 },
+    { f: "'Literata', serif",             w: 900 },
+  ],
+  w: [
+    { f: "'Press Start 2P', monospace",         w: 400, sz: 0.72 },
+    { f: "'Teko', sans-serif",                  w: 700 },
+    { f: "'Saira Condensed', sans-serif",       w: 900 },
+    { f: "'Big Shoulders Display', sans-serif", w: 900 },
+    { f: "'IBM Plex Mono', monospace",          w: 700 },
+    { f: "'Epilogue', sans-serif",              w: 900 },
+    { f: "'Space Mono', monospace",             w: 700, sz: 0.85 },
+  ],
+  t: [
+    { f: "'Saira Condensed', sans-serif", w: 900 },
+    { f: "'Bodoni Moda', serif",          w: 900 },
+    { f: "'IBM Plex Mono', monospace",    w: 700 },
+    { f: "'Teko', sans-serif",            w: 700 },
+    { f: "'Gloock', serif",               w: 400 },
+    { f: "'Fraunces', serif",             w: 900 },
+    { f: "'DM Mono', monospace",          w: 700 },
+  ],
+  h: [
+    { f: "'Gloock', serif",                     w: 400 },
+    { f: "'Alfa Slab One', serif",              w: 400 },
+    { f: "'Big Shoulders Display', sans-serif", w: 900 },
+    { f: "'Abril Fatface', serif",              w: 400 },
+    { f: "'Cormorant Garamond', serif",         w: 700 },
+    { f: "'Press Start 2P', monospace",         w: 400, sz: 0.72 },
+    { f: "'Playfair Display', serif",           w: 900 },
+  ],
+};
+
+const LETTER_RHYTHM: Record<LetterKey, number> = { r: 600, d: 1100, w: 850, t: 1400, h: 700 };
+const START_OFFSETS: Record<LetterKey, number> = { r: 0, d: 300, w: 150, t: 500, h: 80 };
+const MORPH_IDS = ["morph-0","morph-1","morph-2","morph-3","morph-4","morph-5","morph-6",null];
+const STEP_MS = 28;
+
 export default function Splash() {
   const navigate = useNavigate();
-  const [visible, setVisible] = useState(false);
+  const lettersRef = useRef<Partial<Record<LetterKey, HTMLSpanElement | null>>>({});
+  const stateRef = useRef<Record<LetterKey, number>>({ r: 0, d: 0, w: 0, t: 0, h: 0 });
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const stoppedRef = useRef(false);
 
+  // ── Injetar Google Fonts uma vez ─────────────────────────────────
   useEffect(() => {
-    // fade in
-    const t1 = setTimeout(() => setVisible(true), 120);
+    if (!document.querySelector(`link[href*="Bodoni+Moda"]`)) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = FONT_URL;
+      document.head.appendChild(link);
+    }
+  }, []);
 
-    // após 3.8s — verificar sessão e redirecionar
-    const t2 = setTimeout(async () => {
+  // ── Timer de auto-avanço ─────────────────────────────────────────
+  useEffect(() => {
+    const t = setTimeout(async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      navigate(session ? "/home" : "/auth", { replace: true });
-    }, 3800);
+      navigate(session ? "/" : "/auth", { replace: true });
+    }, 4000);
+    return () => clearTimeout(t);
+  }, [navigate]);
+
+  // ── Animação de morphing ─────────────────────────────────────────
+  useEffect(() => {
+    stoppedRef.current = false;
+
+    function applyFont(letter: LetterKey, fd: FontDef) {
+      const el = lettersRef.current[letter];
+      if (!el) return;
+      el.style.fontFamily = fd.f;
+      el.style.fontWeight = String(fd.w);
+      if (fd.sz) {
+        el.style.fontSize = `calc(clamp(100px, 18vw, 200px) * ${fd.sz})`;
+        el.style.paddingBottom = "0.06em";
+      } else {
+        el.style.fontSize = "";
+        el.style.paddingBottom = "";
+      }
+    }
+
+    function morphLetter(letter: LetterKey) {
+      const el = lettersRef.current[letter];
+      if (!el || stoppedRef.current) return;
+      const pool = FONT_POOLS[letter];
+      let nextIdx: number;
+      do { nextIdx = Math.floor(Math.random() * pool.length); }
+      while (nextIdx === stateRef.current[letter]);
+
+      let step = 0;
+      function runStep() {
+        if (stoppedRef.current || !el) return;
+        const filterId = MORPH_IDS[step];
+        if (filterId === null) {
+          el.style.filter = "none";
+          return;
+        }
+        el.style.filter = `url(#${filterId})`;
+        if (step === Math.floor(MORPH_IDS.length / 2)) {
+          stateRef.current[letter] = nextIdx;
+          applyFont(letter, pool[nextIdx]);
+        }
+        step++;
+        const t = setTimeout(runStep, STEP_MS);
+        timeoutsRef.current.push(t);
+      }
+      runStep();
+    }
+
+    function scheduleMorph(letter: LetterKey) {
+      if (stoppedRef.current) return;
+      const base = LETTER_RHYTHM[letter];
+      const delay = base + Math.random() * base;
+      const t = setTimeout(() => {
+        if (stoppedRef.current) return;
+        morphLetter(letter);
+        scheduleMorph(letter);
+      }, delay);
+      timeoutsRef.current.push(t);
+    }
+
+    // Aplicar fontes iniciais
+    (Object.keys(FONT_POOLS) as LetterKey[]).forEach(letter => {
+      applyFont(letter, FONT_POOLS[letter][0]);
+    });
+
+    // Stagger de início
+    (Object.keys(START_OFFSETS) as LetterKey[]).forEach(letter => {
+      const t = setTimeout(() => scheduleMorph(letter), START_OFFSETS[letter]);
+      timeoutsRef.current.push(t);
+    });
 
     return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
+      stoppedRef.current = true;
+      timeoutsRef.current.forEach(clearTimeout);
+      timeoutsRef.current = [];
     };
-  }, [navigate]);
+  }, []);
 
   const handleClick = async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    navigate(session ? "/home" : "/auth", { replace: true });
+    navigate(session ? "/" : "/auth", { replace: true });
   };
 
   return (
@@ -35,67 +198,139 @@ export default function Splash() {
       className="r-screen"
       style={{ cursor: "pointer" }}
     >
+      {/* SVG filters — morphing pixelado coarse→fine */}
+      <svg width="0" height="0" style={{ position: "absolute" }}>
+        <defs>
+          <filter id="morph-0" x="0%" y="0%" width="100%" height="100%">
+            <feComponentTransfer>
+              <feFuncR type="discrete" tableValues="0 1"/>
+              <feFuncG type="discrete" tableValues="0 1"/>
+              <feFuncB type="discrete" tableValues="0 1"/>
+            </feComponentTransfer>
+            <feMorphology operator="dilate" radius="18"/>
+            <feMorphology operator="erode" radius="16"/>
+          </filter>
+          <filter id="morph-1" x="0%" y="0%" width="100%" height="100%">
+            <feComponentTransfer>
+              <feFuncR type="discrete" tableValues="0 1"/>
+              <feFuncG type="discrete" tableValues="0 1"/>
+              <feFuncB type="discrete" tableValues="0 1"/>
+            </feComponentTransfer>
+            <feMorphology operator="dilate" radius="12"/>
+            <feMorphology operator="erode" radius="10"/>
+          </filter>
+          <filter id="morph-2" x="0%" y="0%" width="100%" height="100%">
+            <feComponentTransfer>
+              <feFuncR type="discrete" tableValues="0 1"/>
+              <feFuncG type="discrete" tableValues="0 1"/>
+              <feFuncB type="discrete" tableValues="0 1"/>
+            </feComponentTransfer>
+            <feMorphology operator="dilate" radius="7"/>
+            <feMorphology operator="erode" radius="5"/>
+          </filter>
+          <filter id="morph-3" x="0%" y="0%" width="100%" height="100%">
+            <feComponentTransfer>
+              <feFuncR type="discrete" tableValues="0 1"/>
+              <feFuncG type="discrete" tableValues="0 1"/>
+              <feFuncB type="discrete" tableValues="0 1"/>
+            </feComponentTransfer>
+            <feMorphology operator="dilate" radius="4"/>
+            <feMorphology operator="erode" radius="3"/>
+          </filter>
+          <filter id="morph-4" x="0%" y="0%" width="100%" height="100%">
+            <feComponentTransfer>
+              <feFuncR type="discrete" tableValues="0 1"/>
+              <feFuncG type="discrete" tableValues="0 1"/>
+              <feFuncB type="discrete" tableValues="0 1"/>
+            </feComponentTransfer>
+            <feMorphology operator="dilate" radius="2"/>
+            <feMorphology operator="erode" radius="2"/>
+          </filter>
+          <filter id="morph-5" x="0%" y="0%" width="100%" height="100%">
+            <feComponentTransfer>
+              <feFuncR type="discrete" tableValues="0 1"/>
+              <feFuncG type="discrete" tableValues="0 1"/>
+              <feFuncB type="discrete" tableValues="0 1"/>
+            </feComponentTransfer>
+            <feMorphology operator="dilate" radius="1"/>
+          </filter>
+          <filter id="morph-6" x="0%" y="0%" width="100%" height="100%">
+            <feComponentTransfer>
+              <feFuncR type="discrete" tableValues="0 1"/>
+              <feFuncG type="discrete" tableValues="0 1"/>
+              <feFuncB type="discrete" tableValues="0 1"/>
+            </feComponentTransfer>
+          </filter>
+        </defs>
+      </svg>
+
       {/* data no topo direito */}
-      <div
-        style={{
-          padding: "18px 24px 16px",
-          display: "flex",
-          justifyContent: "flex-end",
-          flexShrink: 0,
-          opacity: visible ? 1 : 0,
-          transition: "opacity 0.6s ease 0.1s",
-        }}
-      >
+      <div style={{
+        padding: "18px 24px 16px",
+        display: "flex",
+        justifyContent: "flex-end",
+        flexShrink: 0,
+      }}>
         <span className="r-header-date">{getToday()}</span>
       </div>
 
       {/* linha superior */}
-      <div
-        className="r-line"
-        style={{
-          opacity: visible ? 0.2 : 0,
-          transition: "opacity 0.5s ease 0.15s",
-        }}
-      />
+      <div className="r-line" style={{ opacity: 0.2 }} />
 
       {/* espaço vazio */}
       <div style={{ flex: 1 }} />
 
-      {/* wordmark — ancorado no rodapé */}
-      <div
-        style={{
-          padding: "20px 24px 20px",
-          flexShrink: 0,
-          opacity: visible ? 1 : 0,
-          transform: visible ? "translateY(0)" : "translateY(8px)",
-          transition: "opacity 0.7s ease 0.2s, transform 0.7s ease 0.2s",
-        }}
-      >
-        <div className="r-wordmark" style={{ marginBottom: 10 }}>
-          _rdwth
+      {/* wordmark animado — ancorado no rodapé */}
+      <div style={{ padding: "20px 24px 20px", flexShrink: 0 }}>
+        {/* Letras _rdwth */}
+        <div style={{
+          display: "flex",
+          alignItems: "flex-end",
+          gap: 0,
+          lineHeight: 1,
+          marginBottom: 10,
+        }}>
+          {/* underscore prefixo — estático */}
+          <span style={{
+            fontFamily: "'IBM Plex Mono', monospace",
+            fontWeight: 700,
+            fontSize: "clamp(52px, 9.5vw, 112px)",
+            color: "var(--r-text)",
+            lineHeight: 1,
+            letterSpacing: "-0.02em",
+          }}>_</span>
+
+          {(["r","d","w","t","h"] as LetterKey[]).map(letter => (
+            <span
+              key={letter}
+              ref={el => { lettersRef.current[letter] = el; }}
+              style={{
+                display: "inline-block",
+                fontSize: "clamp(52px, 9.5vw, 112px)",
+                color: "var(--r-text)",
+                lineHeight: 1,
+              }}
+            >
+              {letter}
+            </span>
+          ))}
         </div>
-        <div
-          style={{
-            fontFamily: "var(--r-font-sys)",
-            fontWeight: 300,
-            fontSize: 11,
-            color: "var(--r-accent)",
-            letterSpacing: "0.06em",
-            lineHeight: 1.8,
-          }}
-        >
+
+        {/* tagline */}
+        <div style={{
+          fontFamily: "'Barlow', 'IBM Plex Mono', sans-serif",
+          fontWeight: 700,
+          fontSize: 11,
+          color: "var(--r-accent)",
+          letterSpacing: "0.06em",
+          lineHeight: 1.8,
+        }}>
           read with insight.
         </div>
       </div>
 
       {/* linha inferior */}
-      <div
-        className="r-line"
-        style={{
-          opacity: visible ? 0.2 : 0,
-          transition: "opacity 0.6s ease 0.3s",
-        }}
-      />
+      <div className="r-line" style={{ opacity: 0.2 }} />
 
       {/* safe area */}
       <div style={{ height: 56, flexShrink: 0 }} />
