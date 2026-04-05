@@ -39,7 +39,14 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-// ─── RootRedirect — redireciona com base no estado do ciclo IPE ──
+// ─── RootRedirect — fluxo completo de onboarding + ciclo IPE ─────
+// Ordem de verificação:
+//   1. não autenticado → Splash
+//   2. sem rdwth_age_confirmed → /age
+//   3. sem rdwth_consent_given → /consent
+//   4. sem rdwth_letter_seen   → /letter
+//   5. sem rdwth_user_name     → /onboarding
+//   6. com tudo → redireciona por status do ciclo IPE
 function RootRedirect() {
   const [checking, setChecking] = useState(true);
   const [authed, setAuthed] = useState(false);
@@ -56,15 +63,32 @@ function RootRedirect() {
 
       setAuthed(true);
 
-      // Checa se já viu a carta de onboarding
-      const seen = localStorage.getItem("rdwth_letter_seen");
-      if (!seen) {
+      // ── Flags de onboarding ──────────────────────────────────────
+      if (!localStorage.getItem("rdwth_age_confirmed")) {
+        setRedirectTo("/age");
+        setChecking(false);
+        return;
+      }
+
+      if (!localStorage.getItem("rdwth_consent_given")) {
+        setRedirectTo("/consent");
+        setChecking(false);
+        return;
+      }
+
+      if (!localStorage.getItem("rdwth_letter_seen")) {
         setRedirectTo("/letter");
         setChecking(false);
         return;
       }
 
-      // Busca ciclo IPE mais recente do usuário
+      if (!localStorage.getItem("rdwth_user_name")) {
+        setRedirectTo("/onboarding");
+        setChecking(false);
+        return;
+      }
+
+      // ── Redireciona por estado do ciclo IPE ──────────────────────
       const { data: cycle } = await supabase
         .from("ipe_cycles")
         .select("status")
@@ -85,7 +109,6 @@ function RootRedirect() {
             setRedirectTo("/reed");
             break;
           case "abandoned":
-            // Ciclo abandonado → home para iniciar novo
             setRedirectTo("/home");
             break;
           default:
@@ -114,9 +137,9 @@ const App = () => (
         <Routes>
           <Route path="/" element={<RootRedirect />} />
           <Route path="/auth" element={<Auth />} />
-          <Route path="/letter" element={<OnboardingLetter />} />
           <Route path="/age" element={<AgeCheck />} />
           <Route path="/consent" element={<Consent />} />
+          <Route path="/letter" element={<OnboardingLetter />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
           <Route path="/pills" element={<ProtectedRoute><Pills /></ProtectedRoute>} />
