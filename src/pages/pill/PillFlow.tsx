@@ -163,12 +163,50 @@ function InvisibleTextarea({
   value, onChange, placeholder = "type here",
 }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
   const ref = useRef<HTMLTextAreaElement>(null);
+  const valueRef = useRef(value);
+  const recogRef = useRef<any>(null);
+  const [listening, setListening] = useState(false);
+
+  useEffect(() => { valueRef.current = value; }, [value]);
+
   useEffect(() => {
     if (ref.current) {
       ref.current.style.height = "auto";
       ref.current.style.height = ref.current.scrollHeight + "px";
     }
   }, [value]);
+
+  function toggleMic() {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) return;
+    if (listening) {
+      recogRef.current?.stop();
+      setListening(false);
+      return;
+    }
+    const r = new SR();
+    r.lang = "pt-BR";
+    r.continuous = true;
+    r.interimResults = false;
+    r.onresult = (e: any) => {
+      const transcript = Array.from(e.results)
+        .slice(e.resultIndex)
+        .map((res: any) => res[0].transcript)
+        .join(" ");
+      const prev = valueRef.current;
+      onChange((prev ? prev + " " : "") + transcript);
+    };
+    r.onend = () => setListening(false);
+    r.onerror = () => setListening(false);
+    r.start();
+    recogRef.current = r;
+    setListening(true);
+  }
+
+  const hasSpeech = typeof window !== "undefined" && (
+    !!(window as any).SpeechRecognition || !!(window as any).webkitSpeechRecognition
+  );
+
   return (
     <div className="r-input-wrap">
       <textarea
@@ -176,7 +214,25 @@ function InvisibleTextarea({
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder} rows={1}
       />
-      <div className={`r-send-dot${value.trim() ? " active" : ""}`} />
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        {hasSpeech && (
+          <div
+            onClick={toggleMic}
+            title={listening ? "parar gravação" : "falar resposta"}
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: "50%",
+              border: listening ? "none" : "0.5px solid var(--r-dim)",
+              background: listening ? "var(--r-accent)" : "transparent",
+              cursor: "pointer",
+              flexShrink: 0,
+              transition: "background 0.2s, border 0.2s",
+            }}
+          />
+        )}
+        <div className={`r-send-dot${value.trim() ? " active" : ""}`} />
+      </div>
     </div>
   );
 }
