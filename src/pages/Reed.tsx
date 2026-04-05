@@ -310,10 +310,34 @@ export default function Reed() {
     setTimeout(() => inputRef.current?.focus(), 100)
   }, [input, sending, cycleId, canonicalILs, baseVersion])
 
-  // ── Chip click ─────────────────────────────────────────────────
-  function handleChip(chip: Chip) {
-    handleSend(chip.text, chip.type)
-  }
+  // ── Chip click — silencioso: sem bolha do usuário, sem entrada visível no banco ──
+  // A instrução expandida vai para o backend como contexto, não como fala do usuário.
+  // chips com type 'casual' (ex: "ok") apenas fecham os chips — sem chamada ao backend.
+  const handleChip = useCallback(async (chip: Chip) => {
+    setChipsVisible(false)
+    setError(null)
+
+    // Chip neutro/casual ("ok") → só fecha, sem resposta
+    if (chip.type === 'casual') return
+
+    // Meta → resposta local, sem backend, sem bolha
+    if (chip.type === 'meta') {
+      setTimeout(() => {
+        setMessages(prev => [...prev, { role: 'reed', text: META_REPLY, local: true }])
+        setChipSet('active')
+        setChipsVisible(true)
+      }, 320)
+      return
+    }
+
+    // Exploratory / structural → backend, mas sem adicionar bolha do usuário na UI
+    if (!cycleId || !canonicalILs || baseVersion === null || sending) return
+    setSending(true)
+    await sendToBackend(cycleId, baseVersion, canonicalILs, chip.text, chip.type)
+    setSending(false)
+    setChipsVisible(true)
+    setTimeout(() => inputRef.current?.focus(), 100)
+  }, [sending, cycleId, canonicalILs, baseVersion])
 
   // ─── Render ──────────────────────────────────────────────────────
   if (loading) return (
@@ -339,7 +363,7 @@ export default function Reed() {
 
       {/* Mensagens */}
       <div className="r-scroll" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        {messages.filter(Boolean).map((msg, i) =>
+        {messages.map((msg, i) =>
           msg.role === 'reed' ? (
             <div key={i}>
               <p style={{
