@@ -18,8 +18,38 @@ export default function Home() {
       </div>
       <div className="r-line" />
 
-      {/* Blank */}
-      <div style={{ flex: 1 }} />
+      {/* CTA */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 24px" }}>
+        <div
+          style={{
+            fontFamily: "var(--r-font-ed)",
+            fontWeight: 800,
+            fontSize: 16,
+            color: "var(--r-dim)",
+            letterSpacing: "-0.01em",
+            marginBottom: 20,
+          }}
+        >
+          ready when you are.
+        </div>
+        <div
+          onClick={() => navigate("/pills")}
+          style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
+        >
+          <div style={{ width: 1, height: 14, background: "var(--r-accent)", flexShrink: 0 }} />
+          <span
+            style={{
+              fontFamily: "var(--r-font-sys)",
+              fontWeight: 300,
+              fontSize: 11,
+              color: "var(--r-text)",
+              letterSpacing: "0.08em",
+            }}
+          >
+            begin pills
+          </span>
+        </div>
+      </div>
 
       {/* Nav bottom */}
       <div className="r-line" />

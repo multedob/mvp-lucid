@@ -11,7 +11,7 @@ export default function OnboardingLetter() {
 
   const handleBegin = () => {
     localStorage.setItem("rdwth_letter_seen", "1");
-    navigate("/home");
+    navigate("/age");
   };
 
   return (
