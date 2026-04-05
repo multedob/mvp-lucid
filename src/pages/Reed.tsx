@@ -339,7 +339,7 @@ export default function Reed() {
 
       {/* Mensagens */}
       <div className="r-scroll" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        {messages.map((msg, i) =>
+        {messages.filter(Boolean).map((msg, i) =>
           msg.role === 'reed' ? (
             <div key={i}>
               <p style={{
