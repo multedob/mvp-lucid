@@ -1,6 +1,6 @@
 // src/pages/Consent.tsx
-// Aceite de Privacy Policy + Terms — fluxo de onboarding
-// Checkbox → habilita "Continue" → /onboarding
+// Aceite de Privacy Policy + Terms — segundo passo do onboarding
+// Checkbox → habilita "Continue" → seta flag + /letter
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -101,7 +101,11 @@ export default function Consent() {
 
         {/* Continue */}
         <div
-          onClick={() => accepted && navigate("/onboarding")}
+          onClick={() => {
+            if (!accepted) return;
+            localStorage.setItem("rdwth_consent_given", "1");
+            navigate("/letter");
+          }}
           style={{
             display: "flex", alignItems: "center", gap: 10,
             cursor: accepted ? "pointer" : "default",
