@@ -35,14 +35,19 @@ export default function Auth() {
       if (error) return setError(error.message);
       navigate("/home", { replace: true });
     } else {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: { emailRedirectTo: `${window.location.origin}/home` },
       });
       setLoading(false);
       if (error) return setError(error.message);
-      setMessage("check your email to confirm your account.");
+      // Se email confirmation está desligado, session vem preenchida → login direto
+      if (data.session) {
+        navigate("/", { replace: true });
+      } else {
+        setMessage("check your email to confirm your account.");
+      }
     }
   };
 
