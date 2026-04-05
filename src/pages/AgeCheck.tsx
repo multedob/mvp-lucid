@@ -1,6 +1,6 @@
 // src/pages/AgeCheck.tsx
-// Verificação de idade — fluxo de onboarding
-// "I am 16 or older" → /consent | "I am under 16" → bloqueio inline
+// Verificação de idade — primeiro passo do onboarding
+// "I am 16 or older" → seta flag + /consent | "I am under 16" → bloqueio inline
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -58,7 +58,10 @@ export default function AgeCheck() {
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div
-            onClick={() => navigate("/consent")}
+            onClick={() => {
+              localStorage.setItem("rdwth_age_confirmed", "1");
+              navigate("/consent");
+            }}
             style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
           >
             <div style={{ width: 1, height: 12, background: "var(--r-accent)", flexShrink: 0 }} />
