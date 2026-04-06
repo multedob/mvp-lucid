@@ -51,6 +51,7 @@ function NavBottom({ active }: { active: "pills" | "context" | "reed" }) {
 
 // ─── ContextSystem — "How _rdwth works" ──────────────────────────
 function ContextSystem({ onBack }: { onBack: () => void }) {
+  const navigate = useNavigate();
   const ITEMS = [
     {
       label: "What this is",
