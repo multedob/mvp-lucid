@@ -88,7 +88,7 @@ function ContextSystem({ onBack }: { onBack: () => void }) {
   return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label">_rdwth · system</span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · system</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
