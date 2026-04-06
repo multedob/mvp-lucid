@@ -51,6 +51,7 @@ function NavBottom({ active }: { active: "pills" | "context" | "reed" }) {
 
 // ─── ContextSystem — "How _rdwth works" ──────────────────────────
 function ContextSystem({ onBack }: { onBack: () => void }) {
+  const navigate = useNavigate();
   const ITEMS = [
     {
       label: "What this is",
@@ -88,7 +89,7 @@ function ContextSystem({ onBack }: { onBack: () => void }) {
   return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label">_rdwth · system</span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · system</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -124,10 +125,11 @@ function ContextSystem({ onBack }: { onBack: () => void }) {
 
 // ─── ContextCycle — leitura salva ────────────────────────────────
 function ContextCycle({ cycle, onBack }: { cycle: CycleData; onBack: () => void }) {
+  const navigate = useNavigate();
   return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label">_rdwth · context · {cycle.id}</span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · context · {cycle.id}</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -157,10 +159,11 @@ function ContextCycle({ cycle, onBack }: { cycle: CycleData; onBack: () => void 
 
 // ─── ContextDeep — deep reading ──────────────────────────────────
 function ContextDeep({ cycle, onBack }: { cycle: CycleData; onBack: () => void }) {
+  const navigate = useNavigate();
   return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label">_rdwth · context · {cycle.id}</span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · context · {cycle.id}</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -272,7 +275,7 @@ const deep = hasPending
   if (!loading && cycles.length === 0) return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label">_rdwth · context</span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · context</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />

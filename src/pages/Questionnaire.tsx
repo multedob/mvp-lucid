@@ -34,10 +34,11 @@ type Phase =
 // ─────────────────────────────────────────
 
 function Header() {
+  const navigate = useNavigate()
   return (
     <>
       <div className="r-header">
-        <span className="r-header-label">_rdwth · questionário</span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · questionário</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />

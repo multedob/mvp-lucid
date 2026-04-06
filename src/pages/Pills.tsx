@@ -52,7 +52,7 @@ export default function Pills() {
 
       {/* Header */}
       <div className="r-header">
-        <span className="r-header-label">_rdwth · pills</span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · pills</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />

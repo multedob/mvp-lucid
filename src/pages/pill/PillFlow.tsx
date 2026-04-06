@@ -111,12 +111,13 @@ const M3_2_OPCOES: Record<PillId, Array<{ id: "A"|"B"|"C"|"D"; text: string }>> 
 // ─── Subcomponents ─────────────────────────────────────────────────
 
 function Header({ moment }: { moment: Moment }) {
+  const navigate = useNavigate();
   const counter = HEADER_LABEL[moment];
   return (
     <>
       <div className="r-header">
         <span className="r-header-label">
-          {counter ? `_rdwth · pills · ${counter}` : "_rdwth · pills"}
+          <span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span>{counter ? ` · pills · ${counter}` : " · pills"}
         </span>
         <span className="r-header-date">{getToday()}</span>
       </div>
