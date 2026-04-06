@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getToday } from "@/lib/api";
+import NavBottom from "@/components/NavBottom";
 
 type PillId = "PI" | "PII" | "PIII" | "PIV" | "PV" | "PVI";
 
