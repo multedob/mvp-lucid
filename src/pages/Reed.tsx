@@ -1,10 +1,8 @@
 // src/pages/Reed.tsx
 // Reed — conversational companion inside rdwth
+// v3.7 — welcome message, pill context, questionnaire nav, _rdwth link
 // Header: "_rdwth · reed" | data
-// Mensagens: Reed → font-ed weight 800 16px; User → indentado 28px weight 300 14px
-// Input: textarea + send dot (vazio=border, preenchido=accent fill)
-// Nav bottom: pills | questionnaire | context | reed (ativo accent) | settings dot
-// v3.7 — welcome message + questionnaire nav
+// Nav bottom: pills | questionnaire | context | reed (ativo) | settings dot
 
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -13,6 +11,7 @@ import { callEdgeFunction, getCurrentUserVersion, getToday } from '@/lib/api'
 
 interface Message { role: 'user' | 'reed'; text: string }
 interface CanonicalILs { d1: number[]; d2: number[]; d3: number[]; d4: number[] }
+interface PillContext { pill_id: string; m2_text: string; m4_percepcao: string; eco_text: string }
 
 function extractILs(resultados: Record<string, { il_canonico: number | null }>): CanonicalILs {
   const get = (id: string) => resultados[id]?.il_canonico ?? 4.0
@@ -32,13 +31,26 @@ function extractResponseText(data: unknown): string {
   return ''
 }
 
+function buildPillContextString(pills: PillContext[]): string {
+  if (!pills.length) return ''
+  return pills
+    .filter(p => p.m4_percepcao || p.m2_text)
+    .map(p => {
+      const parts: string[] = [`[${p.pill_id}]`]
+      if (p.m2_text) parts.push(`O que a pessoa trouxe: "${p.m2_text}"`)
+      if (p.m4_percepcao) parts.push(`O que ficou: "${p.m4_percepcao}"`)
+      return parts.join(' ')
+    })
+    .join('\n')
+}
+
 const WELCOME_MESSAGE = `oi. eu sou o reed.
 
 eu faço parte do rdwth — um sistema de autoconhecimento. não sou humano, e não finjo ser. mas presto atenção no que você diz.
 
 o sistema tem três partes que se alimentam: as pills (leituras curtas que você reage), o questionário (perguntas sobre como você vive e pensa), e essa conversa aqui comigo.
 
-eu leio o que essas partes revelam sobre você — não as palavras exatas, mas os padrões. quanto mais você interage com as pills e responde o questionário, mais eu entendo sobre você, e mais a conversa aqui rende.
+eu leio o que essas partes revelam sobre você. quanto mais você interage com as pills e responde o questionário, mais eu entendo sobre você, e mais a conversa aqui rende.
 
 no começo pode parecer simples. mas conforme você vai completando ciclos, as coisas ganham camada.
 
@@ -55,8 +67,8 @@ export default function Reed() {
   const [cycleId, setCycleId] = useState<string | null>(null)
   const [baseVersion, setBaseVersion] = useState<number | null>(null)
   const [canonicalILs, setCanonicalILs] = useState<CanonicalILs | null>(null)
+  const [pillContext, setPillContext] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
-  const [isFirstVisit, setIsFirstVisit] = useState(false)
 
   useEffect(() => { init() }, [])
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
@@ -74,12 +86,32 @@ export default function Reed() {
       if (!cycle) { navigate('/home'); return }
       setCycleId(cycle.id)
       setBaseVersion(await getCurrentUserVersion())
+
+      // Fetch questionnaire ILs
       const { data: qState } = await (supabase.from('questionnaire_state') as any)
         .select('resultados_por_bloco')
         .eq('ipe_cycle_id', cycle.id)
         .maybeSingle()
       const resultados = (qState?.resultados_por_bloco ?? {}) as Record<string, { il_canonico: number | null }>
       setCanonicalILs(extractILs(resultados))
+
+      // Fetch pill responses — text data for Reed context
+      const { data: pillRows } = await (supabase.from('pill_responses') as any)
+        .select('pill_id, m2_resposta, m4_resposta, eco_text')
+        .eq('ipe_cycle_id', cycle.id)
+        .not('completed_at', 'is', null)
+        .order('pill_id', { ascending: true })
+      if (pillRows && pillRows.length > 0) {
+        const pillData: PillContext[] = pillRows.map((r: any) => ({
+          pill_id: r.pill_id ?? '',
+          m2_text: typeof r.m2_resposta === 'string' ? r.m2_resposta : '',
+          m4_percepcao: (r.m4_resposta as any)?.percepcao ? String((r.m4_resposta as any).percepcao) : '',
+          eco_text: r.eco_text ?? '',
+        }))
+        setPillContext(buildPillContextString(pillData))
+      }
+
+      // Fetch conversation history
       const { data: cycleHistory } = await (supabase as any)
         .from('cycles')
         .select('user_text, llm_response, created_at')
@@ -95,7 +127,6 @@ export default function Reed() {
         setMessages(history)
       } else {
         // First visit — show welcome message
-        setIsFirstVisit(true)
         setMessages([{ role: 'reed', text: WELCOME_MESSAGE }])
       }
       setLoading(false)
@@ -108,11 +139,16 @@ export default function Reed() {
 
   async function sendToReed(cid: string, baseVer: number, ils: CanonicalILs, userText: string, retryOnConflict = true) {
     try {
-      const data = await callEdgeFunction<Record<string, unknown>>('lucid-engine', {
+      const payload: Record<string, unknown> = {
         ipe_cycle_id: cid,
         base_version: baseVer,
         raw_input: { d1: ils.d1, d2: ils.d2, d3: ils.d3, d4: ils.d4, user_text: userText },
-      })
+      }
+      // Pass pill text context if available
+      if (pillContext) {
+        payload.pill_context = pillContext
+      }
+      const data = await callEdgeFunction<Record<string, unknown>>('lucid-engine', payload)
       const nextVersion = data.current_version
       if (typeof nextVersion === 'number') setBaseVersion(nextVersion)
       const text = extractResponseText(data)
@@ -135,7 +171,6 @@ export default function Reed() {
     setInput('')
     setSending(true)
     setError(null)
-    setIsFirstVisit(false)
     setMessages(prev => [...prev, { role: 'user', text: userText }])
     await sendToReed(cycleId, baseVersion, canonicalILs, userText)
     setSending(false)
@@ -156,7 +191,7 @@ export default function Reed() {
       {/* Header */}
       <div className="r-header">
         <span className="r-header-label" onClick={() => navigate('/home')} style={{ cursor: 'pointer' }}>_rdwth</span>
-        <span className="r-header-label" style={{ cursor: 'default' }}> · reed</span>
+        <span className="r-header-label" style={{ cursor: 'default' }}>{' '}· reed</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -252,7 +287,6 @@ export default function Reed() {
               padding: 0,
             }}
           />
-          {/* Send dot — vazio=border, preenchido=accent */}
           <div
             onClick={handleSend}
             style={{
