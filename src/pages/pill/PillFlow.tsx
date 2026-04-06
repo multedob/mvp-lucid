@@ -111,13 +111,12 @@ const M3_2_OPCOES: Record<PillId, Array<{ id: "A"|"B"|"C"|"D"; text: string }>> 
 // ─── Subcomponents ─────────────────────────────────────────────────
 
 function Header({ moment }: { moment: Moment }) {
-  const navigate = useNavigate();
   const counter = HEADER_LABEL[moment];
   return (
     <>
       <div className="r-header">
         <span className="r-header-label">
-          <span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span>{counter ? ` · pills · ${counter}` : " · pills"}
+          {counter ? `_rdwth · pills · ${counter}` : "_rdwth · pills"}
         </span>
         <span className="r-header-date">{getToday()}</span>
       </div>
@@ -306,7 +305,18 @@ export default function PillFlow() {
         payload: {
           M3_1_regua: { posicao: String(state.m3_1_posicao ?? 3), duas_palavras: state.m3_1_duasPalavras || "—", situacao_oposta: state.m3_1_situacaoOposta || "—" },
           M3_2_escolha: { opcao: state.m3_2_opcao ?? "A", abre_mao: state.m3_2_abreMao || "—", followup_C: state.m3_2_followupC || null, followup_D: state.m3_2_followupD || null },
-          M3_3_inventario: { narrativa: state.m3_3_narrativa, condicao: state.m3_3_condicao, cobertura_L1_3: state.m3_3_narrativa },
+          M3_3_inventario: (() => {
+            const base: Record<string, unknown> = { narrativa: state.m3_3_narrativa, condicao: state.m3_3_condicao };
+            // Each pill requires specific cobertura keys — see M3_INVENTARIO_REQUIRED_KEYS in ipe_types.ts
+            const pid = state.pillId;
+            if (pid === "PI")   return { ...base, cobertura_L1_3: state.m3_3_narrativa };
+            if (pid === "PII")  return { ...base, cobertura_L1_3: state.m3_3_narrativa, cobertura_L1_4: state.m3_3_condicao };
+            if (pid === "PIII") return { ...base, cobertura_L1_3: state.m3_3_narrativa, cobertura_L2_2: state.m3_3_condicao };
+            if (pid === "PIV")  return { ...base, cobertura_L1_3: state.m3_3_narrativa };
+            if (pid === "PV")   return { ...base, cobertura_L1_3: state.m3_3_narrativa, cobertura_L4_3: state.m3_3_condicao };
+            if (pid === "PVI")  return { ...base, cobertura_L1_3_pvi: state.m3_3_narrativa, cobertura_L1_4: state.m3_3_condicao };
+            return { ...base, cobertura_L1_3: state.m3_3_narrativa };
+          })(),
         },
       });
     } catch (_) {}
