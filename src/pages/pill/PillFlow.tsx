@@ -515,6 +515,25 @@ export default function PillFlow() {
           <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10, color: "var(--r-ghost)", letterSpacing: "0.06em" }}>···</div>
         )}
       </div>
+      {/* Talk to Reed button */}
+      <div style={{ padding: "0 24px 12px", flexShrink: 0 }}>
+        <div
+          onClick={() => navigate("/reed")}
+          style={{
+            fontFamily: "var(--r-font-sys)",
+            fontWeight: 400,
+            fontSize: 12,
+            color: "var(--r-accent)",
+            letterSpacing: "0.06em",
+            cursor: "pointer",
+            textAlign: "center",
+            padding: "14px 0",
+            borderTop: "0.5px solid var(--r-ghost)",
+          }}
+        >
+          talk to reed
+        </div>
+      </div>
       <Footer onBack={() => setState(s => ({ ...s, moment: "M4" }))}
         onContinue={() => navigate("/pills")} continueLabel="continue" showEthics={false} />
     </div>
