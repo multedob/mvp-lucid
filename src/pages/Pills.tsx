@@ -1,7 +1,7 @@
 // src/pages/Pills.tsx
 // Lista de pills com estado de ciclo
 // Pills feitas → line-through + opacidade reduzida + não clicáveis
-// Após as 6 feitas → "begin reading" → /questionnaire
+// Após as 6 feitas → "begin questionnaire" com barra accent → /questionnaire
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -109,7 +109,7 @@ export default function Pills() {
                   letterSpacing: "0.08em",
                   color: "var(--r-text)",
                 }}>
-                  begin reading
+                  begin questionnaire
                 </span>
               </div>
             )}
@@ -121,9 +121,10 @@ export default function Pills() {
       <div className="r-line" />
       <div style={{ height: 56, display: "flex", alignItems: "center", padding: "0 24px", gap: 28, flexShrink: 0 }}>
         {[
-          { label: "pills",   path: "/pills",   active: true },
-          { label: "context", path: "/context", active: false },
-          { label: "reed",    path: "/reed",    active: false },
+          { label: "pills",         path: "/pills",         active: true },
+          { label: "questionnaire", path: "/questionnaire", active: false },
+          { label: "context",       path: "/context",       active: false },
+          { label: "reed",          path: "/reed",          active: false },
         ].map(({ label, path, active }) => (
           <span
             key={label}
