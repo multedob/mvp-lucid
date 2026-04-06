@@ -4,6 +4,7 @@
 
 import { useNavigate } from "react-router-dom";
 import { getToday } from "@/lib/api";
+import NavBottom from "@/components/NavBottom";
 
 // Troque para uma string quando quiser exibir uma mensagem do sistema no centro.
 const systemMessage: string | null = null;
