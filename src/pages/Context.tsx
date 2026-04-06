@@ -8,46 +8,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getToday } from "@/lib/api";
-
-// ─── Nav bottom compartilhado ─────────────────────────────────────
-function NavBottom({ active }: { active: "pills" | "context" | "reed" }) {
-  const navigate = useNavigate();
-  return (
-    <>
-      <div className="r-line" />
-      <div style={{ height: 56, display: "flex", alignItems: "center", padding: "0 24px", gap: 28, flexShrink: 0 }}>
-        {[
-          { label: "pills",   path: "/pills" },
-          { label: "context", path: "/context" },
-          { label: "reed",    path: "/reed" },
-        ].map(({ label, path }) => (
-          <span
-            key={label}
-            onClick={() => navigate(path)}
-            style={{
-              fontFamily: "var(--r-font-sys)",
-              fontWeight: label === active ? 400 : 300,
-              fontSize: 11,
-              color: label === active ? "var(--r-accent)" : "var(--r-muted)",
-              letterSpacing: "0.08em",
-              cursor: "pointer",
-            }}
-          >
-            {label}
-          </span>
-        ))}
-        <div
-          onClick={() => navigate("/settings")}
-          style={{
-            marginLeft: "auto", width: 6, height: 6, borderRadius: "50%",
-            border: "1px solid var(--r-ghost)", background: "transparent",
-            cursor: "pointer", flexShrink: 0,
-          }}
-        />
-      </div>
-    </>
-  );
-}
+import NavBottom from "@/components/NavBottom";
 
 // ─── ContextSystem — "How _rdwth works" ──────────────────────────
 function ContextSystem({ onBack }: { onBack: () => void }) {
