@@ -5,6 +5,7 @@
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getToday } from "@/lib/api";
+import NavBottom from "@/components/NavBottom";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -84,8 +85,7 @@ export default function Settings() {
 
       </div>
 
-      <div className="r-line" />
-      <div style={{ height: 56, flexShrink: 0 }} />
+      <NavBottom active="settings" />
     </div>
   );
 }
