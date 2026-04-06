@@ -163,60 +163,12 @@ function InvisibleTextarea({
   value, onChange, placeholder = "type here",
 }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
   const ref = useRef<HTMLTextAreaElement>(null);
-  const valueRef = useRef(value);
-  const recogRef = useRef<any>(null);
-  const [listening, setListening] = useState(false);
-  const [interimText, setInterimText] = useState("");
-
-  useEffect(() => { valueRef.current = value; }, [value]);
-
   useEffect(() => {
     if (ref.current) {
       ref.current.style.height = "auto";
       ref.current.style.height = ref.current.scrollHeight + "px";
     }
   }, [value]);
-
-  function toggleMic() {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) return;
-    if (listening) {
-      recogRef.current?.stop();
-      setListening(false);
-      setInterimText("");
-      return;
-    }
-    const r = new SR();
-    r.lang = "pt-BR";
-    r.continuous = true;
-    r.interimResults = true;
-    r.onresult = (e: any) => {
-      let finalStr = "";
-      let interimStr = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) {
-          finalStr += e.results[i][0].transcript;
-        } else {
-          interimStr += e.results[i][0].transcript;
-        }
-      }
-      if (finalStr) {
-        const prev = valueRef.current;
-        onChange((prev ? prev + " " : "") + finalStr);
-      }
-      setInterimText(interimStr);
-    };
-    r.onend = () => { setListening(false); setInterimText(""); };
-    r.onerror = () => { setListening(false); setInterimText(""); };
-    r.start();
-    recogRef.current = r;
-    setListening(true);
-  }
-
-  const hasSpeech = typeof window !== "undefined" && (
-    !!(window as any).SpeechRecognition || !!(window as any).webkitSpeechRecognition
-  );
-
   return (
     <div className="r-input-wrap">
       <textarea
@@ -224,40 +176,7 @@ function InvisibleTextarea({
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder} rows={1}
       />
-      {listening && interimText && (
-        <div style={{
-          fontFamily: "var(--r-font-sys)",
-          fontSize: 11,
-          fontWeight: 300,
-          color: "var(--r-ghost)",
-          letterSpacing: "0.02em",
-          lineHeight: 1.6,
-          padding: "6px 0 2px",
-        }}>
-          {interimText}
-        </div>
-      )}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-        {hasSpeech && (
-          <div
-            onClick={toggleMic}
-            title={listening ? "parar gravação" : "falar resposta"}
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              border: listening ? "none" : "0.5px solid var(--r-dim)",
-              background: listening ? "var(--r-accent)" : "transparent",
-              cursor: "pointer",
-              flexShrink: 0,
-              transition: "all 0.2s",
-              outline: listening ? "2px solid var(--r-accent)" : "none",
-              outlineOffset: "3px",
-            }}
-          />
-        )}
-        <div className={`r-send-dot${value.trim() ? " active" : ""}`} />
-      </div>
+      <div className={`r-send-dot${value.trim() ? " active" : ""}`} />
     </div>
   );
 }
@@ -280,7 +199,7 @@ export default function PillFlow() {
   const initRef = useRef(false);
 
   const initCycle = useCallback(async () => {
-    if (initRef.current) return;          // guard: impede dupla execução (StrictMode)
+    if (initRef.current) return;          // ← guard: impede dupla execução (StrictMode)
     initRef.current = true;
 
     setState(s => ({ ...s, loading: true }));
@@ -288,8 +207,8 @@ export default function PillFlow() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { initRef.current = false; return navigate("/auth"); }
 
-      // FIX: buscar ciclo ativo (pills OU questionnaire) — evita criar ciclo duplicado
-      // quando o usuário completou todas as pills e o status já avançou para questionnaire
+      // Buscar ciclo ativo: pills OU questionnaire (caso usuário tenha navegado para lá e voltado)
+      // Não criar novo se já existe um ciclo incompleto
       let { data: cycle } = await supabase
         .from("ipe_cycles").select("*")
         .eq("user_id", session.user.id)
@@ -297,23 +216,16 @@ export default function PillFlow() {
         .order("cycle_number", { ascending: false })
         .limit(1).maybeSingle();
 
-      // Se o ciclo já está em questionnaire, redirecionar — pills já concluídas
-      if (cycle?.status === "questionnaire") {
-        initRef.current = false;
-        return navigate("/questionnaire");
-      }
-
-      // Verificar se a pill que está sendo acessada já foi completada neste ciclo
-      if (cycle?.status === "pills") {
-        const pillsDone: string[] = cycle.pills_completed ?? [];
-        if (pillsDone.includes(pillId)) {
-          // Pill já feita — redirecionar para lista de pills
-          initRef.current = false;
-          return navigate("/pills");
+      // Se ciclo existe mas status foi para "questionnaire" prematuramente, reverter para "pills"
+      if (cycle && cycle.status === "questionnaire") {
+        const completed = (cycle.pills_completed as string[]) ?? [];
+        const allSix = ["PI","PII","PIII","PIV","PV","PVI"].every(p => completed.includes(p));
+        if (!allSix) {
+          await supabase.from("ipe_cycles").update({ status: "pills" }).eq("id", cycle.id);
+          cycle = { ...cycle, status: "pills" };
         }
       }
 
-      // Criar novo ciclo apenas se não existe nenhum ciclo ativo
       if (!cycle) {
         const { data: last } = await supabase
           .from("ipe_cycles").select("cycle_number")
@@ -323,13 +235,7 @@ export default function PillFlow() {
         const nextNum = (last?.cycle_number ?? 0) + 1;
         const { data: newCycle } = await supabase
           .from("ipe_cycles")
-          .insert({
-            user_id: session.user.id,
-            status: "pills",
-            cycle_number: nextNum,
-            prompt_version: null,
-            pills_completed: [],
-          })
+          .insert({ user_id: session.user.id, status: "pills", cycle_number: nextNum, prompt_version: null, pills_completed: [] })
           .select().single();
         cycle = newCycle;
       }
@@ -344,7 +250,7 @@ export default function PillFlow() {
       initRef.current = false;
       setState(s => ({ ...s, loading: false }));
     }
-  }, [navigate, pillId]);
+  }, [navigate]);
 
   useEffect(() => { initCycle(); }, [initCycle]);
 
@@ -429,7 +335,7 @@ export default function PillFlow() {
         ecoText = eco.eco_text || "";
       } catch (ecoErr) {
         console.error("[PillFlow] ipe-eco failed:", ecoErr);
-        // eco é UX-only, não impede avanço
+        // eco é UX-only, não impede avanço — mas logamos para diagnóstico
       }
 
       setState(s => ({ ...s, ecoText, moment: "M5", loading: false }));
@@ -451,7 +357,7 @@ export default function PillFlow() {
         <div className="r-tension" style={{ marginTop: 14 }}>{pill.tensao}</div>
       </div>
       <div style={{ flex: 1 }} />
-      <Footer onBack={() => navigate("/pills")} onContinue={submitM1}
+      <Footer onBack={() => navigate("/home")} onContinue={submitM1}
         continueLabel={state.loading ? "..." : "begin"}
         showEthics onEthics={() => handleEthics("M1")}
         disabled={state.loading || !state.ipeCycleId} />
@@ -471,8 +377,7 @@ export default function PillFlow() {
       </div>
       <Footer onBack={() => setState(s => ({ ...s, moment: "M1" }))} onContinue={submitM2}
         continueLabel={state.loading ? "..." : "continue"}
-        showEthics onEthics={() => handleEthics("M2")}
-        disabled={state.loading || !state.m2Input.trim()} />
+        showEthics onEthics={() => handleEthics("M2")} disabled={state.loading} />
     </div>
   );
 
@@ -585,7 +490,7 @@ export default function PillFlow() {
     </div>
   );
 
-  // M5 — eco + navegação para lista de pills (não para reed — ciclo ainda não terminou)
+  // M5
   return (
     <div className="r-screen">
       <Header moment="M5" />
@@ -599,9 +504,8 @@ export default function PillFlow() {
           <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10, color: "var(--r-ghost)", letterSpacing: "0.06em" }}>···</div>
         )}
       </div>
-      {/* FIX: volta para /pills, não para /reed — o usuário pode ter outras pills pendentes */}
       <Footer onBack={() => setState(s => ({ ...s, moment: "M4" }))}
-        onContinue={() => navigate("/pills")} continueLabel="back to pills" showEthics={false} />
+        onContinue={() => navigate("/pills")} continueLabel="continue" showEthics={false} />
     </div>
   );
 }
