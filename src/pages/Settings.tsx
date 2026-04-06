@@ -5,6 +5,7 @@
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getToday } from "@/lib/api";
+import NavBottom from "@/components/NavBottom";
 
 export default function Settings() {
   const navigate = useNavigate();
