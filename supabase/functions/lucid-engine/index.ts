@@ -165,6 +165,7 @@ async function executeLlmLanguage(
   movement_secondary: string | null,
   nodes_corpus: RagNode[],
   user_text: string,
+  pill_context: string | null,
 ): Promise<string> {
   const node_texts = node_selection
     .map((n) => {
@@ -299,9 +300,16 @@ Response Type: ${response_type}
 Primary Movement: ${movement_primary}
 ${movement_secondary ? `Secondary Movement: ${movement_secondary}` : ""}`;
 
-  const user_content = node_texts
-    ? `The user said:\n"${user_text}"\n\nConceptual frame (use this to inform your response — do not mention it as a node or system output):\n${node_texts}\n\nRespond to the user now.`
-    : `The user said:\n"${user_text}"\n\nRespond to the user now.`;
+  // Build user content with optional pill context and node texts
+  const pill_section = pill_context
+    ? `\n\nWhat this person shared in their pills (use naturally — don't list or quote directly, but let it inform how you respond):\n${pill_context}`
+    : "";
+
+  const node_section = node_texts
+    ? `\n\nConceptual frame (use this to inform your response — do not mention it as a node or system output):\n${node_texts}`
+    : "";
+
+  const user_content = `The user said:\n"${user_text}"${pill_section}${node_section}\n\nRespond to the user now.`;
 
   const response = await anthropic.messages.create({
     model: LLM_MODEL_ID,
@@ -546,6 +554,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // Fonte: EDGE_EXECUTION_SEQUENCE_SPEC_v1.11.1, PHASE 9
     let llm_response = "";
     try {
+      // pill_context is optional — passed from frontend when available
+      const pill_context = typeof body.pill_context === "string" ? body.pill_context : null;
+
       llm_response = await executeLlmLanguage(
         anthropic,
         bound_version,
@@ -557,6 +568,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         post_core.movement_secondary,
         ragCorpus as RagNode[],
         user_text,
+        pill_context,
       );
     } catch (langErr) {
       // Log mas não abortar — ciclo está persistido
