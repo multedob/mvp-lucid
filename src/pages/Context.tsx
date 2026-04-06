@@ -125,10 +125,11 @@ function ContextSystem({ onBack }: { onBack: () => void }) {
 
 // ─── ContextCycle — leitura salva ────────────────────────────────
 function ContextCycle({ cycle, onBack }: { cycle: CycleData; onBack: () => void }) {
+  const navigate = useNavigate();
   return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label">_rdwth · context · {cycle.id}</span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · context · {cycle.id}</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
