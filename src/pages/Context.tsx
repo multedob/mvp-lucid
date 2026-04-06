@@ -256,12 +256,7 @@ const deep = hasPending
 
       {/* Header */}
       <div className="r-header">
-        <span
-          onClick={() => navigate("/home")}
-          style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-muted)", letterSpacing: "0.08em", cursor: "pointer" }}
-        >
-          _rdwth · context
-        </span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · context</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />

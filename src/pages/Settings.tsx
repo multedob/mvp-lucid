@@ -85,8 +85,7 @@ export default function Settings() {
 
       </div>
 
-      <div className="r-line" />
-      <div style={{ height: 56, flexShrink: 0 }} />
+      <NavBottom active="settings" />
     </div>
   );
 }

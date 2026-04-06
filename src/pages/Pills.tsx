@@ -118,44 +118,7 @@ export default function Pills() {
         )}
       </div>
 
-      {/* Nav bottom */}
-      <div className="r-line" />
-      <div style={{ height: 56, display: "flex", alignItems: "center", padding: "0 24px", gap: 28, flexShrink: 0 }}>
-        {[
-          { label: "pills",         path: "/pills",         active: true },
-          { label: "questionnaire", path: "/questionnaire", active: false },
-          { label: "context",       path: "/context",       active: false },
-          { label: "reed",          path: "/reed",          active: false },
-        ].map(({ label, path, active }) => (
-          <span
-            key={label}
-            onClick={() => navigate(path)}
-            style={{
-              fontFamily: "var(--r-font-sys)",
-              fontWeight: active ? 400 : 300,
-              fontSize: 11,
-              color: active ? "var(--r-accent)" : "var(--r-muted)",
-              letterSpacing: "0.08em",
-              cursor: "pointer",
-            }}
-          >
-            {label}
-          </span>
-        ))}
-        <div
-          onClick={() => navigate("/settings")}
-          style={{
-            marginLeft: "auto",
-            width: 6,
-            height: 6,
-            borderRadius: "50%",
-            border: "1px solid var(--r-ghost)",
-            background: "transparent",
-            cursor: "pointer",
-            flexShrink: 0,
-          }}
-        />
-      </div>
+      <NavBottom active="pills" />
 
     </div>
   );
