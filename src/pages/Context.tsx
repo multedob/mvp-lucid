@@ -275,7 +275,7 @@ const deep = hasPending
   if (!loading && cycles.length === 0) return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label">_rdwth · context</span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · context</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
