@@ -314,7 +314,7 @@ export default function PillFlow() {
             if (pid === "PIII") return { ...base, cobertura_L1_3: state.m3_3_narrativa, cobertura_L2_2: state.m3_3_condicao };
             if (pid === "PIV")  return { ...base, cobertura_L1_3: state.m3_3_narrativa };
             if (pid === "PV")   return { ...base, cobertura_L1_3: state.m3_3_narrativa, cobertura_L4_3: state.m3_3_condicao };
-            if (pid === "PVI")  return { ...base, cobertura_L1_3_pvi: state.m3_3_narrativa, cobertura_L1_4: state.m3_3_condicao };
+            if (pid === "PVI")  return { ...base, cobertura_L1_3: null, cobertura_L1_3_pvi: state.m3_3_narrativa, cobertura_L1_4: state.m3_3_condicao };
             return { ...base, cobertura_L1_3: state.m3_3_narrativa };
           })(),
         },
