@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getToday } from "@/lib/api";
+import { useUserName } from "@/hooks/useUserName";
 import NavBottom from "@/components/NavBottom";
 
 // ─── ContextSystem — "How _rdwth works" ──────────────────────────
@@ -85,7 +86,7 @@ function ContextSystem({ onBack }: { onBack: () => void }) {
 }
 
 // ─── ContextCycle — leitura salva ────────────────────────────────
-function ContextCycle({ cycle, onBack }: { cycle: CycleData; onBack: () => void }) {
+function ContextCycle({ cycle, onBack, userName }: { cycle: CycleData; onBack: () => void; userName: string | null }) {
   const navigate = useNavigate();
   return (
     <div className="r-screen">
@@ -104,7 +105,9 @@ function ContextCycle({ cycle, onBack }: { cycle: CycleData; onBack: () => void 
         </div>
         <div style={{ height: 1, background: "var(--r-ghost)", opacity: 0.5 }} />
         <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10, color: "var(--r-muted)", letterSpacing: "0.04em", lineHeight: 1.7 }}>
-          Esta é uma leitura estrutural de um momento. Não define quem você é.
+          {userName
+                ? `${userName}, esta é uma leitura estrutural de um momento. Não define quem você é.`
+                : "Esta é uma leitura estrutural de um momento. Não define quem você é."}
         </div>
       </div>
 
@@ -119,7 +122,7 @@ function ContextCycle({ cycle, onBack }: { cycle: CycleData; onBack: () => void 
 }
 
 // ─── ContextDeep — deep reading ──────────────────────────────────
-function ContextDeep({ cycle, onBack }: { cycle: CycleData; onBack: () => void }) {
+function ContextDeep({ cycle, onBack, userName }: { cycle: CycleData; onBack: () => void; userName: string | null }) {
   const navigate = useNavigate();
   return (
     <div className="r-screen">
@@ -138,7 +141,9 @@ function ContextDeep({ cycle, onBack }: { cycle: CycleData; onBack: () => void }
         </div>
         <div style={{ height: 1, background: "var(--r-ghost)", opacity: 0.5 }} />
         <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10, color: "var(--r-muted)", letterSpacing: "0.04em", lineHeight: 1.7 }}>
-          Esta é uma leitura estrutural de um momento. Não define quem você é.
+          {userName
+                ? `${userName}, esta é uma leitura estrutural de um momento. Não define quem você é.`
+                : "Esta é uma leitura estrutural de um momento. Não define quem você é."}
         </div>
       </div>
 
@@ -163,6 +168,7 @@ interface CycleData {
 // ─── Context principal ────────────────────────────────────────────
 export default function Context() {
   const navigate = useNavigate();
+  const userName = useUserName();
   const [cycles, setCycles] = useState<CycleData[]>([]);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [showDeep, setShowDeep] = useState(false);
@@ -229,8 +235,8 @@ const deep = hasPending
 
   // Subviews
   if (showSystem) return <ContextSystem onBack={() => setShowSystem(false)} />;
-  if (showDeep && cycles[selectedIdx]) return <ContextDeep cycle={cycles[selectedIdx]} onBack={() => setShowDeep(false)} />;
-  if (showCycle && cycles[selectedIdx]) return <ContextCycle cycle={cycles[selectedIdx]} onBack={() => setShowCycle(false)} />;
+  if (showDeep && cycles[selectedIdx]) return <ContextDeep cycle={cycles[selectedIdx]} onBack={() => setShowDeep(false)} userName={userName} />;
+  if (showCycle && cycles[selectedIdx]) return <ContextCycle cycle={cycles[selectedIdx]} onBack={() => setShowCycle(false)} userName={userName} />;
 
   // Empty state
   if (!loading && cycles.length === 0) return (
@@ -268,7 +274,9 @@ const deep = hasPending
         {cycle && (
           <div style={{ flexShrink: 0 }}>
             <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10, color: "var(--r-muted)", letterSpacing: "0.04em", lineHeight: 1.6, marginBottom: 14 }}>
-              Esta é uma leitura estrutural de um momento. Não define quem você é.
+              {userName
+                ? `${userName}, esta é uma leitura estrutural de um momento. Não define quem você é.`
+                : "Esta é uma leitura estrutural de um momento. Não define quem você é."}
             </div>
             <div style={{ height: 1, background: "var(--r-ghost)", opacity: 0.4, marginBottom: 14 }} />
 
