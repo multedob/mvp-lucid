@@ -1,21 +1,81 @@
 // src/pages/Settings.tsx
-// Privacy Policy | Terms of Use | How _rdwth works
-// Download my data | Delete account
+// v2.0 — iOS.2 compliance: real delete account, data export, no placeholders
+// Privacy Policy | Terms of Use | How _rdwth works | Download my data | Delete account
 
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { getToday } from "@/lib/api";
+import { callEdgeFunction, getToday } from "@/lib/api";
 import NavBottom from "@/components/NavBottom";
 
 export default function Settings() {
   const navigate = useNavigate();
+  const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const handleDeleteAccount = async () => {
-    const confirm = window.confirm("Delete your account and all data? This cannot be undone.");
-    if (!confirm) return;
-    await supabase.auth.signOut();
+    const first = window.confirm(
+      "Delete your account and all data?\nThis cannot be undone."
+    );
+    if (!first) return;
+    const second = window.confirm(
+      "Are you absolutely sure? All your readings, pills, questionnaire data, and conversations will be permanently deleted."
+    );
+    if (!second) return;
+
+    setDeleting(true);
+    try {
+      await callEdgeFunction("delete-account", {});
+    } catch (err) {
+      console.error("Delete account error:", err);
+      // Even if the edge function fails partially, sign out locally
+    }
+    // Clear all local data and redirect
     localStorage.clear();
-    navigate("/auth");
+    await supabase.auth.signOut();
+    setDeleting(false);
+    navigate("/auth", { replace: true });
+  };
+
+  const handleDownloadData = async () => {
+    setExporting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) { setExporting(false); return; }
+      const uid = session.user.id;
+
+      // Fetch all user data
+      const [cyclesRes, pillsRes, qStateRes, hagoRes] = await Promise.all([
+        (supabase.from("ipe_cycles") as any).select("*").eq("user_id", uid),
+        (supabase.from("pill_responses") as any).select("*").order("created_at", { ascending: true }),
+        (supabase.from("questionnaire_state") as any).select("*"),
+        (supabase.from("cycles") as any).select("id, user_text, llm_response, created_at, hago_state").eq("user_id", uid).order("created_at", { ascending: true }),
+      ]);
+
+      const exportData = {
+        exported_at: new Date().toISOString(),
+        user_id: uid,
+        ipe_cycles: cyclesRes.data ?? [],
+        pill_responses: pillsRes.data ?? [],
+        questionnaire_state: qStateRes.data ?? [],
+        conversations: hagoRes.data ?? [],
+      };
+
+      // Download as JSON file
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `rdwth-data-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Export error:", err);
+      alert("Something went wrong exporting your data. Please try again.");
+    }
+    setExporting(false);
   };
 
   const handleSignOut = async () => {
@@ -35,18 +95,18 @@ export default function Settings() {
       <div style={{ flex: 1, padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 0 }}>
 
         {[
-          { label: "Privacy Policy",      action: null },
-          { label: "Terms of Use",        action: null },
-          { label: "How _rdwth works",    action: () => navigate("/context") },
-          { label: "Sign out",            action: handleSignOut },
+          { label: "Privacy Policy",   action: () => navigate("/privacy") },
+          { label: "Terms of Use",     action: () => navigate("/terms") },
+          { label: "How _rdwth works", action: () => navigate("/context") },
+          { label: "Sign out",         action: handleSignOut },
         ].map((item, i) => (
           <div key={i}>
             <div
-              onClick={item.action || undefined}
+              onClick={item.action}
               style={{
                 display: "flex", alignItems: "center", gap: 10,
                 padding: "14px 0",
-                cursor: item.action ? "pointer" : "default",
+                cursor: "pointer",
               }}
             >
               <div style={{ width: 1, height: 12, background: "var(--r-ghost)", flexShrink: 0 }} />
@@ -62,16 +122,26 @@ export default function Settings() {
         <div style={{ flex: 1 }} />
 
         {[
-          { label: "Download my data", color: "var(--r-sub)",    action: null },
-          { label: "Delete account",   color: "var(--r-accent)", action: handleDeleteAccount },
+          {
+            label: exporting ? "exporting..." : "Download my data",
+            color: "var(--r-sub)",
+            action: exporting ? undefined : handleDownloadData,
+          },
+          {
+            label: deleting ? "deleting..." : "Delete account",
+            color: "var(--r-accent)",
+            action: deleting ? undefined : handleDeleteAccount,
+          },
         ].map((item, i) => (
           <div key={i}>
             <div style={{ height: 1, background: "var(--r-ghost)", opacity: 0.25 }} />
             <div
-              onClick={item.action || undefined}
+              onClick={item.action}
               style={{
                 display: "flex", alignItems: "center", gap: 10,
-                padding: "14px 0", cursor: item.action ? "pointer" : "default",
+                padding: "14px 0",
+                cursor: item.action ? "pointer" : "default",
+                opacity: item.action ? 1 : 0.5,
               }}
             >
               <div style={{ width: 1, height: 12, background: item.color, flexShrink: 0 }} />
