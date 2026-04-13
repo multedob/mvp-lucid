@@ -550,7 +550,7 @@ export const M3_INVENTARIO_REQUIRED_KEYS: Record<PillId, string[]> = {
   PIII: ['narrativa', 'condicao', 'cobertura_L1_3', 'cobertura_L2_2'],
   PIV:  ['narrativa', 'condicao', 'cobertura_L1_3'],
   PV:   ['narrativa', 'condicao', 'cobertura_L1_3', 'cobertura_L4_3'],
-  PVI:  ['narrativa', 'condicao', 'cobertura_L1_3_pvi', 'cobertura_L1_4'],
+  PVI:  ['narrativa', 'condicao', 'cobertura_L1_3', 'cobertura_L1_3_pvi', 'cobertura_L1_4'],
 };
 
 export const M4_REQUIRED_KEYS: Record<PillId, string[]> = {
