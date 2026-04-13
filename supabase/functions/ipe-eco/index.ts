@@ -281,6 +281,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return json({ error: "INVALID_INPUT", message: "ipe_cycle_id and pill_id required" }, 400);
   }
 
+  // Optional: user name for personalized eco
+  const user_name = typeof body.user_name === "string" && body.user_name.trim() ? body.user_name.trim() : null;
+
   const VALID_PILLS: PillId[] = ["PI", "PII", "PIII", "PIV", "PV", "PVI"];
   if (!VALID_PILLS.includes(pill_id as PillId)) {
     return json({ error: "INVALID_INPUT", message: "pill_id inválido" }, 400);
@@ -376,8 +379,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return json({ eco_text: fallback, scoring_audit_id: auditId, fallback: true }, 200);
   }
 
+  const nameInstruction = user_name
+    ? `\nThe person's name is "${user_name}". You may use their name ONCE at the start of the echo — naturally, like a friend would. Example: "${user_name}, o que ficou aqui é..." Do NOT overuse it.\n\n`
+    : "\n\n";
+
   const userMessage =
-    `${nivelInstrucao(nivel)}\n\n` +
+    `${nivelInstrucao(nivel)}${nameInstruction}` +
     `Generate the echo for this person based on the corpus below.\n\n` +
     `===CORPUS===\n${corpus}\n\n` +
     `Return only the echo text. Nothing else.`;
