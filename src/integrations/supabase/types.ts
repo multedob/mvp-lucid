@@ -350,6 +350,41 @@ export type Database = {
           },
         ]
       }
+      dev_feedback: {
+        Row: {
+          context: Json | null
+          created_at: string | null
+          feedback_text: string
+          id: string
+          ipe_cycle_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          context?: Json | null
+          created_at?: string | null
+          feedback_text: string
+          id?: string
+          ipe_cycle_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          context?: Json | null
+          created_at?: string | null
+          feedback_text?: string
+          id?: string
+          ipe_cycle_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dev_feedback_ipe_cycle_id_fkey"
+            columns: ["ipe_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "ipe_cycles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ipe_cycles: {
         Row: {
           completed_at: string | null
