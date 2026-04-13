@@ -166,6 +166,7 @@ async function executeLlmLanguage(
   nodes_corpus: RagNode[],
   user_text: string,
   pill_context: string | null,
+  user_name: string | null,
 ): Promise<string> {
   const node_texts = node_selection
     .map((n) => {
@@ -298,7 +299,8 @@ STRUCTURAL STATE
 HAGO: ${hago_state}
 Response Type: ${response_type}
 Primary Movement: ${movement_primary}
-${movement_secondary ? `Secondary Movement: ${movement_secondary}` : ""}`;
+${movement_secondary ? `Secondary Movement: ${movement_secondary}` : ""}
+${user_name ? `\nUSER NAME\nThe person you are talking to is called "${user_name}". Use their name naturally and sparingly — like a friend would. Don't overuse it. Never get their name wrong.` : ""}`;
 
   // Build user content with optional pill context and node texts
   const pill_section = pill_context
@@ -554,8 +556,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // Fonte: EDGE_EXECUTION_SEQUENCE_SPEC_v1.11.1, PHASE 9
     let llm_response = "";
     try {
-      // pill_context is optional — passed from frontend when available
+      // pill_context and user_name are optional — passed from frontend when available
       const pill_context = typeof body.pill_context === "string" ? body.pill_context : null;
+      const user_name = typeof body.user_name === "string" && body.user_name.trim() ? body.user_name.trim() : null;
 
       llm_response = await executeLlmLanguage(
         anthropic,
@@ -569,6 +572,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         ragCorpus as RagNode[],
         user_text,
         pill_context,
+        user_name,
       );
     } catch (langErr) {
       // Log mas não abortar — ciclo está persistido
