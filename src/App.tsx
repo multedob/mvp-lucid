@@ -18,6 +18,8 @@ import Context from "./pages/Context";
 import Reed from "./pages/Reed";
 import Settings from "./pages/Settings";
 import Questionnaire from "./pages/Questionnaire";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -148,6 +150,8 @@ const App = () => (
           <Route path="/context" element={<ProtectedRoute><Context /></ProtectedRoute>} />
           <Route path="/reed" element={<ProtectedRoute><Reed /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
           <Route path="/test" element={<Navigate to="/home" replace />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
