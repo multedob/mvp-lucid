@@ -191,6 +191,27 @@ export default function Reed() {
     }
   }
 
+  // ─── Export conversation as CSV download ───
+  function exportConversation(msgs: Message[]): void {
+    const now = new Date()
+    const ts = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`
+    const header = 'ordem,role,texto,notas'
+    const rows = msgs
+      .filter(m => !m.text.startsWith('[sys]'))
+      .map((m, i) => {
+        const escaped = m.text.replace(/"/g, '""').replace(/\n/g, ' | ')
+        return `${i + 1},${m.role},"${escaped}",""`
+      })
+    const csv = '\uFEFF' + [header, ...rows].join('\n') // BOM for Excel UTF-8
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `reed_${ts}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   // ─── Dev commands (/command) — invisible to regular users ───
   async function handleDevCommand(cmd: string): Promise<boolean> {
     const parts = cmd.trim().split(/\s+/)
@@ -209,22 +230,53 @@ export default function Reed() {
         return true
       }
 
+      case '/export': {
+        if (messages.length === 0) { setMessages(prev => [...prev, { role: 'reed', text: '[sys] nenhuma mensagem para exportar.' }]); return true }
+        exportConversation(messages)
+        setMessages(prev => [...prev, { role: 'reed', text: `[sys] conversa exportada (${messages.filter(m => !m.text.startsWith('[sys]')).length} mensagens). coluna "notas" livre pra anotações.` }])
+        return true
+      }
+
       case '/reset': {
         if (!cycleId) { setMessages(prev => [...prev, { role: 'reed', text: '[sys] nenhum ciclo ativo.' }]); return true }
+        // Auto-export before clearing
+        if (messages.filter(m => !m.text.startsWith('[sys]')).length > 0) {
+          exportConversation(messages)
+        }
         try {
           const { data: { session } } = await supabase.auth.getSession()
-          if (session?.user?.id) {
-            // Delete HAGO conversation cycles for current IPE cycle
-            const { data: hagoCycles } = await (supabase as any).from('cycles').select('id').eq('ipe_cycle_id', cycleId)
-            if (hagoCycles?.length) {
-              const ids = hagoCycles.map((c: any) => c.id)
-              await (supabase as any).from('structural_snapshots').delete().in('cycle_id', ids)
-              await (supabase as any).from('node_history').delete().in('cycle_id', ids)
-              await (supabase as any).from('audit_log').delete().in('cycle_id', ids)
-              await (supabase as any).from('cycles').delete().eq('ipe_cycle_id', cycleId)
-            }
+          if (!session?.user?.id) { setMessages(prev => [...prev, { role: 'reed', text: '[sys] sem sessão autenticada.' }]); return true }
+
+          const log: string[] = ['[sys] reset (conversa exportada automaticamente)']
+
+          // 1. Delete HAGO conversation cycles for current IPE cycle
+          const { data: hagoCycles, error: selErr } = await (supabase as any).from('cycles').select('id').eq('ipe_cycle_id', cycleId)
+          if (selErr) {
+            log.push(`cycles select error: ${selErr.message}`)
+          } else if (hagoCycles?.length) {
+            const ids = hagoCycles.map((c: any) => c.id)
+            const { error: e1 } = await (supabase as any).from('structural_snapshots').delete().in('cycle_id', ids)
+            if (e1) log.push(`snapshots: ${e1.message}`)
+            const { error: e2 } = await (supabase as any).from('node_history').delete().in('cycle_id', ids)
+            if (e2) log.push(`node_history: ${e2.message}`)
+            const { error: e3 } = await (supabase as any).from('audit_log').delete().in('cycle_id', ids)
+            if (e3) log.push(`audit_log: ${e3.message}`)
+            const { error: e4 } = await (supabase as any).from('cycles').delete().eq('ipe_cycle_id', cycleId)
+            if (e4) log.push(`cycles delete: ${e4.message}`)
+            else log.push(`${ids.length} ciclo(s) HAGO deletados`)
+          } else {
+            log.push('nenhum ciclo HAGO encontrado (tabela cycles vazia ou RLS bloqueando)')
           }
-          setMessages([{ role: 'reed', text: '[sys] histórico limpo. reed recomeça do zero neste ciclo.' }])
+
+          // 2. Clear local conversation regardless of DB result
+          const hadErrors = log.some(l => l.includes('error') || l.includes('Error'))
+          if (hadErrors) {
+            log.push('conversa local limpa, mas houve erros no banco.')
+          } else {
+            log.push('histórico limpo. reed recomeça do zero.')
+          }
+
+          setMessages([{ role: 'reed', text: log.join('\n') }])
           setBaseVersion(await getCurrentUserVersion())
         } catch (err) {
           setMessages(prev => [...prev, { role: 'reed', text: `[sys] erro ao limpar: ${err instanceof Error ? err.message : String(err)}` }])
@@ -297,7 +349,8 @@ export default function Reed() {
           '[sys] comandos disponíveis:',
           '/name — mostra nome atual',
           '/name <nome> — altera nome',
-          '/reset — limpa histórico de conversa',
+          '/export — baixa conversa como CSV',
+          '/reset — exporta + limpa histórico',
           '/debug — mostra estado interno',
           '/status — mostra ciclo, pills, user',
           '/feedback <texto> — registra feedback',
@@ -355,8 +408,30 @@ export default function Reed() {
 
       {/* Mensagens */}
       <div className="r-scroll" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-        {messages.map((msg, i) =>
-          msg.role === 'reed' ? (
+        {messages.map((msg, i) => {
+          const isSys = msg.role === 'reed' && msg.text.startsWith('[sys]')
+
+          if (isSys) {
+            return (
+              <div key={i} style={{ paddingLeft: 0 }}>
+                <p style={{
+                  fontFamily: "'IBM Plex Mono', var(--r-font-sys), monospace",
+                  fontWeight: 400,
+                  fontSize: 11,
+                  lineHeight: 1.7,
+                  color: 'var(--r-muted)',
+                  letterSpacing: '0.04em',
+                  whiteSpace: 'pre-wrap',
+                  margin: 0,
+                  opacity: 0.75,
+                }}>
+                  {msg.text}
+                </p>
+              </div>
+            )
+          }
+
+          return msg.role === 'reed' ? (
             <div key={i} style={{ paddingLeft: 0 }}>
               <p style={{
                 fontFamily: 'var(--r-font-ed)',
@@ -387,7 +462,7 @@ export default function Reed() {
               </p>
             </div>
           )
-        )}
+        })}
 
         {/* Typing indicator */}
         {sending && (
