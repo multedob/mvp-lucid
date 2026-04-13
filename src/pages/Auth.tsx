@@ -12,8 +12,13 @@ export default function Auth() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
 
   const handleGoogleSignIn = async () => {
+    if (mode === "signup" && !ageConfirmed) {
+      setError("you must confirm you are 16 or older.");
+      return;
+    }
     setLoading(true);
     setError(null);
     const { error } = await supabase.auth.signInWithOAuth({
@@ -35,10 +40,18 @@ export default function Auth() {
       if (error) return setError(error.message);
       navigate("/home", { replace: true });
     } else {
+      // Age gate — required for signup
+      if (!ageConfirmed) {
+        setLoading(false);
+        return setError("you must confirm you are 16 or older.");
+      }
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: `${window.location.origin}/home` },
+        options: {
+          emailRedirectTo: `${window.location.origin}/home`,
+          data: { age_confirmed: true, age_confirmed_at: new Date().toISOString() },
+        },
       });
       setLoading(false);
       if (error) return setError(error.message);
@@ -153,6 +166,37 @@ export default function Auth() {
             />
           </div>
 
+          {/* age gate — signup only */}
+          {mode === "signup" && (
+            <div
+              onClick={() => setAgeConfirmed(a => !a)}
+              style={{
+                display: "flex", alignItems: "center", gap: 10,
+                cursor: "pointer", paddingTop: 2,
+              }}
+            >
+              <div style={{
+                width: 14, height: 14, borderRadius: 2, flexShrink: 0,
+                border: `1px solid ${ageConfirmed ? "var(--r-accent)" : "var(--r-ghost)"}`,
+                background: ageConfirmed ? "var(--r-accent)" : "transparent",
+                transition: "all 0.15s",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                {ageConfirmed && (
+                  <svg width="10" height="10" viewBox="0 0 16 16" fill="none">
+                    <path d="M3 8L7 12L13 4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </div>
+              <span style={{
+                fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10,
+                color: "var(--r-sub)", letterSpacing: "0.04em",
+              }}>
+                I confirm I am 16 years or older
+              </span>
+            </div>
+          )}
+
           {/* erro / mensagem */}
           {error && (
             <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 9, color: "var(--r-accent)", letterSpacing: "0.04em" }}>
@@ -188,7 +232,10 @@ export default function Auth() {
 
         {/* legal */}
         <div style={{ marginTop: 20, fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 8, color: "var(--r-ghost)", letterSpacing: "0.06em", lineHeight: 1.8 }}>
-          by continuing you agree to our terms<br />and privacy policy.
+          by continuing you agree to our{" "}
+          <span onClick={() => navigate("/terms")} style={{ textDecoration: "underline", cursor: "pointer" }}>terms</span>
+          {" "}and{" "}
+          <span onClick={() => navigate("/privacy")} style={{ textDecoration: "underline", cursor: "pointer" }}>privacy policy</span>.
         </div>
 
       </div>
