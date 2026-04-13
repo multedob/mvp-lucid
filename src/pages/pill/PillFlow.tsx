@@ -340,8 +340,9 @@ export default function PillFlow() {
       // ipe-eco: tentativa com fallback — não bloqueia M5 mas loga o erro
       let ecoText = "";
       try {
+        const userName = localStorage.getItem("rdwth_user_name") || undefined;
         const eco = await callEdgeFunction<{ eco_text: string }>("ipe-eco", {
-          ipe_cycle_id: state.ipeCycleId, pill_id: state.pillId,
+          ipe_cycle_id: state.ipeCycleId, pill_id: state.pillId, ...(userName && { user_name: userName }),
         });
         ecoText = eco.eco_text || "";
       } catch (ecoErr) {
