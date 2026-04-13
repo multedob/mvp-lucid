@@ -138,12 +138,24 @@ export default function Reed() {
     }
   }
 
-  async function sendToReed(cid: string, baseVer: number, ils: CanonicalILs, userText: string, retryOnConflict = true) {
+  async function sendToReed(cid: string, baseVer: number, ils: CanonicalILs, userText: string, attempt = 0): Promise<void> {
+    const MAX_RETRIES = 2
+    const BACKOFF_MS = [0, 1500, 3000]
+
     try {
+      if (attempt > 0) {
+        await new Promise(r => setTimeout(r, BACKOFF_MS[attempt] ?? 3000))
+      }
+
       const payload: Record<string, unknown> = {
         ipe_cycle_id: cid,
         base_version: baseVer,
         raw_input: { d1: ils.d1, d2: ils.d2, d3: ils.d3, d4: ils.d4, user_text: userText },
+      }
+      // Pass user name from onboarding so Reed addresses the person correctly
+      const storedName = localStorage.getItem('rdwth_user_name')
+      if (storedName) {
+        payload.user_name = storedName
       }
       // Pass pill text context if available
       if (pillContext) {
@@ -153,16 +165,29 @@ export default function Reed() {
       const nextVersion = data.current_version
       if (typeof nextVersion === 'number') setBaseVersion(nextVersion)
       const text = extractResponseText(data)
-      if (text) setMessages(prev => [...prev, { role: 'reed', text }])
+      // AI content moderation: detect and handle failed/empty/placeholder responses
+      if (text && text !== '[linguistic layer unavailable]') {
+        setMessages(prev => [...prev, { role: 'reed', text }])
+      } else {
+        setMessages(prev => [...prev, { role: 'reed', text: 'algo não funcionou do meu lado. tenta de novo — às vezes eu preciso de uma segunda chance pra pensar direito.' }])
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      if (retryOnConflict && message.includes('VERSION_CONFLICT')) {
+
+      // Version conflict — refresh version and retry once
+      if (message.includes('VERSION_CONFLICT') && attempt === 0) {
         const freshVersion = await getCurrentUserVersion()
         setBaseVersion(freshVersion)
-        await sendToReed(cid, freshVersion, ils, userText, false)
-        return
+        return sendToReed(cid, freshVersion, ils, userText, 1)
       }
-      setError('reed não respondeu. tenta de novo.')
+
+      // Network/timeout errors — retry with backoff
+      if (attempt < MAX_RETRIES && (message.includes('fetch') || message.includes('network') || message.includes('timeout') || message.includes('Failed'))) {
+        return sendToReed(cid, baseVer, ils, userText, attempt + 1)
+      }
+
+      // All retries exhausted
+      setError('reed não conseguiu responder. verifica tua conexão e tenta de novo.')
     }
   }
 
