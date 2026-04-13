@@ -191,13 +191,144 @@ export default function Reed() {
     }
   }
 
+  // ─── Dev commands (/command) — invisible to regular users ───
+  async function handleDevCommand(cmd: string): Promise<boolean> {
+    const parts = cmd.trim().split(/\s+/)
+    const command = parts[0]?.toLowerCase()
+    const args = parts.slice(1).join(' ')
+
+    switch (command) {
+      case '/name': {
+        if (!args) {
+          setMessages(prev => [...prev, { role: 'reed', text: `[sys] nome atual: ${localStorage.getItem('rdwth_user_name') || '(nenhum)'}` }])
+          return true
+        }
+        localStorage.setItem('rdwth_user_name', args)
+        try { await supabase.auth.updateUser({ data: { display_name: args } }) } catch {}
+        setMessages(prev => [...prev, { role: 'reed', text: `[sys] nome atualizado para "${args}". reed vai usar a partir da próxima mensagem.` }])
+        return true
+      }
+
+      case '/reset': {
+        if (!cycleId) { setMessages(prev => [...prev, { role: 'reed', text: '[sys] nenhum ciclo ativo.' }]); return true }
+        try {
+          const { data: { session } } = await supabase.auth.getSession()
+          if (session?.user?.id) {
+            // Delete HAGO conversation cycles for current IPE cycle
+            const { data: hagoCycles } = await (supabase as any).from('cycles').select('id').eq('ipe_cycle_id', cycleId)
+            if (hagoCycles?.length) {
+              const ids = hagoCycles.map((c: any) => c.id)
+              await (supabase as any).from('structural_snapshots').delete().in('cycle_id', ids)
+              await (supabase as any).from('node_history').delete().in('cycle_id', ids)
+              await (supabase as any).from('audit_log').delete().in('cycle_id', ids)
+              await (supabase as any).from('cycles').delete().eq('ipe_cycle_id', cycleId)
+            }
+          }
+          setMessages([{ role: 'reed', text: '[sys] histórico limpo. reed recomeça do zero neste ciclo.' }])
+          setBaseVersion(await getCurrentUserVersion())
+        } catch (err) {
+          setMessages(prev => [...prev, { role: 'reed', text: `[sys] erro ao limpar: ${err instanceof Error ? err.message : String(err)}` }])
+        }
+        return true
+      }
+
+      case '/debug': {
+        const name = localStorage.getItem('rdwth_user_name') || '(nenhum)'
+        const info = [
+          `[sys] debug`,
+          `nome: ${name}`,
+          `cycleId: ${cycleId || '(nenhum)'}`,
+          `baseVersion: ${baseVersion ?? '(null)'}`,
+          `ILs D1: ${canonicalILs?.d1?.join(', ') || '–'}`,
+          `ILs D2: ${canonicalILs?.d2?.join(', ') || '–'}`,
+          `ILs D3: ${canonicalILs?.d3?.join(', ') || '–'}`,
+          `ILs D4: ${canonicalILs?.d4?.join(', ') || '–'}`,
+          `pillContext: ${pillContext ? pillContext.slice(0, 200) + '...' : '(vazio)'}`,
+          `mensagens na sessão: ${messages.length}`,
+        ].join('\n')
+        setMessages(prev => [...prev, { role: 'reed', text: info }])
+        return true
+      }
+
+      case '/status': {
+        try {
+          const { data: { session } } = await supabase.auth.getSession()
+          if (!session?.user?.id) { setMessages(prev => [...prev, { role: 'reed', text: '[sys] sem sessão.' }]); return true }
+          const { data: cycles } = await (supabase.from('ipe_cycles') as any).select('id, cycle_number, status').eq('user_id', session.user.id).order('cycle_number', { ascending: true })
+          const { data: pills } = await (supabase.from('pill_responses') as any).select('pill_id, completed_at, eco_text').eq('ipe_cycle_id', cycleId)
+          const completedPills = pills?.filter((p: any) => p.completed_at).map((p: any) => p.pill_id) || []
+          const withEco = pills?.filter((p: any) => p.eco_text).map((p: any) => p.pill_id) || []
+          const info = [
+            `[sys] status`,
+            `ciclos: ${cycles?.map((c: any) => `${c.cycle_number}(${c.status})`).join(', ') || 'nenhum'}`,
+            `pills completas: ${completedPills.join(', ') || 'nenhuma'}`,
+            `pills com eco: ${withEco.join(', ') || 'nenhuma'}`,
+            `user: ${session.user.email}`,
+            `metadata: ${JSON.stringify(session.user.user_metadata || {}).slice(0, 200)}`,
+          ].join('\n')
+          setMessages(prev => [...prev, { role: 'reed', text: info }])
+        } catch (err) {
+          setMessages(prev => [...prev, { role: 'reed', text: `[sys] erro: ${err instanceof Error ? err.message : String(err)}` }])
+        }
+        return true
+      }
+
+      case '/feedback': {
+        if (!args) { setMessages(prev => [...prev, { role: 'reed', text: '[sys] uso: /feedback <texto>' }]); return true }
+        try {
+          const { data: { session } } = await supabase.auth.getSession()
+          await (supabase as any).from('dev_feedback').insert({
+            user_id: session?.user?.id || null,
+            ipe_cycle_id: cycleId,
+            feedback_text: args,
+            context: { baseVersion, messagesCount: messages.length, pillContext: pillContext?.slice(0, 500) },
+          })
+          setMessages(prev => [...prev, { role: 'reed', text: '[sys] feedback registrado.' }])
+        } catch {
+          // Table might not exist yet — log locally
+          console.log('[DEV_FEEDBACK]', { cycleId, text: args, timestamp: new Date().toISOString() })
+          setMessages(prev => [...prev, { role: 'reed', text: '[sys] feedback salvo no console (tabela dev_feedback não existe ainda).' }])
+        }
+        return true
+      }
+
+      case '/help': {
+        setMessages(prev => [...prev, { role: 'reed', text: [
+          '[sys] comandos disponíveis:',
+          '/name — mostra nome atual',
+          '/name <nome> — altera nome',
+          '/reset — limpa histórico de conversa',
+          '/debug — mostra estado interno',
+          '/status — mostra ciclo, pills, user',
+          '/feedback <texto> — registra feedback',
+          '/help — este menu',
+        ].join('\n') }])
+        return true
+      }
+
+      default:
+        return false
+    }
+  }
+
   async function handleSend() {
-    if (!input.trim() || !cycleId || !canonicalILs || baseVersion === null || sending) return
+    if (!input.trim() || sending) return
     const userText = input.trim()
+
+    // Check for dev commands before regular flow
+    if (userText.startsWith('/')) {
+      setInput('')
+      setMessages(prev => [...prev, { role: 'user', text: userText }])
+      const handled = await handleDevCommand(userText)
+      if (handled) return
+      // If not a known command, fall through to regular send
+    }
+
+    if (!cycleId || !canonicalILs || baseVersion === null) return
     setInput('')
     setSending(true)
     setError(null)
-    setMessages(prev => [...prev, { role: 'user', text: userText }])
+    setMessages(prev => prev[prev.length - 1]?.text === userText ? prev : [...prev, { role: 'user', text: userText }])
     await sendToReed(cycleId, baseVersion, canonicalILs, userText)
     setSending(false)
     setTimeout(() => inputRef.current?.focus(), 100)
