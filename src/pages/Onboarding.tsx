@@ -1,19 +1,33 @@
 // src/pages/Onboarding.tsx
 // Coleta do primeiro nome — fluxo de onboarding
-// Persiste nome em localStorage: "rdwth_user_name"
+// Persiste nome em localStorage + Supabase user_metadata
 // Continue → /home
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { getToday } from "@/lib/api";
 
 export default function Onboarding() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!name.trim()) return;
-    localStorage.setItem("rdwth_user_name", name.trim());
+    const trimmed = name.trim();
+
+    // Persist locally (immediate availability across the app)
+    localStorage.setItem("rdwth_user_name", trimmed);
+
+    // Persist server-side (survives device/browser changes)
+    try {
+      await supabase.auth.updateUser({
+        data: { display_name: trimmed },
+      });
+    } catch {
+      // Non-blocking — localStorage is primary, metadata is backup
+    }
+
     navigate("/home");
   };
 
