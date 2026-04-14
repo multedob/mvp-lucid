@@ -8,12 +8,33 @@ import { callEdgeFunction, getToday } from "@/lib/api";
 type PillId = "PI" | "PII" | "PIII" | "PIV" | "PV" | "PVI";
 type Moment = "M1" | "M2" | "M3_1" | "M3_2" | "M3_3" | "M4" | "M5";
 
+// Variation content loaded from DB
+interface PillVariationContent {
+  m1: { phrase: string; tension_label: string };
+  m2: { scene: string; question: string };
+  m3_1: { question: string; pole_left: string; pole_right: string; context: string };
+  m3_2: {
+    scenario: string;
+    framing: string;
+    options: Array<{
+      key: "A" | "B" | "C" | "D";
+      text: string;
+      followup: string;
+      followup_type: "cost" | "question";
+    }>;
+  };
+  m3_3: { q1: string; q2: string; q_transversal: string; scoring_note: string };
+  m4: { question: string; instruction: string };
+}
+
 interface State {
   pillId: PillId;
   moment: Moment;
-  ipeCycleId: string
+  ipeCycleId: string;
   cycleDisplay: string;
   pillResponseId: string | null;
+  variationKey: string | null;
+  variationContent: PillVariationContent | null;
   m1TimerStart: number;
   m2Input: string;
   m3_1_posicao: number | null;
@@ -25,12 +46,15 @@ interface State {
   m3_2_followupD: string;
   m3_3_narrativa: string;
   m3_3_condicao: string;
+  m3_3_transversal: string;
   m4Input: string;
   ecoText: string;
   loading: boolean;
 }
 
-const PILLS: Record<PillId, { tensao: string; frase: string }> = {
+// ─── Fallback content (V1 hardcoded — used when variation selector fails) ────
+
+const FALLBACK_PILLS: Record<PillId, { tensao: string; frase: string }> = {
   PI:   { tensao: "I ↔ Belonging",       frase: "I moved. Not everything moved with me." },
   PII:  { tensao: "I ↔ Role",            frase: "Still doing what I've always done. But something inside isn't with it anymore." },
   PIII: { tensao: "Presence ↔ Distance", frase: "It's over. And now I can see what I couldn't while it was happening." },
@@ -39,18 +63,8 @@ const PILLS: Record<PillId, { tensao: string; frase: string }> = {
   PVI:  { tensao: "Movement ↔ Pause",    frase: "Building something that matters. The vertigo is part of the work." },
 };
 
-const HEADER_LABEL: Record<Moment, string> = {
-  M1: "1/6", M2: "1/6", M3_1: "2/6", M3_2: "3/6", M3_3: "4/6", M4: "5/6", M5: "",
-};
-
-const M2_TEXT: Record<PillId, string> = {
-  PI: `Marina is 34. Her mother is getting older and over the past few months it has become clear she needs more care. Her siblings don't live in the same city. Marina does.
-
-Everyone agrees they "need to do something" — but no one has taken the first step.
-
-Last night, after visiting her mother, Marina sat in her car outside the house for twenty minutes before driving away. She didn't call any of her siblings. She just sat there, looking at the light in her mother's bedroom window.
-
-What do you think is happening with Marina right now?`,
+const FALLBACK_M2: Record<PillId, string> = {
+  PI: `Marina is 34. Her mother is getting older and over the past few months it has become clear she needs more care. Her siblings don't live in the same city. Marina does.\n\nEveryone agrees they "need to do something" — but no one has taken the first step.\n\nLast night, after visiting her mother, Marina sat in her car outside the house for twenty minutes before driving away. She didn't call any of her siblings. She just sat there, looking at the light in her mother's bedroom window.\n\nWhat do you think is happening with Marina right now?`,
   PII:  "Describe a concrete situation where I ↔ Role became visible in your daily life.\n\nWhat were you doing when you first noticed it?",
   PIII: "Describe a concrete situation where Presence ↔ Distance became visible in your daily life.\n\nWhat were you doing when you first noticed it?",
   PIV:  "Describe a concrete situation where Clarity ↔ Action became visible in your daily life.\n\nWhat were you doing when you first noticed it?",
@@ -58,10 +72,8 @@ What do you think is happening with Marina right now?`,
   PVI:  "Describe a concrete situation where Movement ↔ Pause became visible in your daily life.\n\nWhat were you doing when you first noticed it?",
 };
 
-const M3_2_SITUACAO: Record<PillId, string> = {
-  PI: `Someone close to you is doing something you consider wrong. It's not illegal. But it goes against what you believe.
-
-This person doesn't know that you know. And there's a real cost in any direction you choose.`,
+const FALLBACK_M3_2_SITUACAO: Record<PillId, string> = {
+  PI: `Someone close to you is doing something you consider wrong. It's not illegal. But it goes against what you believe.\n\nThis person doesn't know that you know. And there's a real cost in any direction you choose.`,
   PII:  "You've been offered a role that others think fits you perfectly. But something in you hesitates.\n\nThe offer is real. The deadline is tomorrow.",
   PIII: "Someone you were close to is back in your life. The distance between you has changed both of you.\n\nYou don't know yet if that's good or bad.",
   PIV:  "You know what needs to be done. You've known for a while.\n\nThe cost of acting is clear. So is the cost of waiting.",
@@ -69,7 +81,7 @@ This person doesn't know that you know. And there's a real cost in any direction
   PVI:  "You've been building something for months. It's working — but the pace is taking something from you.\n\nYou can't tell yet if that's a problem or just the cost.",
 };
 
-const M3_2_OPCOES: Record<PillId, Array<{ id: "A"|"B"|"C"|"D"; text: string }>> = {
+const FALLBACK_M3_2_OPCOES: Record<PillId, Array<{ id: "A"|"B"|"C"|"D"; text: string }>> = {
   PI: [
     { id: "A", text: "I don't get involved. Everyone is responsible for their own choices." },
     { id: "B", text: "I speak directly with the person. I accept whatever happens after." },
@@ -106,6 +118,58 @@ const M3_2_OPCOES: Record<PillId, Array<{ id: "A"|"B"|"C"|"D"; text: string }>> 
     { id: "C", text: "I finish this phase, then reassess. I can't decide in the middle." },
     { id: "D", text: "I try to name what's being taken — before I decide what to do." },
   ],
+};
+
+// ─── Content accessors (variation → fallback) ─────────────────────
+
+function getM1(pillId: PillId, vc: PillVariationContent | null) {
+  if (vc) return { frase: vc.m1.phrase, tensao: vc.m1.tension_label };
+  return FALLBACK_PILLS[pillId];
+}
+
+function getM2Text(pillId: PillId, vc: PillVariationContent | null): string {
+  if (vc) return vc.m2.scene + "\n\n" + vc.m2.question;
+  return FALLBACK_M2[pillId];
+}
+
+function getM3_1(pillId: PillId, vc: PillVariationContent | null) {
+  if (vc) return { question: vc.m3_1.question, poleLeft: vc.m3_1.pole_left, poleRight: vc.m3_1.pole_right };
+  return { question: "When you face a decision with real cost, where do you naturally go first?", poleLeft: "outward", poleRight: "inward" };
+}
+
+function getM3_2(pillId: PillId, vc: PillVariationContent | null) {
+  if (vc) {
+    return {
+      scenario: vc.m3_2.scenario,
+      options: vc.m3_2.options.map(o => ({ id: o.key, text: o.text, followup: o.followup, followupType: o.followup_type })),
+    };
+  }
+  return {
+    scenario: FALLBACK_M3_2_SITUACAO[pillId],
+    options: FALLBACK_M3_2_OPCOES[pillId].map(o => ({
+      id: o.id, text: o.text,
+      followup: o.id === "C" ? "What would that third path look like in practice?" : o.id === "D" ? "What specifically would you need to understand before deciding?" : "What do you give up when you choose this?",
+      followupType: (o.id === "C" || o.id === "D") ? "question" as const : "cost" as const,
+    })),
+  };
+}
+
+function getM3_3(pillId: PillId, vc: PillVariationContent | null) {
+  if (vc) return { q1: vc.m3_3.q1, q2: vc.m3_3.q2, qTransversal: vc.m3_3.q_transversal };
+  return {
+    q1: "Think of a moment — recent or not — when you knew clearly what you needed to do and did it, even though it was hard.",
+    q2: "What made it possible to act in that moment?",
+    qTransversal: null as string | null,
+  };
+}
+
+function getM4(pillId: PillId, vc: PillVariationContent | null) {
+  if (vc) return { question: vc.m4.question, instruction: vc.m4.instruction };
+  return { question: "What did you notice about yourself answering this?", instruction: "can be a word. can be a paragraph. what stayed." };
+}
+
+const HEADER_LABEL: Record<Moment, string> = {
+  M1: "1/6", M2: "1/6", M3_1: "2/6", M3_2: "3/6", M3_3: "4/6", M4: "5/6", M5: "",
 };
 
 // ─── Subcomponents ─────────────────────────────────────────────────
@@ -186,20 +250,21 @@ function InvisibleTextarea({
 export default function PillFlow() {
   const navigate = useNavigate();
   const { pillId: rawPillId } = useParams<{ pillId: string }>();
-  const pillId: PillId = (rawPillId && rawPillId in PILLS) ? rawPillId as PillId : "PI";
+  const pillId: PillId = (rawPillId && rawPillId in FALLBACK_PILLS) ? rawPillId as PillId : "PI";
   const [state, setState] = useState<State>({
     pillId, moment: "M1", ipeCycleId: "", cycleDisplay: "",
-    pillResponseId: null, m1TimerStart: Date.now(),
+    pillResponseId: null, variationKey: null, variationContent: null,
+    m1TimerStart: Date.now(),
     m2Input: "", m3_1_posicao: null, m3_1_duasPalavras: "",
     m3_1_situacaoOposta: "", m3_2_opcao: null, m3_2_abreMao: "",
     m3_2_followupC: "", m3_2_followupD: "", m3_3_narrativa: "",
-    m3_3_condicao: "", m4Input: "", ecoText: "", loading: false,
+    m3_3_condicao: "", m3_3_transversal: "", m4Input: "", ecoText: "", loading: false,
   });
 
   const initRef = useRef(false);
 
   const initCycle = useCallback(async () => {
-    if (initRef.current) return;          // ← guard: impede dupla execução (StrictMode)
+    if (initRef.current) return;
     initRef.current = true;
 
     setState(s => ({ ...s, loading: true }));
@@ -207,8 +272,6 @@ export default function PillFlow() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { initRef.current = false; return navigate("/auth"); }
 
-      // Buscar ciclo ativo: pills OU questionnaire (caso usuário tenha navegado para lá e voltado)
-      // Não criar novo se já existe um ciclo incompleto
       let { data: cycle } = await supabase
         .from("ipe_cycles").select("*")
         .eq("user_id", session.user.id)
@@ -216,7 +279,6 @@ export default function PillFlow() {
         .order("cycle_number", { ascending: false })
         .limit(1).maybeSingle();
 
-      // Se ciclo existe mas status foi para "questionnaire" prematuramente, reverter para "pills"
       if (cycle && cycle.status === "questionnaire") {
         const completed = (cycle.pills_completed as string[]) ?? [];
         const allSix = ["PI","PII","PIII","PIV","PV","PVI"].every(p => completed.includes(p));
@@ -244,13 +306,39 @@ export default function PillFlow() {
       const d = new Date(cycle.started_at || new Date());
       const code = String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0");
       const display = String(cycle.cycle_number).padStart(2, "0") + " · " + code;
-      setState(s => ({ ...s, ipeCycleId: cycle.id, cycleDisplay: display, loading: false, m1TimerStart: Date.now() }));
+
+      // Load variation content from ipe-variation-selector
+      let variationKey: string | null = null;
+      let variationContent: PillVariationContent | null = null;
+      try {
+        const vr = await callEdgeFunction<{ variation_key: string; content: PillVariationContent }>(
+          "ipe-variation-selector",
+          {
+            action: "select_pill_variation",
+            user_id: session.user.id,
+            ipe_cycle_id: cycle.id,
+            pill_id: pillId,
+            ipe_level: 1.0,
+          }
+        );
+        variationKey = vr.variation_key;
+        variationContent = vr.content;
+      } catch (err) {
+        console.warn("[PillFlow] Variation selector failed, using fallback content:", err);
+        // Fallback: use hardcoded V1 content (null variationContent triggers fallbacks)
+      }
+
+      setState(s => ({
+        ...s, ipeCycleId: cycle.id, cycleDisplay: display,
+        variationKey, variationContent,
+        loading: false, m1TimerStart: Date.now(),
+      }));
     } catch (err) {
       console.error("[PillFlow] initCycle error:", err);
       initRef.current = false;
       setState(s => ({ ...s, loading: false }));
     }
-  }, [navigate]);
+  }, [navigate, pillId]);
 
   useEffect(() => { initCycle(); }, [initCycle]);
 
@@ -279,6 +367,7 @@ export default function PillFlow() {
       const r = await callEdgeFunction<{ pill_response_id: string }>("ipe-pill-session", {
         ipe_cycle_id: state.ipeCycleId, pill_id: state.pillId, moment: "M1",
         payload: { tempo_segundos: secs },
+        variation_key: state.variationKey, // persisted in pill_responses
       });
       setState(s => ({ ...s, pillResponseId: r.pill_response_id, moment: "M2", loading: false }));
     } catch { setState(s => ({ ...s, moment: "M2", loading: false })); }
@@ -306,16 +395,19 @@ export default function PillFlow() {
           M3_1_regua: { posicao: String(state.m3_1_posicao ?? 3), duas_palavras: state.m3_1_duasPalavras || "—", situacao_oposta: state.m3_1_situacaoOposta || "—" },
           M3_2_escolha: { opcao: state.m3_2_opcao ?? "A", abre_mao: state.m3_2_abreMao || "—", followup_C: state.m3_2_followupC || null, followup_D: state.m3_2_followupD || null },
           M3_3_inventario: (() => {
-            const base: Record<string, unknown> = { narrativa: state.m3_3_narrativa, condicao: state.m3_3_condicao };
-            // Each pill requires specific cobertura keys — see M3_INVENTARIO_REQUIRED_KEYS in ipe_types.ts
+            const base: Record<string, unknown> = {
+              narrativa: state.m3_3_narrativa,
+              condicao: state.m3_3_condicao,
+              transversal_l13: state.m3_3_transversal || null, // new: L1.3 coverage
+            };
             const pid = state.pillId;
-            if (pid === "PI")   return { ...base, cobertura_L1_3: state.m3_3_narrativa };
-            if (pid === "PII")  return { ...base, cobertura_L1_3: state.m3_3_narrativa, cobertura_L1_4: state.m3_3_condicao };
-            if (pid === "PIII") return { ...base, cobertura_L1_3: state.m3_3_narrativa, cobertura_L2_2: state.m3_3_condicao };
-            if (pid === "PIV")  return { ...base, cobertura_L1_3: state.m3_3_narrativa };
-            if (pid === "PV")   return { ...base, cobertura_L1_3: state.m3_3_narrativa, cobertura_L4_3: state.m3_3_condicao };
-            if (pid === "PVI")  return { ...base, cobertura_L1_3: null, cobertura_L1_3_pvi: state.m3_3_narrativa, cobertura_L1_4: state.m3_3_condicao };
-            return { ...base, cobertura_L1_3: state.m3_3_narrativa };
+            if (pid === "PI")   return { ...base, cobertura_L1_3: state.m3_3_transversal || state.m3_3_narrativa };
+            if (pid === "PII")  return { ...base, cobertura_L1_3: state.m3_3_transversal || state.m3_3_narrativa, cobertura_L1_4: state.m3_3_condicao };
+            if (pid === "PIII") return { ...base, cobertura_L1_3: state.m3_3_transversal || state.m3_3_narrativa, cobertura_L2_2: state.m3_3_condicao };
+            if (pid === "PIV")  return { ...base, cobertura_L1_3: state.m3_3_transversal || state.m3_3_narrativa };
+            if (pid === "PV")   return { ...base, cobertura_L1_3: state.m3_3_transversal || state.m3_3_narrativa, cobertura_L4_3: state.m3_3_condicao };
+            if (pid === "PVI")  return { ...base, cobertura_L1_3: null, cobertura_L1_3_pvi: state.m3_3_transversal || state.m3_3_narrativa, cobertura_L1_4: state.m3_3_condicao };
+            return { ...base, cobertura_L1_3: state.m3_3_transversal || state.m3_3_narrativa };
           })(),
         },
       });
@@ -337,7 +429,6 @@ export default function PillFlow() {
     })() },
       });
 
-      // ipe-eco: tentativa com fallback — não bloqueia M5 mas loga o erro
       let ecoText = "";
       try {
         const userName = localStorage.getItem("rdwth_user_name") || undefined;
@@ -347,26 +438,32 @@ export default function PillFlow() {
         ecoText = eco.eco_text || "";
       } catch (ecoErr) {
         console.error("[PillFlow] ipe-eco failed:", ecoErr);
-        // eco é UX-only, não impede avanço — mas logamos para diagnóstico
       }
 
       setState(s => ({ ...s, ecoText, moment: "M5", loading: false }));
     } catch (err) {
       console.error("[PillFlow] submitM4 failed:", err);
-      // M4 persistence falhou — NÃO avança para M5
       setState(s => ({ ...s, loading: false }));
     }
   };
 
-  const pill = PILLS[pillId];
+  // ─── Content derived from variation (or fallback) ────────────
+  const vc = state.variationContent;
+  const m1Content = getM1(pillId, vc);
+  const m2Text = getM2Text(pillId, vc);
+  const m3_1Content = getM3_1(pillId, vc);
+  const m3_2Content = getM3_2(pillId, vc);
+  const m3_3Content = getM3_3(pillId, vc);
+  const m4Content = getM4(pillId, vc);
   const { moment } = state;
 
+  // ─── M1: Impact phrase ────────────────────────────────────────
   if (moment === "M1") return (
     <div className="r-screen">
       <Header moment="M1" />
       <div style={{ padding: "32px 24px 0", flexShrink: 0 }}>
-        <div className="r-impact">{pill.frase}</div>
-        <div className="r-tension" style={{ marginTop: 14 }}>{pill.tensao}</div>
+        <div className="r-impact">{m1Content.frase}</div>
+        <div className="r-tension" style={{ marginTop: 14 }}>{m1Content.tensao}</div>
       </div>
       <div style={{ flex: 1 }} />
       <Footer onBack={() => navigate("/home")} onContinue={submitM1}
@@ -376,11 +473,12 @@ export default function PillFlow() {
     </div>
   );
 
+  // ─── M2: Narrative scene ──────────────────────────────────────
   if (moment === "M2") return (
     <div className="r-screen">
       <Header moment="M2" />
       <div className="r-scroll" style={{ padding: "24px 24px 0" }}>
-        <div className="r-narrative" style={{ whiteSpace: "pre-line" }}>{M2_TEXT[pillId]}</div>
+        <div className="r-narrative" style={{ whiteSpace: "pre-line" }}>{m2Text}</div>
         <div style={{ height: 24 }} />
       </div>
       <div className="r-line" />
@@ -393,14 +491,15 @@ export default function PillFlow() {
     </div>
   );
 
+  // ─── M3_1: Bipolar scale ─────────────────────────────────────
   if (moment === "M3_1") return (
     <div className="r-screen">
       <Header moment="M3_1" />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 24px 16px" }}>
         <div className="r-question" style={{ marginBottom: 20 }}>
-          When you face a decision with real cost, where do you naturally go first?
+          {m3_1Content.question}
         </div>
-        <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10, color: "var(--r-dim)", textAlign: "center", marginBottom: 14 }}>outward</div>
+        <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10, color: "var(--r-dim)", textAlign: "center", marginBottom: 14 }}>{m3_1Content.poleLeft}</div>
         <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative", width: 16 }}>
             <div style={{ position: "absolute", top: 6, bottom: 6, left: "50%", width: "0.5px", background: "var(--r-ghost)", transform: "translateX(-50%)" }} />
@@ -412,7 +511,7 @@ export default function PillFlow() {
             </div>
           </div>
         </div>
-        <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10, color: "var(--r-dim)", textAlign: "center", marginTop: 14 }}>inward</div>
+        <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10, color: "var(--r-dim)", textAlign: "center", marginTop: 14 }}>{m3_1Content.poleRight}</div>
         {state.m3_1_posicao !== null && (
           <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 12 }}>
             <InvisibleTextarea value={state.m3_1_duasPalavras} onChange={v => setState(s => ({ ...s, m3_1_duasPalavras: v }))} placeholder="two words for this position" />
@@ -426,36 +525,40 @@ export default function PillFlow() {
     </div>
   );
 
+  // ─── M3_2: Impossible choice ──────────────────────────────────
   if (moment === "M3_2") {
-    const opcoes = M3_2_OPCOES[pillId];
+    const { scenario, options } = m3_2Content;
+    const selectedOption = options.find(o => o.id === state.m3_2_opcao);
     return (
       <div className="r-screen">
         <Header moment="M3_2" />
         <div className="r-scroll" style={{ padding: "20px 24px 0" }}>
-          <div className="r-narrative" style={{ whiteSpace: "pre-line", marginBottom: 24 }}>{M3_2_SITUACAO[pillId]}</div>
+          <div className="r-narrative" style={{ whiteSpace: "pre-line", marginBottom: 24 }}>{scenario}</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 24 }}>
-            {opcoes.map(o => (
-              <div key={o.id} className="r-choice" onClick={() => setState(s => ({ ...s, m3_2_opcao: o.id }))}>
+            {options.map(o => (
+              <div key={o.id} className="r-choice" onClick={() => setState(s => ({ ...s, m3_2_opcao: o.id as "A"|"B"|"C"|"D" }))}>
                 <div className={`r-choice-dot${state.m3_2_opcao === o.id ? " selected" : ""}`} style={{ marginTop: 5 }} />
                 <div className={`r-choice-text${state.m3_2_opcao === o.id ? " selected" : ""}`}>{o.text}</div>
               </div>
             ))}
           </div>
-          {state.m3_2_opcao === "C" && (
+          {/* Dynamic follow-up based on selected option */}
+          {selectedOption && selectedOption.followupType === "question" && (
             <div style={{ marginBottom: 20 }}>
-              <div className="r-question" style={{ marginBottom: 12, fontSize: 14 }}>What would that third path look like in practice?</div>
-              <InvisibleTextarea value={state.m3_2_followupC} onChange={v => setState(s => ({ ...s, m3_2_followupC: v }))} />
-            </div>
-          )}
-          {state.m3_2_opcao === "D" && (
-            <div style={{ marginBottom: 20 }}>
-              <div className="r-question" style={{ marginBottom: 12, fontSize: 14 }}>What specifically would you need to understand before deciding?</div>
-              <InvisibleTextarea value={state.m3_2_followupD} onChange={v => setState(s => ({ ...s, m3_2_followupD: v }))} />
+              <div className="r-question" style={{ marginBottom: 12, fontSize: 14 }}>{selectedOption.followup}</div>
+              {state.m3_2_opcao === "C" && (
+                <InvisibleTextarea value={state.m3_2_followupC} onChange={v => setState(s => ({ ...s, m3_2_followupC: v }))} />
+              )}
+              {state.m3_2_opcao === "D" && (
+                <InvisibleTextarea value={state.m3_2_followupD} onChange={v => setState(s => ({ ...s, m3_2_followupD: v }))} />
+              )}
             </div>
           )}
           {state.m3_2_opcao && (
             <div style={{ marginBottom: 24 }}>
-              <div className="r-question" style={{ marginBottom: 12, fontSize: 14 }}>What do you give up when you choose this?</div>
+              <div className="r-question" style={{ marginBottom: 12, fontSize: 14 }}>
+                {selectedOption?.followupType === "cost" ? selectedOption.followup : "What do you give up when you choose this?"}
+              </div>
               <InvisibleTextarea value={state.m3_2_abreMao} onChange={v => setState(s => ({ ...s, m3_2_abreMao: v }))} />
             </div>
           )}
@@ -468,15 +571,23 @@ export default function PillFlow() {
     );
   }
 
+  // ─── M3_3: Inventory ──────────────────────────────────────────
   if (moment === "M3_3") return (
     <div className="r-screen">
       <Header moment="M3_3" />
       <div className="r-scroll" style={{ padding: "20px 24px 0" }}>
-        <div className="r-question" style={{ marginBottom: 14 }}>Think of a moment — recent or not — when you knew clearly what you needed to do and did it, even though it was hard.</div>
+        <div className="r-question" style={{ marginBottom: 14 }}>{m3_3Content.q1}</div>
         <InvisibleTextarea value={state.m3_3_narrativa} onChange={v => setState(s => ({ ...s, m3_3_narrativa: v }))} />
         <div style={{ height: 32 }} />
-        <div className="r-question" style={{ marginBottom: 14 }}>What made it possible to act in that moment?</div>
+        <div className="r-question" style={{ marginBottom: 14 }}>{m3_3Content.q2}</div>
         <InvisibleTextarea value={state.m3_3_condicao} onChange={v => setState(s => ({ ...s, m3_3_condicao: v }))} />
+        {m3_3Content.qTransversal && (
+          <>
+            <div style={{ height: 32 }} />
+            <div className="r-question" style={{ marginBottom: 14 }}>{m3_3Content.qTransversal}</div>
+            <InvisibleTextarea value={state.m3_3_transversal} onChange={v => setState(s => ({ ...s, m3_3_transversal: v }))} />
+          </>
+        )}
         <div style={{ height: 24 }} />
       </div>
       <Footer onBack={() => setState(s => ({ ...s, moment: "M3_2" }))} onContinue={submitM3}
@@ -486,12 +597,13 @@ export default function PillFlow() {
     </div>
   );
 
+  // ─── M4: Self-observation ─────────────────────────────────────
   if (moment === "M4") return (
     <div className="r-screen">
       <Header moment="M4" />
       <div style={{ flex: 1, padding: "28px 24px 0", display: "flex", flexDirection: "column", gap: 10 }}>
-        <div className="r-question">What did you notice about yourself answering this?</div>
-        <div className="r-sub">can be a word. can be a paragraph. what stayed.</div>
+        <div className="r-question">{m4Content.question}</div>
+        <div className="r-sub">{m4Content.instruction}</div>
         <div style={{ marginTop: 10 }}>
           <InvisibleTextarea value={state.m4Input} onChange={v => setState(s => ({ ...s, m4Input: v }))} />
         </div>
@@ -502,7 +614,7 @@ export default function PillFlow() {
     </div>
   );
 
-  // M5
+  // ─── M5: Echo ─────────────────────────────────────────────────
   return (
     <div className="r-screen">
       <Header moment="M5" />
@@ -516,7 +628,6 @@ export default function PillFlow() {
           <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10, color: "var(--r-ghost)", letterSpacing: "0.06em" }}>···</div>
         )}
       </div>
-      {/* Talk to Reed button */}
       <div style={{ padding: "0 24px 12px", flexShrink: 0 }}>
         <div
           onClick={() => navigate("/reed")}
