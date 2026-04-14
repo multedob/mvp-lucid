@@ -103,6 +103,7 @@ export type Database = {
           position: number
           principal_resposta: string | null
           protecao_etica: boolean
+          rotation_variation_key: string | null
           tempo_resposta_segundos: number | null
           variante_resposta: string | null
           variante_servida: string | null
@@ -115,6 +116,7 @@ export type Database = {
           position: number
           principal_resposta?: string | null
           protecao_etica?: boolean
+          rotation_variation_key?: string | null
           tempo_resposta_segundos?: number | null
           variante_resposta?: string | null
           variante_servida?: string | null
@@ -127,6 +129,7 @@ export type Database = {
           position?: number
           principal_resposta?: string | null
           protecao_etica?: boolean
+          rotation_variation_key?: string | null
           tempo_resposta_segundos?: number | null
           variante_resposta?: string | null
           variante_servida?: string | null
@@ -456,6 +459,36 @@ export type Database = {
           },
         ]
       }
+      pill_content_variations: {
+        Row: {
+          content: Json
+          created_at: string
+          id: string
+          ipe_level: number
+          locale: string
+          pill_id: string
+          variation_key: string
+        }
+        Insert: {
+          content: Json
+          created_at?: string
+          id?: string
+          ipe_level?: number
+          locale?: string
+          pill_id: string
+          variation_key: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          id?: string
+          ipe_level?: number
+          locale?: string
+          pill_id?: string
+          variation_key?: string
+        }
+        Relationships: []
+      }
       pill_responses: {
         Row: {
           completed_at: string | null
@@ -468,6 +501,7 @@ export type Database = {
           m3_respostas: Json | null
           m4_resposta: Json | null
           pill_id: string
+          variation_key: string | null
         }
         Insert: {
           completed_at?: string | null
@@ -480,6 +514,7 @@ export type Database = {
           m3_respostas?: Json | null
           m4_resposta?: Json | null
           pill_id: string
+          variation_key?: string | null
         }
         Update: {
           completed_at?: string | null
@@ -492,6 +527,7 @@ export type Database = {
           m3_respostas?: Json | null
           m4_resposta?: Json | null
           pill_id?: string
+          variation_key?: string | null
         }
         Relationships: [
           {
@@ -574,6 +610,36 @@ export type Database = {
           id?: string
           prompt_text?: string
           version?: string
+        }
+        Relationships: []
+      }
+      questionnaire_content_variations: {
+        Row: {
+          block_id: string
+          content: Json
+          created_at: string
+          id: string
+          ipe_level: number
+          locale: string
+          variation_key: string
+        }
+        Insert: {
+          block_id: string
+          content: Json
+          created_at?: string
+          id?: string
+          ipe_level?: number
+          locale?: string
+          variation_key: string
+        }
+        Update: {
+          block_id?: string
+          content?: Json
+          created_at?: string
+          id?: string
+          ipe_level?: number
+          locale?: string
+          variation_key?: string
         }
         Relationships: []
       }
