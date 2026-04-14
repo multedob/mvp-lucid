@@ -140,7 +140,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
       if (typeof tempo !== "number" || tempo < 0) {
         return json({ error: "INVALID_INPUT", message: "M1 requires tempo_segundos: number >= 0" }, 400);
       }
-      update      = { m1_tempo_segundos: tempo };
+      // variation_key: tracks which content variation was shown to the user
+      // Optional for backward compatibility (null = legacy/V1 hardcoded content)
+      const variation_key = (body.variation_key as string) ?? null;
+      update      = { m1_tempo_segundos: tempo, ...(variation_key ? { variation_key } : {}) };
       next_moment = "M2";
       break;
     }
