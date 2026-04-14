@@ -451,6 +451,7 @@ async function handleNextBlock(
     const variante = block_response.variante_resposta as string | null;
     const protecao = block_response.protecao_etica as boolean ?? false;
     const tempo = block_response.tempo_resposta_segundos as number | null;
+    const rotation_variation_key = (block_response.rotation_variation_key as string) ?? null;
 
     const aguardandoVariante = flags.bloco_aguardando_variante;
 
@@ -468,6 +469,7 @@ async function handleNextBlock(
         variante_resposta: variante,
         protecao_etica: protecao,
         tempo_resposta_segundos: tempo,
+        rotation_variation_key,
       }, { onConflict: "ipe_cycle_id,block_id" });
 
       // Chamar ipe-scoring-block com principal + variante
@@ -540,6 +542,7 @@ async function handleNextBlock(
           variante_resposta: null,
           protecao_etica: protecao,
           tempo_resposta_segundos: tempo,
+          rotation_variation_key,
         }, { onConflict: "ipe_cycle_id,block_id" });
 
         // Chamar ipe-scoring-block com principal apenas (scoring provisório)
