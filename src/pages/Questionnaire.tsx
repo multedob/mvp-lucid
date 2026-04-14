@@ -236,6 +236,11 @@ export default function Questionnaire() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
+  // Rotation variants: loaded once after /plan, used for principal question text
+  const [rotationVariants, setRotationVariants] = useState<
+    Record<string, { variation_key: string; content: { principal: string; hint?: string | null } }>
+  >({})
+
   // ─────────────────────────────────────
   // Init
   // ─────────────────────────────────────
@@ -262,6 +267,27 @@ export default function Questionnaire() {
         ipe_cycle_id: cycle.id,
       })
       setStateId((planRes as any).questionnaire_state_id)
+
+      // Load rotation variants for all blocks (weighted random per-block)
+      try {
+        const allBlockIds = [
+          'L1.1','L1.2','L1.3','L1.4','L2.1','L2.2','L2.3','L2.4',
+          'L3.1','L3.2','L3.3','L3.4','L3.4_CP','L4.1','L4.2','L4.3','L4.4',
+        ]
+        const vrRes = await callEdgeFunction<{
+          variations: Record<string, { variation_key: string; content: { principal: string; hint?: string | null } }>
+        }>('ipe-variation-selector', {
+          action: 'select_questionnaire_variations',
+          user_id: session.user.id,
+          ipe_cycle_id: cycle.id,
+          block_ids: allBlockIds,
+          ipe_level: 1.0,
+        })
+        setRotationVariants(vrRes.variations ?? {})
+      } catch (err) {
+        console.warn('[Questionnaire] Rotation variant selector failed, using default questions:', err)
+        // Fallback: rotationVariants stays empty → questions.ts used as-is
+      }
 
       await fetchNextBlock(cycle.id, null)
     } catch (e) {
@@ -320,6 +346,9 @@ export default function Questionnaire() {
 
     const tempo = Math.round((Date.now() - startTime) / 1000)
 
+    // Include rotation_variation_key so backend can track which version was shown
+    const rotationKey = rotationVariants[currentBlock]?.variation_key ?? null
+
     const blockResponse = currentVariant
       ? {
           block_id: currentBlock,
@@ -327,6 +356,7 @@ export default function Questionnaire() {
           variante_resposta: protecao ? null : answer.trim(),
           protecao_etica: protecao,
           tempo_resposta_segundos: tempo,
+          rotation_variation_key: rotationKey,
         }
       : {
           block_id: currentBlock,
@@ -334,6 +364,7 @@ export default function Questionnaire() {
           variante_resposta: null,
           protecao_etica: protecao,
           tempo_resposta_segundos: tempo,
+          rotation_variation_key: rotationKey,
         }
 
     await fetchNextBlock(cycleId, blockResponse)
@@ -412,14 +443,22 @@ export default function Questionnaire() {
     if (!currentBlock) return ''
     const block = QUESTIONS[currentBlock as BlockId]
     if (!block) return ''
+    // Calibration variants (from scoring) — always use questions.ts
     if (phase === 'variant' && currentVariant) return block.variantes[currentVariant] ?? block.principal
+    // Fallbacks — always use questions.ts (Portuguese, as designed)
     if (phase === 'fallback')    return block.fallback    ?? block.principal
     if (phase === 'subfallback') return block.subfallback ?? block.fallback ?? block.principal
+    // Principal question — use rotation variant if available
+    const rotation = rotationVariants[currentBlock]
+    if (rotation?.content?.principal) return rotation.content.principal
     return block.principal
   }
 
   function getHintText(): string | undefined {
     if (!currentBlock || phase !== 'question') return undefined
+    // Rotation variant may include a hint
+    const rotation = rotationVariants[currentBlock]
+    if (rotation?.content?.hint) return rotation.content.hint
     return QUESTIONS[currentBlock as BlockId]?.hint
   }
 
