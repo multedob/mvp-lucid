@@ -496,10 +496,18 @@ export type Database = {
           id: string
           ipe_cycle_id: string
           m1_tempo_segundos: number | null
+          m2_audio_duration_ms: number | null
+          m2_audio_url: string | null
           m2_cal_signals: Json | null
           m2_resposta: string | null
+          m2_transcription_final: string | null
+          m2_transcription_live: string | null
           m3_respostas: Json | null
+          m4_audio_duration_ms: number | null
+          m4_audio_url: string | null
           m4_resposta: Json | null
+          m4_transcription_final: string | null
+          m4_transcription_live: string | null
           pill_id: string
           variation_key: string | null
         }
@@ -509,10 +517,18 @@ export type Database = {
           id?: string
           ipe_cycle_id: string
           m1_tempo_segundos?: number | null
+          m2_audio_duration_ms?: number | null
+          m2_audio_url?: string | null
           m2_cal_signals?: Json | null
           m2_resposta?: string | null
+          m2_transcription_final?: string | null
+          m2_transcription_live?: string | null
           m3_respostas?: Json | null
+          m4_audio_duration_ms?: number | null
+          m4_audio_url?: string | null
           m4_resposta?: Json | null
+          m4_transcription_final?: string | null
+          m4_transcription_live?: string | null
           pill_id: string
           variation_key?: string | null
         }
@@ -522,10 +538,18 @@ export type Database = {
           id?: string
           ipe_cycle_id?: string
           m1_tempo_segundos?: number | null
+          m2_audio_duration_ms?: number | null
+          m2_audio_url?: string | null
           m2_cal_signals?: Json | null
           m2_resposta?: string | null
+          m2_transcription_final?: string | null
+          m2_transcription_live?: string | null
           m3_respostas?: Json | null
+          m4_audio_duration_ms?: number | null
+          m4_audio_url?: string | null
           m4_resposta?: Json | null
+          m4_transcription_final?: string | null
+          m4_transcription_live?: string | null
           pill_id?: string
           variation_key?: string | null
         }

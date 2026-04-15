@@ -312,14 +312,14 @@ function validateScoringOutput(raw: string): ParseResult {
 
   // v0.7.8 — Aceitar tanto "sinais" quanto "linhas" como chave principal
   // PI usa "sinais", PII+ pode usar "linhas" dependendo do prompt
-  const sinaisData = parsed.sinais ?? (parsed as Record<string, unknown>).linhas as Record<string, LinhaCorpus> | undefined;
+  const sinaisData = parsed.sinais ?? (parsed as unknown as Record<string, unknown>).linhas as Record<string, LinhaCorpus> | undefined;
   if (!sinaisData || typeof sinaisData !== "object") {
     return { success: false, reason: "schema_violation: missing sinais/linhas" };
   }
   // Normalizar para "sinais" no parsed output
   parsed.sinais = sinaisData;
   // Limpar chave "linhas" duplicada se existir
-  delete (parsed as Record<string, unknown>).linhas;
+  delete (parsed as unknown as Record<string, unknown>).linhas;
 
   for (const [lineId, linha] of Object.entries(parsed.sinais)) {
     // v0.7.10 — Se IL_sinal é um primitivo (número), converter para objeto
@@ -331,23 +331,23 @@ function validateScoringOutput(raw: string): ParseResult {
 
     // v0.7.7 — Snap IL antes de validar
     // v0.7.8 — Aceitar IL_sinal ou acesso direto a campos de corte
-    const ilSinal = (linha?.IL_sinal && typeof linha.IL_sinal === "object") ? linha.IL_sinal : linha;
+    const ilSinal = (linha?.IL_sinal && typeof linha.IL_sinal === "object") ? linha.IL_sinal : linha as any;
     const numerico = ilSinal?.numerico;
     if (numerico !== null && numerico !== undefined) {
       const snapped = snapIL(numerico) as number;
       if (linha?.IL_sinal && typeof linha.IL_sinal === "object") {
-        linha.IL_sinal.numerico = snapped;
+        (linha.IL_sinal as any).numerico = snapped;
       }
     }
 
     // Validar IL
-    const il = (linha?.IL_sinal && typeof linha.IL_sinal === "object") ? linha.IL_sinal.numerico : linha?.numerico;
+    const il = (linha?.IL_sinal && typeof linha.IL_sinal === "object") ? (linha.IL_sinal as any).numerico : (linha as any)?.numerico;
     if (il !== null && il !== undefined && !IL_VALID_VALUES.has(il)) {
       return { success: false, reason: `il_out_of_range for ${lineId}: ${il}` };
     }
 
     // Validar FD — aceitar FD_linha ou fd_linha
-    const fd = linha?.FD_linha ?? linha?.fd_linha;
+    const fd = linha?.FD_linha ?? (linha as any)?.fd_linha;
     if (fd !== undefined && fd !== null) {
       if (typeof fd !== "number" || fd < 0 || fd > 1) {
         return { success: false, reason: `fd_out_of_range for ${lineId}: ${fd}` };
@@ -355,7 +355,7 @@ function validateScoringOutput(raw: string): ParseResult {
     }
 
     // C6 — Validar faixa
-    const faixa = (linha?.IL_sinal && typeof linha.IL_sinal === "object") ? linha.IL_sinal.faixa : linha?.faixa;
+    const faixa = (linha?.IL_sinal && typeof linha.IL_sinal === "object") ? (linha.IL_sinal as any).faixa : (linha as any)?.faixa;
     if (faixa !== undefined && !VALID_FAIXAS.has(faixa as string)) {
       return { success: false, reason: `faixa_inválida for ${lineId}: ${faixa}` };
     }
@@ -368,7 +368,7 @@ function validateScoringOutput(raw: string): ParseResult {
 
     // C6 — Validar GCC_por_corte (estrutura mínima se presente)
     // v0.7.8 — Aceitar "cortes" em IL_sinal ou diretamente na linha
-    const gcc = ((linha?.IL_sinal && typeof linha.IL_sinal === "object" ? linha.IL_sinal.cortes : undefined) ?? linha?.cortes) as Record<string, unknown> | undefined;
+    const gcc = ((linha?.IL_sinal && typeof linha.IL_sinal === "object" ? (linha.IL_sinal as any).cortes : undefined) ?? (linha as any)?.cortes) as Record<string, unknown> | undefined;
     if (gcc) {
       for (const corte of CORTES_ESPERADOS) {
         const c = gcc[corte] as Record<string, unknown> | undefined;
@@ -418,16 +418,16 @@ function validateScoringOutput(raw: string): ParseResult {
       }
       if (directNum !== undefined && linha.IL_sinal.numerico === undefined) {
         const snapped = snapIL(directNum);
-        linha.IL_sinal.numerico = snapped !== undefined && snapped !== null ? snapped : directNum;
+        (linha.IL_sinal as any).numerico = snapped !== undefined && snapped !== null ? snapped : directNum;
       }
       if (directFaixa !== undefined && linha.IL_sinal.faixa === undefined) {
-        linha.IL_sinal.faixa = directFaixa;
+        (linha.IL_sinal as any).faixa = directFaixa;
       }
       // v0.7.11 — Se faixa foi setada mas numerico ainda falta, derivar dos cortes
       if (linha.IL_sinal.numerico === undefined && linha.IL_sinal.faixa) {
-        const cortesForDerive = (linha.IL_sinal.cortes ?? (linha as any).cortes) as Record<string, unknown> | undefined;
+        const cortesForDerive = ((linha.IL_sinal as any).cortes ?? (linha as any).cortes) as Record<string, unknown> | undefined;
         const derivedNum = deriveNumericoFromFaixa(linha.IL_sinal.faixa as string, cortesForDerive);
-        linha.IL_sinal.numerico = derivedNum;
+        (linha.IL_sinal as any).numerico = derivedNum;
         console.warn(`IL_NORMALIZE+DERIVE ${lineId}: faixa=${linha.IL_sinal.faixa} → numerico=${derivedNum}`);
       } else {
         console.warn(`IL_NORMALIZE ${lineId}: direct → IL_sinal (num=${linha.IL_sinal.numerico}, faixa=${linha.IL_sinal.faixa})`);
@@ -439,7 +439,7 @@ function validateScoringOutput(raw: string): ParseResult {
     }
 
     // Caso 3: Sem numerico/faixa explícitos, mas tem cortes → derivar
-    const cortes = (linha.IL_sinal?.cortes ?? (linha as any).cortes) as Record<string, unknown> | undefined;
+    const cortes = ((linha.IL_sinal as any)?.cortes ?? (linha as any).cortes) as Record<string, unknown> | undefined;
     if (cortes) {
       const derivedFaixa = deriveFaixaFromCortes(cortes);
       if (derivedFaixa) {
@@ -448,10 +448,10 @@ function validateScoringOutput(raw: string): ParseResult {
           (linha as any).IL_sinal = {};
         }
         if (linha.IL_sinal.numerico === undefined) {
-          linha.IL_sinal.numerico = derivedNum;
+          (linha.IL_sinal as any).numerico = derivedNum;
         }
         if (linha.IL_sinal.faixa === undefined) {
-          linha.IL_sinal.faixa = derivedFaixa;
+          (linha.IL_sinal as any).faixa = derivedFaixa;
         }
         console.warn(`IL_DERIVE ${lineId}: cortes → IL_sinal (num=${derivedNum}, faixa=${derivedFaixa})`);
       }
