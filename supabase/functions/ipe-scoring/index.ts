@@ -418,16 +418,16 @@ function validateScoringOutput(raw: string): ParseResult {
       }
       if (directNum !== undefined && linha.IL_sinal.numerico === undefined) {
         const snapped = snapIL(directNum);
-        linha.IL_sinal.numerico = snapped !== undefined && snapped !== null ? snapped : directNum;
+        (linha.IL_sinal as any).numerico = snapped !== undefined && snapped !== null ? snapped : directNum;
       }
       if (directFaixa !== undefined && linha.IL_sinal.faixa === undefined) {
-        linha.IL_sinal.faixa = directFaixa;
+        (linha.IL_sinal as any).faixa = directFaixa;
       }
       // v0.7.11 — Se faixa foi setada mas numerico ainda falta, derivar dos cortes
       if (linha.IL_sinal.numerico === undefined && linha.IL_sinal.faixa) {
-        const cortesForDerive = (linha.IL_sinal.cortes ?? (linha as any).cortes) as Record<string, unknown> | undefined;
+        const cortesForDerive = ((linha.IL_sinal as any).cortes ?? (linha as any).cortes) as Record<string, unknown> | undefined;
         const derivedNum = deriveNumericoFromFaixa(linha.IL_sinal.faixa as string, cortesForDerive);
-        linha.IL_sinal.numerico = derivedNum;
+        (linha.IL_sinal as any).numerico = derivedNum;
         console.warn(`IL_NORMALIZE+DERIVE ${lineId}: faixa=${linha.IL_sinal.faixa} → numerico=${derivedNum}`);
       } else {
         console.warn(`IL_NORMALIZE ${lineId}: direct → IL_sinal (num=${linha.IL_sinal.numerico}, faixa=${linha.IL_sinal.faixa})`);
@@ -439,7 +439,7 @@ function validateScoringOutput(raw: string): ParseResult {
     }
 
     // Caso 3: Sem numerico/faixa explícitos, mas tem cortes → derivar
-    const cortes = (linha.IL_sinal?.cortes ?? (linha as any).cortes) as Record<string, unknown> | undefined;
+    const cortes = ((linha.IL_sinal as any)?.cortes ?? (linha as any).cortes) as Record<string, unknown> | undefined;
     if (cortes) {
       const derivedFaixa = deriveFaixaFromCortes(cortes);
       if (derivedFaixa) {
@@ -448,10 +448,10 @@ function validateScoringOutput(raw: string): ParseResult {
           (linha as any).IL_sinal = {};
         }
         if (linha.IL_sinal.numerico === undefined) {
-          linha.IL_sinal.numerico = derivedNum;
+          (linha.IL_sinal as any).numerico = derivedNum;
         }
         if (linha.IL_sinal.faixa === undefined) {
-          linha.IL_sinal.faixa = derivedFaixa;
+          (linha.IL_sinal as any).faixa = derivedFaixa;
         }
         console.warn(`IL_DERIVE ${lineId}: cortes → IL_sinal (num=${derivedNum}, faixa=${derivedFaixa})`);
       }
