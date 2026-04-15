@@ -106,14 +106,20 @@ export function RevealText({
         if (char === '\n') {
           return <br key={i} />
         }
+        // Render spaces as plain text nodes so the browser can use them as
+        // soft-wrap opportunities. Wrapping spaces in <span whiteSpace:pre>
+        // eliminates wrap points and causes horizontal overflow on narrow
+        // viewports (mobile). Spaces have no visible glyph, so skipping the
+        // per-char fade on them is imperceptible.
+        if (char === ' ') {
+          return ' '
+        }
         return (
           <span
             key={i}
             style={{
               opacity: visible[i] ? 1 : 0,
               transition: `opacity ${charFadeMs}ms ease-out`,
-              // Preserve spacing for whitespace
-              whiteSpace: 'pre',
             }}
           >
             {char}
