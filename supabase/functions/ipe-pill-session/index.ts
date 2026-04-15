@@ -153,9 +153,19 @@ Deno.serve(async (req: Request): Promise<Response> => {
       if (typeof resposta !== "string" || !resposta.trim()) {
         return json({ error: "INVALID_INPUT", message: "M2 requires resposta: string" }, 400);
       }
+      // Optional audio metadata (present when user used the mic).
+      // All four fields are nullable — text-only responses leave them null.
+      const audioUrl        = typeof payload.audio_url === "string" ? payload.audio_url : null;
+      const transcLive      = typeof payload.transcription_live === "string" ? payload.transcription_live : null;
+      const transcFinal     = typeof payload.transcription_final === "string" ? payload.transcription_final : null;
+      const audioDurationMs = typeof payload.audio_duration_ms === "number" ? payload.audio_duration_ms : null;
       update = {
-        m2_resposta:    resposta,
-        m2_cal_signals: (payload.cal_signals as M2CalSignals) ?? null,
+        m2_resposta:             resposta,
+        m2_cal_signals:          (payload.cal_signals as M2CalSignals) ?? null,
+        m2_audio_url:            audioUrl,
+        m2_transcription_live:   transcLive,
+        m2_transcription_final:  transcFinal,
+        m2_audio_duration_ms:    audioDurationMs,
       };
       next_moment = "M3";
       break;
@@ -188,9 +198,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
       if (m4Error) {
         return json({ error: "INVALID_INPUT", message: `M4 inválido para ${pill_id}: ${m4Error}` }, 400);
       }
+      // Optional audio metadata (same pattern as M2).
+      const audioUrl        = typeof payload.audio_url === "string" ? payload.audio_url : null;
+      const transcLive      = typeof payload.transcription_live === "string" ? payload.transcription_live : null;
+      const transcFinal     = typeof payload.transcription_final === "string" ? payload.transcription_final : null;
+      const audioDurationMs = typeof payload.audio_duration_ms === "number" ? payload.audio_duration_ms : null;
       update = {
-        m4_resposta:  m4,
-        completed_at: new Date().toISOString(),
+        m4_resposta:             m4,
+        completed_at:            new Date().toISOString(),
+        m4_audio_url:            audioUrl,
+        m4_transcription_live:   transcLive,
+        m4_transcription_final:  transcFinal,
+        m4_audio_duration_ms:    audioDurationMs,
       };
       next_moment       = "M5";
       scoring_triggered = true;
