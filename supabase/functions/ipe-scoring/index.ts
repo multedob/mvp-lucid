@@ -355,7 +355,7 @@ function validateScoringOutput(raw: string): ParseResult {
     }
 
     // C6 — Validar faixa
-    const faixa = (linha?.IL_sinal && typeof linha.IL_sinal === "object") ? linha.IL_sinal.faixa : linha?.faixa;
+    const faixa = (linha?.IL_sinal && typeof linha.IL_sinal === "object") ? (linha.IL_sinal as any).faixa : (linha as any)?.faixa;
     if (faixa !== undefined && !VALID_FAIXAS.has(faixa as string)) {
       return { success: false, reason: `faixa_inválida for ${lineId}: ${faixa}` };
     }
