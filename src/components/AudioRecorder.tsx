@@ -25,6 +25,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { callEdgeFunction } from "@/lib/api";
 
 type Moment = "m2" | "m4";
 
@@ -58,12 +59,12 @@ interface SpeechRecognitionLike {
 }
 
 function getSpeechRecognitionCtor(): (new () => SpeechRecognitionLike) | null {
-  const w = window as unknown as Record<string, unknown>;
-  return (w.SpeechRecognition ?? w.webkitSpeechRecognition) as
-    | (new () => SpeechRecognitionLike)
-    | null
-    | undefined
-    ?? null;
+  if (typeof window === "undefined") return null;
+  const w = window as unknown as {
+    SpeechRecognition?: new () => SpeechRecognitionLike;
+    webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+  };
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
 /** Convert 'pt-BR' → 'pt' (ISO-639-1) for Whisper. */
@@ -206,23 +207,13 @@ export function AudioRecorder({
 
       onAudioStored?.({ path, durationMs });
 
-      // Whisper transcription via edge function.
+      // Whisper transcription via edge function (uses the shared helper,
+      // which reads VITE_SUPABASE_URL and attaches the current session).
       const iso = localeToIso639(language);
-      const { data: { session } } = await supabase.auth.getSession();
-      const supabaseUrl = (supabase as unknown as { supabaseUrl: string }).supabaseUrl;
-      const res = await fetch(`${supabaseUrl}/functions/v1/transcribe-audio`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session?.access_token ?? ""}`,
-        },
-        body: JSON.stringify({ audio_path: path, language: iso }),
+      const data = await callEdgeFunction<{ text?: string }>("transcribe-audio", {
+        audio_path: path,
+        language: iso,
       });
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(`whisper_failed: ${txt}`);
-      }
-      const data = await res.json() as { text?: string };
       const finalText = (data.text ?? "").trim();
       if (finalText) onFinalTranscript?.(finalText);
       setState("idle");
