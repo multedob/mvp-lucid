@@ -78,7 +78,19 @@ export default function Reed() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => { init() }, [])
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
+  // Scroll behavior:
+  //   - Initial load: stay at top so user reads from the beginning of the
+  //     conversation (welcome message or oldest history).
+  //   - New messages added during session: auto-scroll to bottom.
+  const didInitialRenderRef = useRef(false)
+  useEffect(() => {
+    if (messages.length === 0) return
+    if (!didInitialRenderRef.current) {
+      didInitialRenderRef.current = true
+      return
+    }
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   async function init() {
     try {
