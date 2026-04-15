@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { callEdgeFunction, getCurrentUserVersion, getToday } from '@/lib/api'
 import NavBottom from '@/components/NavBottom'
+import { RevealText } from '@/components/RevealText'
 
 interface Message { role: 'user' | 'reed'; text: string }
 interface CanonicalILs { d1: number[]; d2: number[]; d3: number[]; d4: number[] }
@@ -64,6 +65,9 @@ export default function Reed() {
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const [messages, setMessages] = useState<Message[]>([])
+  // Index below this count = historical messages (no reveal animation).
+  // Messages at or above this index are "new" (animate with RevealText).
+  const historicalCountRef = useRef(0)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
@@ -127,9 +131,11 @@ export default function Reed() {
             { role: 'reed' as const, text: i.llm_response ?? '' },
           ])
           .filter((m: Message) => m.text)
+        historicalCountRef.current = history.length
         setMessages(history)
       } else {
-        // First visit — show welcome message
+        // First visit — welcome message is "new" (index 0 >= historicalCount 0), so it animates
+        historicalCountRef.current = 0
         setMessages([{ role: 'reed', text: WELCOME_MESSAGE }])
       }
       setLoading(false)
@@ -435,18 +441,23 @@ export default function Reed() {
 
           return msg.role === 'reed' ? (
             <div key={i} style={{ paddingLeft: 0 }}>
-              <p style={{
-                fontFamily: 'var(--r-font-ed)',
-                fontWeight: 800,
-                fontSize: 16,
-                lineHeight: 1.7,
-                color: 'var(--r-text)',
-                letterSpacing: '0.01em',
-                whiteSpace: 'pre-wrap',
-                margin: 0,
-              }}>
-                {msg.text}
-              </p>
+              <RevealText
+                as="p"
+                text={msg.text}
+                enabled={i >= historicalCountRef.current}
+                duration={1800}
+                charFadeMs={320}
+                style={{
+                  fontFamily: 'var(--r-font-ed)',
+                  fontWeight: 800,
+                  fontSize: 16,
+                  lineHeight: 1.7,
+                  color: 'var(--r-text)',
+                  letterSpacing: '0.01em',
+                  whiteSpace: 'pre-wrap',
+                  margin: 0,
+                }}
+              />
             </div>
           ) : (
             <div key={i} style={{ paddingLeft: 28 }}>
