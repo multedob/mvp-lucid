@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const openaiKey   = Deno.env.get("OPENAI_API_KEY");
+    const openaiKey   = (Deno.env.get("OPENAI_API_KEY") ?? "").trim();
     if (!openaiKey) return json({ error: "missing_openai_key" }, 500);
 
     // Anon client (with caller JWT) — used to verify the caller's user_id.
