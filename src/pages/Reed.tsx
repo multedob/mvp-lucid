@@ -45,17 +45,19 @@ function buildPillContextString(pills: PillContext[]): string {
     .join('\n')
 }
 
-const WELCOME_MESSAGE = `oi. eu sou o reed.
+const WELCOME_MESSAGE = `hi. i'm reed.
 
-eu faço parte do rdwth — um sistema de autoconhecimento. não sou humano, e não finjo ser. mas presto atenção no que você diz.
+i'm part of rdwth — a self-knowledge system. i'm not human, and i don't pretend to be. but i pay attention to what you say.
 
-o sistema tem três partes que se alimentam: as pills (leituras curtas que você reage), o questionário (perguntas sobre como você vive e pensa), e essa conversa aqui comigo.
+the system has four parts that feed each other: the pills (short readings you react to), the questionnaire (questions about how you live and think), the third-party questionnaire (where a few people who know you well answer about you), and this conversation with me.
 
-eu leio o que essas partes revelam sobre você. quanto mais você interage com as pills e responde o questionário, mais eu entendo sobre você, e mais a conversa aqui rende.
+i read what those parts reveal about you. the more you engage with the pills, the questionnaires, and this conversation, the more i understand you, and the more this conversation goes somewhere.
 
-no começo pode parecer simples. mas conforme você vai completando ciclos, as coisas ganham camada.
+it can feel simple at first. but as you complete cycles, things gain layers.
 
-pode começar me dizendo o que te trouxe aqui, ou perguntando qualquer coisa.`
+you can start by telling me what brought you here, or ask me anything.
+
+(write in whatever language feels natural — i'll follow.)`
 
 export default function Reed() {
   const navigate = useNavigate()
