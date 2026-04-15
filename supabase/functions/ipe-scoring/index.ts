@@ -312,14 +312,14 @@ function validateScoringOutput(raw: string): ParseResult {
 
   // v0.7.8 — Aceitar tanto "sinais" quanto "linhas" como chave principal
   // PI usa "sinais", PII+ pode usar "linhas" dependendo do prompt
-  const sinaisData = parsed.sinais ?? (parsed as Record<string, unknown>).linhas as Record<string, LinhaCorpus> | undefined;
+  const sinaisData = parsed.sinais ?? (parsed as unknown as Record<string, unknown>).linhas as Record<string, LinhaCorpus> | undefined;
   if (!sinaisData || typeof sinaisData !== "object") {
     return { success: false, reason: "schema_violation: missing sinais/linhas" };
   }
   // Normalizar para "sinais" no parsed output
   parsed.sinais = sinaisData;
   // Limpar chave "linhas" duplicada se existir
-  delete (parsed as Record<string, unknown>).linhas;
+  delete (parsed as unknown as Record<string, unknown>).linhas;
 
   for (const [lineId, linha] of Object.entries(parsed.sinais)) {
     // v0.7.10 — Se IL_sinal é um primitivo (número), converter para objeto
