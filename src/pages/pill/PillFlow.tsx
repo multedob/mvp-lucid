@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunction, getToday } from "@/lib/api";
+import { RevealText } from "@/components/RevealText";
 
 // ─── Types ────────────────────────────────────────────────────────
 type PillId = "PI" | "PII" | "PIII" | "PIV" | "PV" | "PVI";
@@ -462,8 +463,29 @@ export default function PillFlow() {
     <div className="r-screen">
       <Header moment="M1" />
       <div style={{ padding: "32px 24px 0", flexShrink: 0 }}>
-        <div className="r-impact">{m1Content.frase}</div>
-        <div className="r-tension" style={{ marginTop: 14 }}>{m1Content.tensao}</div>
+        {state.loading ? (
+          // Hold the space blank while the variation loads, so the user never
+          // sees the fallback phrase get replaced by the variation phrase.
+          <div style={{ minHeight: 120 }} />
+        ) : (
+          <>
+            <RevealText
+              as="div"
+              text={m1Content.frase}
+              duration={1800}
+              charFadeMs={340}
+              className="r-impact"
+            />
+            <RevealText
+              as="div"
+              text={m1Content.tensao}
+              duration={1200}
+              charFadeMs={280}
+              className="r-tension"
+              style={{ marginTop: 14 }}
+            />
+          </>
+        )}
       </div>
       <div style={{ flex: 1 }} />
       <Footer onBack={() => navigate("/home")} onContinue={submitM1}
@@ -622,10 +644,14 @@ export default function PillFlow() {
         <div className="r-reed-sig">REED · {state.cycleDisplay}</div>
         {state.ecoText ? (
           state.ecoText.split("\n\n").map((p, i) => (
-            <div key={i} className="r-narrative">{p}</div>
+            <div key={i} className="r-narrative">
+              <RevealText text={p} duration={2000} charFadeMs={380} />
+            </div>
           ))
         ) : (
-          <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10, color: "var(--r-ghost)", letterSpacing: "0.06em" }}>···</div>
+          <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-ghost)", letterSpacing: "0.08em", textAlign: "center", padding: "12px 0" }}>
+            reed is listening<span className="r-dots">...</span>
+          </div>
         )}
       </div>
       <div style={{ padding: "0 24px 12px", flexShrink: 0 }}>
