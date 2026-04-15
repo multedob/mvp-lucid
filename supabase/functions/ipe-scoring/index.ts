@@ -368,7 +368,7 @@ function validateScoringOutput(raw: string): ParseResult {
 
     // C6 — Validar GCC_por_corte (estrutura mínima se presente)
     // v0.7.8 — Aceitar "cortes" em IL_sinal ou diretamente na linha
-    const gcc = ((linha?.IL_sinal && typeof linha.IL_sinal === "object" ? linha.IL_sinal.cortes : undefined) ?? linha?.cortes) as Record<string, unknown> | undefined;
+    const gcc = ((linha?.IL_sinal && typeof linha.IL_sinal === "object" ? (linha.IL_sinal as any).cortes : undefined) ?? (linha as any)?.cortes) as Record<string, unknown> | undefined;
     if (gcc) {
       for (const corte of CORTES_ESPERADOS) {
         const c = gcc[corte] as Record<string, unknown> | undefined;
