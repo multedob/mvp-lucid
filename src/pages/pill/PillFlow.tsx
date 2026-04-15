@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunction, getToday } from "@/lib/api";
 import { RevealText } from "@/components/RevealText";
+import { AudioRecorder } from "@/components/AudioRecorder";
 
 // ─── Types ────────────────────────────────────────────────────────
 type PillId = "PI" | "PII" | "PIII" | "PIV" | "PV" | "PVI";
@@ -51,6 +52,17 @@ interface State {
   m4Input: string;
   ecoText: string;
   loading: boolean;
+  // ─── Audio (M2 & M4) ────────────────────────────────
+  userId: string | null;               // filled in initCycle, used for storage path
+  audioLocale: string;                 // BCP-47, e.g. 'en-US', 'pt-BR'
+  m2AudioPath: string | null;
+  m2AudioDurationMs: number | null;
+  m2TranscriptionLive: string;
+  m2TranscriptionFinal: string | null;
+  m4AudioPath: string | null;
+  m4AudioDurationMs: number | null;
+  m4TranscriptionLive: string;
+  m4TranscriptionFinal: string | null;
 }
 
 // ─── Fallback content (V1 hardcoded — used when variation selector fails) ────
@@ -260,6 +272,13 @@ export default function PillFlow() {
     m3_1_situacaoOposta: "", m3_2_opcao: null, m3_2_abreMao: "",
     m3_2_followupC: "", m3_2_followupD: "", m3_3_narrativa: "",
     m3_3_condicao: "", m3_3_transversal: "", m4Input: "", ecoText: "", loading: false,
+    userId: null,
+    // Prefer browser's language; fall back to en-US. User can effectively
+    // override by typing in any language — Web Speech adapts loosely and
+    // Whisper auto-detects anyway (locale here is just a hint).
+    audioLocale: typeof navigator !== "undefined" && navigator.language ? navigator.language : "en-US",
+    m2AudioPath: null, m2AudioDurationMs: null, m2TranscriptionLive: "", m2TranscriptionFinal: null,
+    m4AudioPath: null, m4AudioDurationMs: null, m4TranscriptionLive: "", m4TranscriptionFinal: null,
   });
 
   const initRef = useRef(false);
@@ -333,6 +352,7 @@ export default function PillFlow() {
         ...s, ipeCycleId: cycle.id, cycleDisplay: display,
         variationKey, variationContent,
         loading: false, m1TimerStart: Date.now(),
+        userId: session.user.id,
       }));
     } catch (err) {
       console.error("[PillFlow] initCycle error:", err);
@@ -380,7 +400,15 @@ export default function PillFlow() {
     try {
       await callEdgeFunction("ipe-pill-session", {
         ipe_cycle_id: state.ipeCycleId, pill_id: state.pillId, moment: "M2",
-        payload: { resposta: state.m2Input, cal_signals: { localizacao: null, custo: null, foco: null, horizonte: null } },
+        payload: {
+          resposta: state.m2Input,
+          cal_signals: { localizacao: null, custo: null, foco: null, horizonte: null },
+          // Audio metadata — nullable. Server-side fields also nullable.
+          audio_url:            state.m2AudioPath,
+          audio_duration_ms:    state.m2AudioDurationMs,
+          transcription_live:   state.m2TranscriptionLive || null,
+          transcription_final:  state.m2TranscriptionFinal,
+        },
       });
     } catch (_) {}
     setState(s => ({ ...s, moment: "M3_1", loading: false }));
@@ -422,12 +450,19 @@ export default function PillFlow() {
     try {
       await callEdgeFunction("ipe-pill-session", {
         ipe_cycle_id: state.ipeCycleId, pill_id: state.pillId, moment: "M4",
-        payload: { m4: (() => {
-      const p = state.m4Input;
-      if (state.pillId === "PI")  return { percepcao: p, presenca_deslocamento: p };
-      if (state.pillId === "PV")  return { percepcao: p, conhecimento_em_campo: p, presenca_para_outros: p };
-      return { percepcao: p, presenca_para_outros: p };
-    })() },
+        payload: {
+          m4: (() => {
+            const p = state.m4Input;
+            if (state.pillId === "PI")  return { percepcao: p, presenca_deslocamento: p };
+            if (state.pillId === "PV")  return { percepcao: p, conhecimento_em_campo: p, presenca_para_outros: p };
+            return { percepcao: p, presenca_para_outros: p };
+          })(),
+          // Audio metadata — nullable.
+          audio_url:            state.m4AudioPath,
+          audio_duration_ms:    state.m4AudioDurationMs,
+          transcription_live:   state.m4TranscriptionLive || null,
+          transcription_final:  state.m4TranscriptionFinal,
+        },
       });
 
       let ecoText = "";
@@ -506,6 +541,21 @@ export default function PillFlow() {
       <div className="r-line" />
       <div style={{ padding: "12px 24px 10px", flexShrink: 0 }}>
         <InvisibleTextarea value={state.m2Input} onChange={v => setState(s => ({ ...s, m2Input: v }))} />
+        {state.userId && state.ipeCycleId && (
+          <div style={{ marginTop: 8 }}>
+            <AudioRecorder
+              userId={state.userId}
+              cycleId={state.ipeCycleId}
+              pillId={state.pillId}
+              moment="m2"
+              language={state.audioLocale}
+              onLiveTranscript={text => setState(s => ({ ...s, m2Input: text, m2TranscriptionLive: text }))}
+              onFinalTranscript={text => setState(s => ({ ...s, m2Input: text, m2TranscriptionFinal: text }))}
+              onAudioStored={info => setState(s => ({ ...s, m2AudioPath: info.path, m2AudioDurationMs: info.durationMs }))}
+              disabled={state.loading}
+            />
+          </div>
+        )}
       </div>
       <Footer onBack={() => setState(s => ({ ...s, moment: "M1" }))} onContinue={submitM2}
         continueLabel={state.loading ? "..." : "continue"}
@@ -628,6 +678,21 @@ export default function PillFlow() {
         <div className="r-sub">{m4Content.instruction}</div>
         <div style={{ marginTop: 10 }}>
           <InvisibleTextarea value={state.m4Input} onChange={v => setState(s => ({ ...s, m4Input: v }))} />
+          {state.userId && state.ipeCycleId && (
+            <div style={{ marginTop: 8 }}>
+              <AudioRecorder
+                userId={state.userId}
+                cycleId={state.ipeCycleId}
+                pillId={state.pillId}
+                moment="m4"
+                language={state.audioLocale}
+                onLiveTranscript={text => setState(s => ({ ...s, m4Input: text, m4TranscriptionLive: text }))}
+                onFinalTranscript={text => setState(s => ({ ...s, m4Input: text, m4TranscriptionFinal: text }))}
+                onAudioStored={info => setState(s => ({ ...s, m4AudioPath: info.path, m4AudioDurationMs: info.durationMs }))}
+                disabled={state.loading}
+              />
+            </div>
+          )}
         </div>
       </div>
       <Footer onBack={() => setState(s => ({ ...s, moment: "M3_3" }))} onContinue={submitM4}
