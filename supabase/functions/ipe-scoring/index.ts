@@ -331,23 +331,23 @@ function validateScoringOutput(raw: string): ParseResult {
 
     // v0.7.7 — Snap IL antes de validar
     // v0.7.8 — Aceitar IL_sinal ou acesso direto a campos de corte
-    const ilSinal = (linha?.IL_sinal && typeof linha.IL_sinal === "object") ? linha.IL_sinal : linha;
+    const ilSinal = (linha?.IL_sinal && typeof linha.IL_sinal === "object") ? linha.IL_sinal : linha as any;
     const numerico = ilSinal?.numerico;
     if (numerico !== null && numerico !== undefined) {
       const snapped = snapIL(numerico) as number;
       if (linha?.IL_sinal && typeof linha.IL_sinal === "object") {
-        linha.IL_sinal.numerico = snapped;
+        (linha.IL_sinal as any).numerico = snapped;
       }
     }
 
     // Validar IL
-    const il = (linha?.IL_sinal && typeof linha.IL_sinal === "object") ? linha.IL_sinal.numerico : linha?.numerico;
+    const il = (linha?.IL_sinal && typeof linha.IL_sinal === "object") ? (linha.IL_sinal as any).numerico : (linha as any)?.numerico;
     if (il !== null && il !== undefined && !IL_VALID_VALUES.has(il)) {
       return { success: false, reason: `il_out_of_range for ${lineId}: ${il}` };
     }
 
     // Validar FD — aceitar FD_linha ou fd_linha
-    const fd = linha?.FD_linha ?? linha?.fd_linha;
+    const fd = linha?.FD_linha ?? (linha as any)?.fd_linha;
     if (fd !== undefined && fd !== null) {
       if (typeof fd !== "number" || fd < 0 || fd > 1) {
         return { success: false, reason: `fd_out_of_range for ${lineId}: ${fd}` };
