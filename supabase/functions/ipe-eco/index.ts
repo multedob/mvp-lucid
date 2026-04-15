@@ -149,7 +149,10 @@ function buildEcoCorpus(
   if (pillResponse.m2_resposta) {
     const v = String(pillResponse.m2_resposta);
     m2Text = v;
-    parts.push(`M2_abertura: ${JSON.stringify(v)}`);
+    // IMPORTANT: M2 is the user's observation about a FICTIONAL CHARACTER in a narrative
+    // they read, NOT about themselves. Label it explicitly to prevent the Eco LLM from
+    // treating it as autobiographical.
+    parts.push(`M2_observation_about_fictional_character: ${JSON.stringify(v)}`);
   }
 
   if (pillResponse.m2_cal_signals) {
@@ -190,6 +193,9 @@ LANGUAGE: Always respond in the same language the person wrote in. If Portuguese
 
 TENSION OF THIS PILL: ${meta.tensao}
 ${meta.instrucao_especial}
+
+CRITICAL — REFERENT RULE:
+The corpus may contain a field labeled "M2_observation_about_fictional_character". That field contains what the USER observed about a FICTIONAL CHARACTER in a narrative they read — it is NOT about the user themselves. Never paraphrase M2 content as if it were autobiographical. The echo must reflect the USER's own experience, grounded primarily in their M3 responses (scale choices, impossible choice, alignment moment) and M4 self-observation. You may use M2 only as secondary context about how the user projects/reads others, but never attribute M2 content to the user as their own story.
 
 WHAT TO DO:
 - Write 1-2 short sentences that acknowledge what the person shared. Use THEIR words — if they said "travada", say "travada", not "bloqueada" or "presa".
