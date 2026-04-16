@@ -3,8 +3,13 @@
 // Coexists with a textarea: user can type OR press the mic.
 // While recording, Web Speech API feeds live transcript into the
 // same textarea via onLiveTranscript. On stop, we upload the audio
-// blob to Supabase Storage and call `transcribe-audio` (Whisper)
-// for a polished final transcript which replaces the live text.
+// blob to Supabase Storage and call `transcribe-audio` (Groq Whisper
+// primary, OpenAI fallback) for a polished final transcript which
+// replaces the live text.
+//
+// Cost protection:
+//   - Hard cap at MAX_DURATION_MS (5 min). Auto-stops at the limit.
+//   - Visual warning in the last 30 seconds.
 //
 // Props:
 //   userId    — used to build the storage path ({userId}/{cycleId}/...)
@@ -28,6 +33,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunction } from "@/lib/api";
 
 type Moment = "m2" | "m4";
+
+// ─── Cost-protection caps ───────────────────────────────────
+const MAX_DURATION_MS = 5 * 60 * 1000;   // 5 minutes hard stop
+const WARN_THRESHOLD_MS = 4 * 60 * 1000 + 30 * 1000;  // warn at 4:30
 
 interface AudioRecorderProps {
   userId: string;
@@ -166,7 +175,12 @@ export function AudioRecorder({
       startMsRef.current = performance.now();
       setElapsedMs(0);
       timerRef.current = window.setInterval(() => {
-        setElapsedMs(performance.now() - startMsRef.current);
+        const elapsed = performance.now() - startMsRef.current;
+        setElapsedMs(elapsed);
+        // Hard cap: auto-stop at MAX_DURATION_MS to protect cost.
+        if (elapsed >= MAX_DURATION_MS) {
+          void stopRecording();
+        }
       }, 100);
       setState("recording");
     } catch (err) {
@@ -207,8 +221,7 @@ export function AudioRecorder({
 
       onAudioStored?.({ path, durationMs });
 
-      // Whisper transcription via edge function (uses the shared helper,
-      // which reads VITE_SUPABASE_URL and attaches the current session).
+      // Whisper transcription via edge function (Groq primary, OpenAI fallback).
       const iso = localeToIso639(language);
       const data = await callEdgeFunction<{ text?: string }>("transcribe-audio", {
         audio_path: path,
@@ -230,11 +243,22 @@ export function AudioRecorder({
   const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
   const ss = String(seconds % 60).padStart(2, "0");
 
+  // Last-30s warning: switch label to countdown to the cap.
+  const isNearLimit = isRecording && elapsedMs >= WARN_THRESHOLD_MS;
+  const remainingSec = Math.max(0, Math.ceil((MAX_DURATION_MS - elapsedMs) / 1000));
+
   const buttonLabel = isRecording
-    ? `recording ${mm}:${ss}`
+    ? isNearLimit
+      ? `stops in ${remainingSec}s`
+      : `recording ${mm}:${ss}`
     : isProcessing
       ? "polishing…"
       : "record";
+
+  // Color shifts to a warning hue near the limit.
+  const accentColor = isNearLimit
+    ? "var(--r-warn, #d49a3a)"
+    : "var(--r-accent, #c8553d)";
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -249,8 +273,8 @@ export function AudioRecorder({
           gap: 6,
           padding: "4px 10px",
           borderRadius: 999,
-          border: `1px solid ${isRecording ? "var(--r-accent, #c8553d)" : "var(--r-ghost, #ccc)"}`,
-          background: isRecording ? "var(--r-accent, #c8553d)" : "transparent",
+          border: `1px solid ${isRecording ? accentColor : "var(--r-ghost, #ccc)"}`,
+          background: isRecording ? accentColor : "transparent",
           color: isRecording ? "white" : "var(--r-muted, #666)",
           fontFamily: "var(--r-font-sys, system-ui)",
           fontSize: 11,
@@ -267,7 +291,9 @@ export function AudioRecorder({
             height: 6,
             borderRadius: "50%",
             background: isRecording ? "white" : "var(--r-muted, #666)",
-            animation: isRecording ? "audio-pulse 1s ease-in-out infinite" : "none",
+            animation: isRecording
+              ? `audio-pulse ${isNearLimit ? "0.5s" : "1s"} ease-in-out infinite`
+              : "none",
           }}
         />
         {buttonLabel}
