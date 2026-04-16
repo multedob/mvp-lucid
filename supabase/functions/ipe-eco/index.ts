@@ -1,12 +1,12 @@
 // ============================================================
 // ipe-eco/index.ts
-// v1.2 — Eco rewrite: lighter, warmer, bridge to Reed
-// Changes from v1.1:
-//   - Luce → Reed in all prompts
-//   - Simplified structure: 1 echo sentence + 1 bridge to Reed
-//   - Removed forced 3-element structure (espelho + observação + pergunta)
-//   - Eco is now a brief, warm acknowledgment that invites deeper conversation
-//   - Kept: pill-specific tensions, vocabulary anchoring, language detection
+// v2.0 — Eco rewrite: grounded, specific, no templates
+// Changes from v1.2:
+//   - Corpus rebuilt as narrative with clear hierarchy (M4 > M3_3 > M3_2 > M3_1)
+//   - M2 removed from main corpus (fictional character contamination)
+//   - System prompt rewritten: strong positive instruction, zero literal examples
+//   - Temperature lowered 0.7 → 0.45 (grounded but not robotic)
+//   - Name instruction simplified (no example phrases to parrot)
 //
 // Fonte: PIPELINE_IMPLEMENTACAO_IPE_MVP v1.1 §4.6 + §6.1
 // PILL_I–VI_Prototipo v0.3 — estrutura do Eco M5
@@ -14,7 +14,7 @@
 // Responsabilidade: geração do Eco M5 por Pill
 // Input:  { ipe_cycle_id, pill_id }
 // Output: { eco_text, scoring_audit_id }
-// LLM: 1 chamada (Sonnet, temp 0.7)
+// LLM: 1 chamada (Sonnet, temp 0.45)
 // Persiste: pill_responses.eco_text + scoring_audit
 // ============================================================
 
@@ -39,9 +39,9 @@ function json(body: unknown, status = 200): Response {
 }
 
 const ECO_MODEL = "claude-sonnet-4-20250514";
-const ECO_TEMPERATURE = 0.7;
+const ECO_TEMPERATURE = 0.45;
 const MAX_RETRIES = 1;
-const EMBEDDED_PROMPT_VERSION = "embedded-v1.2";
+const EMBEDDED_PROMPT_VERSION = "embedded-v2.0";
 
 type NivelPersona = "B" | "M" | "A";
 
@@ -93,79 +93,89 @@ const PILL_META: Record<PillId, {
 };
 
 // ─────────────────────────────────────────
-// CORPUS BUILDER (same as v1.1)
+// CORPUS BUILDER v2.0 — narrative hierarchy
+// Priority: M4 (self-observation) > M3_3 (alignment) > M3_2 (choice) > M3_1 (scale)
+// M2 excluded from main corpus (fictional character → contamination risk)
+// M2 kept only for language detection
 // ─────────────────────────────────────────
 function buildEcoCorpus(
   pillId: PillId,
   pillResponse: Record<string, unknown>
 ): { corpus: string; m2Text: string; m4Text: string } {
-  const parts: string[] = [];
+  const sections: string[] = [];
   let m2Text = "";
   let m4Text = "";
 
+  // ── TIER 1: M4 — the person's own words about themselves ──
   if (pillResponse.m4_resposta) {
     const m4 = pillResponse.m4_resposta as Record<string, unknown>;
+    const m4Parts: string[] = [];
+
     if (m4.percepcao) {
       const v = String(m4.percepcao);
       m4Text = v;
-      parts.push(`M4_percepcao: ${JSON.stringify(v)}`);
+      m4Parts.push(`What the person said about themselves after the exercise:\n"${v}"`);
     }
     if (pillId === "PI" && m4.presenca_deslocamento) {
-      parts.push(`M4_presenca_deslocamento: ${JSON.stringify(String(m4.presenca_deslocamento))}`);
+      m4Parts.push(`On the cost of displacement:\n"${String(m4.presenca_deslocamento)}"`);
     }
-    if (pillId === "PV") {
-      if (m4.conhecimento_em_campo) {
-        parts.push(`M4_conhecimento_em_campo: ${JSON.stringify(String(m4.conhecimento_em_campo))}`);
-      }
-      if (m4.presenca_para_outros) {
-        parts.push(`M4_presenca_para_outros: ${JSON.stringify(String(m4.presenca_para_outros))}`);
-      }
-    } else if (m4.presenca_para_outros) {
-      parts.push(`M4_presenca_para_outros: ${JSON.stringify(String(m4.presenca_para_outros))}`);
+    if (m4.presenca_para_outros) {
+      m4Parts.push(`On how they show up for others:\n"${String(m4.presenca_para_outros)}"`);
+    }
+    if (pillId === "PV" && m4.conhecimento_em_campo) {
+      m4Parts.push(`On knowledge in practice:\n"${String(m4.conhecimento_em_campo)}"`);
+    }
+
+    if (m4Parts.length) {
+      sections.push(`=== WHAT THE PERSON SHARED (primary — use their exact words) ===\n${m4Parts.join("\n")}`);
     }
   }
 
+  // ── TIER 2: M3_3 — alignment moment (narrative + condition) ──
   if (pillResponse.m3_respostas) {
     const m3 = pillResponse.m3_respostas as Record<string, unknown>;
     const inv = m3.M3_3_inventario as Record<string, unknown> | undefined;
     if (inv) {
-      if (inv.narrativa) parts.push(`M3_3_narrativa: ${JSON.stringify(String(inv.narrativa))}`);
-      if (inv.condicao) parts.push(`M3_3_condicao_possibilidade: ${JSON.stringify(String(inv.condicao))}`);
+      const invParts: string[] = [];
+      if (inv.narrativa) invParts.push(`When asked about a moment of alignment, they wrote:\n"${String(inv.narrativa)}"`);
+      if (inv.condicao) invParts.push(`What made that moment possible:\n"${String(inv.condicao)}"`);
+      if (invParts.length) {
+        sections.push(`=== ALIGNMENT MOMENT (secondary — supports the echo) ===\n${invParts.join("\n")}`);
+      }
     }
+
+    // ── TIER 3: M3_2 — impossible choice ──
     const escolha = m3.M3_2_escolha as Record<string, unknown> | undefined;
     if (escolha) {
-      if (escolha.opcao) parts.push(`M3_2_opcao_escolhida: ${JSON.stringify(String(escolha.opcao))}`);
-      if (escolha.abre_mao) parts.push(`M3_2_o_que_abre_mao: ${JSON.stringify(String(escolha.abre_mao))}`);
-      if (escolha.followup_C) parts.push(`M3_2_followup: ${JSON.stringify(String(escolha.followup_C))}`);
-      if (escolha.followup_D) parts.push(`M3_2_followup: ${JSON.stringify(String(escolha.followup_D))}`);
+      const chParts: string[] = [];
+      if (escolha.opcao) chParts.push(`Chose option: ${String(escolha.opcao)}`);
+      if (escolha.abre_mao) chParts.push(`What they gave up: "${String(escolha.abre_mao)}"`);
+      if (escolha.followup_C) chParts.push(`Follow-up reflection: "${String(escolha.followup_C)}"`);
+      if (escolha.followup_D) chParts.push(`Follow-up reflection: "${String(escolha.followup_D)}"`);
+      if (chParts.length) {
+        sections.push(`=== IMPOSSIBLE CHOICE (context only — do not echo directly) ===\n${chParts.join("\n")}`);
+      }
     }
+
+    // ── TIER 4: M3_1 — scale position (structural, lowest priority) ──
     const regua = m3.M3_1_regua as Record<string, unknown> | undefined;
     if (regua) {
-      if (regua.duas_palavras) parts.push(`M3_1_duas_palavras: ${JSON.stringify(String(regua.duas_palavras))}`);
-      if (regua.situacao_oposta) parts.push(`M3_1_situacao_oposta: ${JSON.stringify(String(regua.situacao_oposta))}`);
+      const rParts: string[] = [];
+      if (regua.duas_palavras) rParts.push(`Two words for where they are: "${String(regua.duas_palavras)}"`);
+      if (regua.situacao_oposta) rParts.push(`Opposite situation: "${String(regua.situacao_oposta)}"`);
+      if (rParts.length) {
+        sections.push(`=== SCALE POSITION (background only) ===\n${rParts.join("\n")}`);
+      }
     }
   }
 
+  // ── M2 — NOT included in corpus (fictional character observation) ──
+  // Kept only for language detection
   if (pillResponse.m2_resposta) {
-    const v = String(pillResponse.m2_resposta);
-    m2Text = v;
-    // IMPORTANT: M2 is the user's observation about a FICTIONAL CHARACTER in a narrative
-    // they read, NOT about themselves. Label it explicitly to prevent the Eco LLM from
-    // treating it as autobiographical.
-    parts.push(`M2_observation_about_fictional_character: ${JSON.stringify(v)}`);
+    m2Text = String(pillResponse.m2_resposta);
   }
 
-  if (pillResponse.m2_cal_signals) {
-    const cal = pillResponse.m2_cal_signals as Record<string, unknown>;
-    const calParts: string[] = [];
-    if (cal.localizacao) calParts.push(`localizacao:${cal.localizacao}`);
-    if (cal.custo) calParts.push(`custo:${cal.custo}`);
-    if (cal.foco) calParts.push(`foco:${cal.foco}`);
-    if (cal.horizonte) calParts.push(`horizonte:${cal.horizonte}`);
-    if (calParts.length) parts.push(`CAL_signals: ${calParts.join(", ")}`);
-  }
-
-  return { corpus: parts.join("\n"), m2Text, m4Text };
+  return { corpus: sections.join("\n\n"), m2Text, m4Text };
 }
 
 // ─────────────────────────────────────────
@@ -180,42 +190,47 @@ function detectLanguage(m2Text: string, m4Text: string): "pt" | "en" {
 }
 
 // ─────────────────────────────────────────
-// SYSTEM PROMPT v1.2 — lighter, bridge to Reed
+// SYSTEM PROMPT v2.0 — grounded, specific, no templates
 // ─────────────────────────────────────────
 function buildEmbeddedSystemPrompt(pillId: PillId): string {
   const meta = PILL_META[pillId];
 
-  return `You are generating a brief echo at the end of a reading exercise (pill) inside a self-knowledge app called rdwth.
+  return `You write the echo — a closing moment after someone completes a self-knowledge exercise (pill) in an app called rdwth.
 
-The echo is a short, warm acknowledgment of what the person just shared. It's NOT a therapy session, NOT an analysis, NOT a report. It's more like a friend who was listening and says one thing that lands.
+LANGUAGE: Write in the same language the person used. If they wrote in Portuguese, respond in Portuguese. If English, English.
 
-LANGUAGE: Always respond in the same language the person wrote in. If Portuguese, write in Portuguese. If English, write in English.
-
-TENSION OF THIS PILL: ${meta.tensao}
+PILL TENSION: ${meta.tensao}
 ${meta.instrucao_especial}
 
-CRITICAL — REFERENT RULE:
-The corpus may contain a field labeled "M2_observation_about_fictional_character". That field contains what the USER observed about a FICTIONAL CHARACTER in a narrative they read — it is NOT about the user themselves. Never paraphrase M2 content as if it were autobiographical. The echo must reflect the USER's own experience, grounded primarily in their M3 responses (scale choices, impossible choice, alignment moment) and M4 self-observation. You may use M2 only as secondary context about how the user projects/reads others, but never attribute M2 content to the user as their own story.
+YOUR TASK — step by step:
 
-WHAT TO DO:
-- Write 1-2 short sentences that acknowledge what the person shared. Use THEIR words — if they said "travada", say "travada", not "bloqueada" or "presa".
-- Then, one brief closing line that points forward — something that makes the person want to explore this further. This could be an observation that opens a door, or a simple sentence like "isso rende conversa" or "tem mais coisa aí."
-- The echo should feel like a bookmark, not a conclusion. It marks something worth returning to.
+1. Read the corpus. Find the ONE specific thing the person named that carries weight — a word, an image, a contradiction, a quiet admission. It will almost always be in the section marked "WHAT THE PERSON SHARED". That section contains their actual words about themselves.
 
-WHAT NOT TO DO:
-- Do NOT analyze or interpret what the person said
-- Do NOT present two options and ask them to choose
-- Do NOT use the structure "when you say X, it seems like Y"
-- Do NOT offer reassurance ("que coragem", "isso é muito forte")
-- Do NOT use words like "padrão", "sempre", "costuma", "tende a", "geralmente"
-- Do NOT use: "modo de ser", "mecanismo interno", "trajetória", "estrutura"
+2. Write 2-3 sentences that place that specific thing back in front of them — not interpreted, not reframed, not praised. Reflected. Use their exact vocabulary. If they said "travada", you say "travada" — not "bloqueada", not "presa", not "paralisada".
+
+3. The last sentence should leave something slightly open — a tension unnamed, a question implied but not asked. The person should finish reading and feel there's something left to think about. Do NOT write a generic forward-looking phrase. The opening must come from the specific material they gave you.
+
+WHAT MAKES A GOOD ECO:
+- It contains at least one word or phrase the person actually used
+- It names something specific, not a category ("the part where you stayed quiet" vs "your way of dealing with things")
+- It makes the person feel heard, not analyzed
+- It's short enough to remember, specific enough to sting a little
+
+WHAT KILLS AN ECO:
+- Generic acknowledgment that could apply to anyone
+- Paraphrasing their words into cleaner, more "therapeutic" language
+- Closing with a cliché opening ("there's more here", "worth exploring")
+- Interpreting what they said ("when you say X, it seems like Y")
+- Reassurance or praise ("that took courage", "that's powerful")
+- Abstract vocabulary: "padrão", "trajetória", "mecanismo", "estrutura", "modo de ser"
+- Generalizing words: "sempre", "costuma", "tende a", "geralmente"
 ${meta.proibicoes}
 
-TONE: Warm, simple, brief. Like someone who heard you and said one true thing.
+The corpus has clear priority labels. Trust them: "WHAT THE PERSON SHARED" is your primary source. "ALIGNMENT MOMENT" supports. "IMPOSSIBLE CHOICE" and "SCALE POSITION" are background — use them only if they deepen what's already in the primary material.
 
-LENGTH: Maximum 2-3 short sentences. Less is more. Every word must earn its place.
+LENGTH: 2-3 short sentences. No more.
 
-Return ONLY the echo text. No preamble, no metadata, no quotes.`;
+Return ONLY the echo text. No preamble, no labels, no quotes around the text.`;
 }
 
 // ─────────────────────────────────────────
@@ -369,7 +384,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const lang = detectLanguage(m2Text, m4Text);
   const nivel = detectNivelPersona(ipe_cycle_id);
 
-  const hasMinCorpus = corpus.includes("M4_percepcao") || corpus.includes("M3_3_narrativa");
+  const hasMinCorpus = corpus.includes("WHAT THE PERSON SHARED") || corpus.includes("ALIGNMENT MOMENT");
   const auditId = crypto.randomUUID();
 
   if (!hasMinCorpus) {
@@ -386,14 +401,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   const nameInstruction = user_name
-    ? `\nThe person's name is "${user_name}". You may use their name ONCE at the start of the echo — naturally, like a friend would. Example: "${user_name}, o que ficou aqui é..." Do NOT overuse it.\n\n`
+    ? `\nThe person's name is "${user_name}". You may use it once at the start, naturally — no forced phrasing.\n\n`
     : "\n\n";
 
   const userMessage =
     `${nivelInstrucao(nivel)}${nameInstruction}` +
-    `Generate the echo for this person based on the corpus below.\n\n` +
-    `===CORPUS===\n${corpus}\n\n` +
-    `Return only the echo text. Nothing else.`;
+    `Here is everything this person shared during the pill. Read it, find the one thing that carries weight, and write the echo.\n\n` +
+    `${corpus}\n\n` +
+    `Echo:`;
 
   let ecoText = "";
   let success = false;
