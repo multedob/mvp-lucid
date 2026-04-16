@@ -1,65 +1,35 @@
-// ============================================================
-// ipe-eco/index.ts
-// v2.0 — Eco rewrite: grounded, specific, no templates
-// Changes from v1.2:
-//   - Corpus rebuilt as narrative with clear hierarchy (M4 > M3_3 > M3_2 > M3_1)
-//   - M2 removed from main corpus (fictional character contamination)
-//   - System prompt rewritten: strong positive instruction, zero literal examples
-//   - Temperature lowered 0.7 → 0.45 (grounded but not robotic)
-//   - Name instruction simplified (no example phrases to parrot)
-//
-// Fonte: PIPELINE_IMPLEMENTACAO_IPE_MVP v1.1 §4.6 + §6.1
-// PILL_I–VI_Prototipo v0.3 — estrutura do Eco M5
-//
-// Responsabilidade: geração do Eco M5 por Pill
-// Input:  { ipe_cycle_id, pill_id }
-// Output: { eco_text, scoring_audit_id }
-// LLM: 1 chamada (Sonnet, temp 0.45)
-// Persiste: pill_responses.eco_text + scoring_audit
-// ============================================================
-
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.27.3";
-import {
-  type PillId,
-  detectStubPersona,
-} from "../_shared/ipe_types.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, content-type",
 };
 
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
+const json = (data: unknown, status = 200) =>
+  new Response(JSON.stringify(data), {
     status,
     headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
   });
-}
 
-const ECO_MODEL = "claude-sonnet-4-20250514";
-const ECO_TEMPERATURE = 0.45;
-const MAX_RETRIES = 1;
-const EMBEDDED_PROMPT_VERSION = "embedded-v2.0";
+const PILL_LINES: Record<string, string[]> = {
+  PI: ["L1.1", "L2.1", "L3.1", "L3.2", "L4.4"],
+  PII: ["L1.2", "L1.3", "L1.4", "L2.1", "L2.3", "L3.4"],
+  PIII: ["L1.4", "L2.1", "L2.2", "L3.4", "L4.2"],
+  PIV: ["L1.1", "L3.2", "L3.3", "L3.4", "L4.1", "L4.2"],
+  PV: ["L1.1", "L2.2", "L4.1", "L4.2", "L4.3"],
+  PVI: ["L1.2", "L1.3", "L1.4", "L2.3", "L3.1", "L4.1", "L4.2"],
+};
 
-type NivelPersona = "B" | "M" | "A";
-
-function detectNivelPersona(ipe_cycle_id: string): NivelPersona {
-  const persona = detectStubPersona(ipe_cycle_id);
-  if (persona === "P2-B" || persona === "P5-B") return "B";
-  if (persona === "P7-A") return "A";
-  return "M";
-}
-
-// ─────────────────────────────────────────
-// PILL METADATA
-// ─────────────────────────────────────────
-const PILL_META: Record<PillId, {
-  tensao: string;
-  proibicoes: string;
-  instrucao_especial: string;
-}> = {
+const PILL_META: Record<
+  string,
+  {
+    tensao: string;
+    proibicoes: string;
+    instrucao_especial: string;
+  }
+> = {
   PI: {
     tensao: "I ↔ Belonging",
     proibicoes: `Proibido: "pertencimento", "você sempre foi", "quem você é", "você pertence", "lugar de origem". Não resolve a tensão — honra o custo real do deslocamento.`,
@@ -92,373 +62,648 @@ const PILL_META: Record<PillId, {
   },
 };
 
-// ─────────────────────────────────────────
-// CORPUS BUILDER v2.0 — narrative hierarchy
-// Priority: M4 (self-observation) > M3_3 (alignment) > M3_2 (choice) > M3_1 (scale)
-// M2 excluded from main corpus (fictional character → contamination risk)
-// M2 kept only for language detection
-// ─────────────────────────────────────────
-function buildEcoCorpus(
-  pillId: PillId,
-  pillResponse: Record<string, unknown>
-): { corpus: string; m2Text: string; m4Text: string } {
-  const sections: string[] = [];
-  let m2Text = "";
-  let m4Text = "";
-
-  // ── TIER 1: M4 — the person's own words about themselves ──
-  if (pillResponse.m4_resposta) {
-    const m4 = pillResponse.m4_resposta as Record<string, unknown>;
-    const m4Parts: string[] = [];
-
-    if (m4.percepcao) {
-      const v = String(m4.percepcao);
-      m4Text = v;
-      m4Parts.push(`What the person said about themselves after the exercise:\n"${v}"`);
-    }
-    if (pillId === "PI" && m4.presenca_deslocamento) {
-      m4Parts.push(`On the cost of displacement:\n"${String(m4.presenca_deslocamento)}"`);
-    }
-    if (m4.presenca_para_outros) {
-      m4Parts.push(`On how they show up for others:\n"${String(m4.presenca_para_outros)}"`);
-    }
-    if (pillId === "PV" && m4.conhecimento_em_campo) {
-      m4Parts.push(`On knowledge in practice:\n"${String(m4.conhecimento_em_campo)}"`);
-    }
-
-    if (m4Parts.length) {
-      sections.push(`=== WHAT THE PERSON SHARED (primary — use their exact words) ===\n${m4Parts.join("\n")}`);
-    }
-  }
-
-  // ── TIER 2: M3_3 — alignment moment (narrative + condition) ──
-  if (pillResponse.m3_respostas) {
-    const m3 = pillResponse.m3_respostas as Record<string, unknown>;
-    const inv = m3.M3_3_inventario as Record<string, unknown> | undefined;
-    if (inv) {
-      const invParts: string[] = [];
-      if (inv.narrativa) invParts.push(`When asked about a moment of alignment, they wrote:\n"${String(inv.narrativa)}"`);
-      if (inv.condicao) invParts.push(`What made that moment possible:\n"${String(inv.condicao)}"`);
-      if (invParts.length) {
-        sections.push(`=== ALIGNMENT MOMENT (secondary — supports the echo) ===\n${invParts.join("\n")}`);
-      }
-    }
-
-    // ── TIER 3: M3_2 — impossible choice ──
-    const escolha = m3.M3_2_escolha as Record<string, unknown> | undefined;
-    if (escolha) {
-      const chParts: string[] = [];
-      if (escolha.opcao) chParts.push(`Chose option: ${String(escolha.opcao)}`);
-      if (escolha.abre_mao) chParts.push(`What they gave up: "${String(escolha.abre_mao)}"`);
-      if (escolha.followup_C) chParts.push(`Follow-up reflection: "${String(escolha.followup_C)}"`);
-      if (escolha.followup_D) chParts.push(`Follow-up reflection: "${String(escolha.followup_D)}"`);
-      if (chParts.length) {
-        sections.push(`=== IMPOSSIBLE CHOICE (context only — do not echo directly) ===\n${chParts.join("\n")}`);
-      }
-    }
-
-    // ── TIER 4: M3_1 — scale position (structural, lowest priority) ──
-    const regua = m3.M3_1_regua as Record<string, unknown> | undefined;
-    if (regua) {
-      const rParts: string[] = [];
-      if (regua.duas_palavras) rParts.push(`Two words for where they are: "${String(regua.duas_palavras)}"`);
-      if (regua.situacao_oposta) rParts.push(`Opposite situation: "${String(regua.situacao_oposta)}"`);
-      if (rParts.length) {
-        sections.push(`=== SCALE POSITION (background only) ===\n${rParts.join("\n")}`);
-      }
-    }
-  }
-
-  // ── M2 — NOT included in corpus (fictional character observation) ──
-  // Kept only for language detection
-  if (pillResponse.m2_resposta) {
-    m2Text = String(pillResponse.m2_resposta);
-  }
-
-  return { corpus: sections.join("\n\n"), m2Text, m4Text };
+interface StructuralContext {
+  cgg: number;
+  d1: number;
+  d2: number;
+  d3: number;
+  d4: number;
 }
 
-// ─────────────────────────────────────────
-// LANGUAGE DETECTION (same as v1.1)
-// ─────────────────────────────────────────
-function detectLanguage(m2Text: string, m4Text: string): "pt" | "en" {
-  const freeText = `${m2Text} ${m4Text}`.trim();
-  if (!freeText) return "pt";
-  const enScore = (freeText.match(/\b(I|my|we|you|the|and|was|were|have|had|felt|it's|didn't|don't|that|this|when|they|there)\b/gi) || []).length;
-  const ptScore = (freeText.match(/\b(eu|meu|minha|você|nós|que|com|para|mas|não|uma|esse|isso|quando|ela|ele|havia|fui|foi|tinha|estou|estava)\b/gi) || []).length;
-  return enScore > ptScore ? "en" : "pt";
+interface LongitudinalDataPoint {
+  line_id: string;
+  previous_ils: number[];
 }
 
-// ─────────────────────────────────────────
-// SYSTEM PROMPT v2.0 — grounded, specific, no templates
-// ─────────────────────────────────────────
-function buildEmbeddedSystemPrompt(pillId: PillId): string {
-  const meta = PILL_META[pillId];
-
-  return `You write the echo — a closing moment after someone completes a self-knowledge exercise (pill) in an app called rdwth.
-
-LANGUAGE: Write in the same language the person used. If they wrote in Portuguese, respond in Portuguese. If English, English.
-
-PILL TENSION: ${meta.tensao}
-${meta.instrucao_especial}
-
-YOUR TASK — step by step:
-
-1. Read the corpus. Find the ONE specific thing the person named that carries weight — a word, an image, a contradiction, a quiet admission. It will almost always be in the section marked "WHAT THE PERSON SHARED". That section contains their actual words about themselves.
-
-2. Write 2-3 sentences that place that specific thing back in front of them — not interpreted, not reframed, not praised. Reflected. Use their exact vocabulary. If they said "travada", you say "travada" — not "bloqueada", not "presa", not "paralisada".
-
-3. The last sentence should leave something slightly open — a tension unnamed, a question implied but not asked. The person should finish reading and feel there's something left to think about. Do NOT write a generic forward-looking phrase. The opening must come from the specific material they gave you.
-
-WHAT MAKES A GOOD ECO:
-- It contains at least one word or phrase the person actually used
-- It names something specific, not a category ("the part where you stayed quiet" vs "your way of dealing with things")
-- It makes the person feel heard, not analyzed
-- It's short enough to remember, specific enough to sting a little
-
-WHAT KILLS AN ECO:
-- Generic acknowledgment that could apply to anyone
-- Paraphrasing their words into cleaner, more "therapeutic" language
-- Closing with a cliché opening ("there's more here", "worth exploring")
-- Interpreting what they said ("when you say X, it seems like Y")
-- Reassurance or praise ("that took courage", "that's powerful")
-- Abstract vocabulary: "padrão", "trajetória", "mecanismo", "estrutura", "modo de ser"
-- Generalizing words: "sempre", "costuma", "tende a", "geralmente"
-${meta.proibicoes}
-
-The corpus has clear priority labels. Trust them: "WHAT THE PERSON SHARED" is your primary source. "ALIGNMENT MOMENT" supports. "IMPOSSIBLE CHOICE" and "SCALE POSITION" are background — use them only if they deepen what's already in the primary material.
-
-LENGTH: 2-3 short sentences. No more.
-
-Return ONLY the echo text. No preamble, no labels, no quotes around the text.`;
+interface PillResponse {
+  ipe_cycle_id: string;
+  pill_id: string;
+  m2_resposta?: string;
+  m3_respostas?: Record<string, string>;
+  m4_resposta?: Record<string, unknown>;
+  m2_cal_signals?: Record<string, unknown>;
+  eco_text?: string;
 }
 
-// ─────────────────────────────────────────
-// NIVEL PERSONA (same as v1.1)
-// ─────────────────────────────────────────
-function nivelInstrucao(nivel: NivelPersona): string {
-  if (nivel === "B") return "Nível da persona: B. Prefira frases curtas, uma ideia por frase.";
-  if (nivel === "A") return "Nível da persona: A. Mantenha complexidade sintática quando serve a uma distinção real.";
-  return "Nível da persona: M. Duas camadas permitidas, cada uma em frase própria.";
-}
+const detectLanguage = (text: string): "pt" | "en" => {
+  if (!text) return "pt";
+  const pt_words = [
+    "você",
+    "estar",
+    "ir",
+    "fazer",
+    "querer",
+    "pode",
+    "aqui",
+    "agora",
+  ];
+  const en_words = [
+    "you",
+    "be",
+    "go",
+    "do",
+    "want",
+    "can",
+    "here",
+    "now",
+    "the",
+    "and",
+  ];
+  const words = text.toLowerCase().split(/\s+/);
+  const pt_count = words.filter((w) => pt_words.includes(w)).length;
+  const en_count = words.filter((w) => en_words.includes(w)).length;
+  return en_count > pt_count ? "en" : "pt";
+};
 
-// ─────────────────────────────────────────
-// FALLBACK
-// ─────────────────────────────────────────
-function getFallbackEco(lang: "pt" | "en"): string {
-  return lang === "en"
-    ? "Something stayed with you here — even if it's hard to name yet. That's worth coming back to."
-    : "Alguma coisa ficou aqui — mesmo que ainda seja difícil de nomear. Vale voltar nisso.";
-}
+const getFallbackEco = (pillId: string, language: "pt" | "en"): string => {
+  const fallbacks: Record<string, Record<"pt" | "en", string>> = {
+    PI: {
+      pt: "Há algo em sua raiz que ainda pulsa — talvez não no lugar de origem, mas no que você carrega.",
+      en: "There is something in your roots that still pulses — perhaps not in the place of origin, but in what you carry.",
+    },
+    PII: {
+      pt: "O papel que você exerce guarda mais sobre você do que imaginava.",
+      en: "The role you play holds more about you than you imagined.",
+    },
+    PIII: {
+      pt: "A distância entre então e agora marca quem você foi, não quem você é.",
+      en: "The distance between then and now marks who you were, not who you are.",
+    },
+    PIV: {
+      pt: "Clareza sem movimento é apenas um espelho — a ação está no próximo passo.",
+      en: "Clarity without movement is just a mirror — action is in the next step.",
+    },
+    PV: {
+      pt: "O que você busca fora reflete o que ainda não reconheceu dentro.",
+      en: "What you seek outside reflects what you have not yet recognized within.",
+    },
+    PVI: {
+      pt: "Cada pausa é um respiro do sistema — nem preguiça, nem crise.",
+      en: "Every pause is a breath of the system — neither laziness nor crisis.",
+    },
+  };
+  return (fallbacks[pillId]?.[language] ||
+    fallbacks[pillId]?.pt ||
+    "Há muito mais aqui do que o eco consegue dizer.");
+};
 
-// ─────────────────────────────────────────
-// PERSISTENCE (same as v1.1)
-// ─────────────────────────────────────────
-// deno-lint-ignore no-explicit-any
-async function persistAudit(
+const fetchStructuralContext = async (
   supabase: any,
-  payload: Record<string, unknown>
-): Promise<void> {
-  const { error } = await supabase.from("scoring_audit").insert(payload);
-  if (error) console.error("ECO_AUDIT_INSERT_ERROR:", error);
-}
+  user_id: string
+): Promise<StructuralContext | null> => {
+  try {
+    const { data: user_data, error: user_error } = await supabase
+      .from("users")
+      .select("version")
+      .eq("id", user_id)
+      .single();
 
-// deno-lint-ignore no-explicit-any
-async function persistEcoText(
+    if (user_error || !user_data || user_data.version === 0) {
+      return null;
+    }
+
+    const { data: cycle_data, error: cycle_error } = await supabase
+      .from("cycles")
+      .select("id")
+      .eq("user_id", user_id)
+      .order("id", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (cycle_error || !cycle_data) {
+      return null;
+    }
+
+    const { data: snapshot_data, error: snapshot_error } = await supabase
+      .from("structural_snapshots")
+      .select("snapshot_json")
+      .eq("cycle_id", cycle_data.id)
+      .single();
+
+    if (snapshot_error || !snapshot_data) {
+      return null;
+    }
+
+    const snap = snapshot_data.snapshot_json;
+    return {
+      cgg: parseFloat(snap.cgg) || 1.0,
+      d1: parseFloat(snap.d1) || 1.0,
+      d2: parseFloat(snap.d2) || 1.0,
+      d3: parseFloat(snap.d3) || 1.0,
+      d4: parseFloat(snap.d4) || 1.0,
+    };
+  } catch (err) {
+    console.error("fetchStructuralContext error:", err);
+    return null;
+  }
+};
+
+const selectEcoNode = async (
+  supabase: any,
+  cgg: number | null
+): Promise<string | null> => {
+  try {
+    const stage = cgg ?? 1.0;
+
+    // scores is JSONB — filter stage + density in query, then post-filter safe scores in JS
+    const { data, error } = await supabase
+      .from("rag_corpus")
+      .select("node_id, content_text, stage_min, stage_max, scores")
+      .lte("stage_min", stage)
+      .gte("stage_max", stage)
+      .eq("density_class", 1)
+      .order("node_id");
+
+    if (error || !data || data.length === 0) {
+      return null;
+    }
+
+    // Post-filter: only nodes with safe scores (teleology=0, prescriptive=0, normative=0)
+    const safe_nodes = data.filter((n: any) => {
+      const s = n.scores;
+      if (!s) return true; // no scores = assume safe
+      return (
+        (s.teleology_score ?? s.teleology ?? 0) === 0 &&
+        (s.prescriptive_score ?? s.prescriptive ?? 0) === 0 &&
+        (s.normative_score ?? s.normative ?? 0) === 0
+      );
+    });
+
+    if (safe_nodes.length === 0) {
+      // Fallback: pick any density-1 node in range
+      return data[0]?.content_text || null;
+    }
+
+    let closest = safe_nodes[0];
+    let min_distance = Math.min(
+      Math.abs(stage - closest.stage_min),
+      Math.abs(stage - closest.stage_max)
+    );
+
+    for (const node of safe_nodes) {
+      const dist = Math.min(
+        Math.abs(stage - node.stage_min),
+        Math.abs(stage - node.stage_max)
+      );
+      if (dist < min_distance) {
+        min_distance = dist;
+        closest = node;
+      }
+    }
+
+    return closest.content_text || null;
+  } catch (err) {
+    console.error("selectEcoNode error:", err);
+    return null;
+  }
+};
+
+const fetchLongitudinalData = async (
+  supabase: any,
+  user_id: string,
+  current_ipe_cycle_id: string,
+  pill_id: string
+): Promise<LongitudinalDataPoint[]> => {
+  try {
+    const lines = PILL_LINES[pill_id] || [];
+    if (lines.length === 0) {
+      return [];
+    }
+
+    const { data: cycle_ids, error: cycle_error } = await supabase
+      .from("ipe_cycles")
+      .select("id")
+      .eq("user_id", user_id)
+      .neq("id", current_ipe_cycle_id)
+      .order("cycle_number", { ascending: false });
+
+    if (cycle_error || !cycle_ids || cycle_ids.length === 0) {
+      return [];
+    }
+
+    const { data: scoring_data, error: scoring_error } = await supabase
+      .from("pill_scoring")
+      .select("corpus_linhas")
+      .eq("pill_id", pill_id)
+      .in(
+        "ipe_cycle_id",
+        cycle_ids.map((c: any) => c.id)
+      );
+
+    if (scoring_error || !scoring_data) {
+      return [];
+    }
+
+    const result: LongitudinalDataPoint[] = [];
+    const line_map: Record<string, number[]> = {};
+
+    for (const record of scoring_data) {
+      const corpus = record.corpus_linhas;
+      if (!corpus) continue;
+
+      for (const line_id of lines) {
+        if (corpus[line_id]?.IL_sinal?.numerico !== undefined) {
+          if (!line_map[line_id]) {
+            line_map[line_id] = [];
+          }
+          line_map[line_id].push(corpus[line_id].IL_sinal.numerico);
+        }
+      }
+    }
+
+    for (const [line_id, ils] of Object.entries(line_map)) {
+      if (ils.length > 0) {
+        result.push({ line_id, previous_ils: ils });
+      }
+    }
+
+    return result;
+  } catch (err) {
+    console.error("fetchLongitudinalData error:", err);
+    return [];
+  }
+};
+
+const buildOracularCorpus = (
+  pillId: string,
+  pillResponse: PillResponse,
+  structuralContext: StructuralContext | null,
+  nodeText: string | null,
+  longitudinalData: LongitudinalDataPoint[]
+): string => {
+  let corpus = "";
+
+  // Section 1: What the person shared
+  corpus += "=== WHAT THE PERSON SHARED IN THIS PILL ===\n";
+
+  if (pillResponse.m4_resposta) {
+    const m4 = pillResponse.m4_resposta;
+    if (m4.percepcao) {
+      corpus += `Percepcao: ${m4.percepcao}\n`;
+    }
+    if (m4.narrativa) {
+      corpus += `Narrativa: ${m4.narrativa}\n`;
+    }
+    if (m4.condicao) {
+      corpus += `Condicao: ${m4.condicao}\n`;
+    }
+    if (m4.tensao) {
+      corpus += `Tensao: ${m4.tensao}\n`;
+    }
+  }
+
+  if (
+    pillResponse.m3_respostas &&
+    typeof pillResponse.m3_respostas === "object"
+  ) {
+    for (const [key, value] of Object.entries(pillResponse.m3_respostas)) {
+      if (value) {
+        corpus += `M3 (${key}): ${value}\n`;
+      }
+    }
+  }
+
+  // Section 2: Structural position (invisible to user)
+  if (structuralContext) {
+    corpus += "\n=== STRUCTURAL POSITION (invisible to user) ===\n";
+    corpus += `CGG: ${structuralContext.cgg.toFixed(2)} | D1: ${structuralContext.d1.toFixed(2)} | D2: ${structuralContext.d2.toFixed(2)} | D3: ${structuralContext.d3.toFixed(2)} | D4: ${structuralContext.d4.toFixed(2)}\n`;
+
+    // Determine stage band from CGG
+    let stage = "unknown";
+    if (structuralContext.cgg < 1.5) stage = "F1 (Formation)";
+    else if (structuralContext.cgg < 2.5) stage = "F2 (Formation)";
+    else if (structuralContext.cgg < 3.5) stage = "P1 (Post-Formation)";
+    else if (structuralContext.cgg < 4.5) stage = "P2 (Post-Formation)";
+    else stage = "Beyond";
+
+    corpus += `Stage: ${stage}\n`;
+  }
+
+  // Section 3: Longitudinal signal
+  if (longitudinalData.length > 0) {
+    corpus += "\n=== LONGITUDINAL SIGNAL ===\n";
+    for (const data of longitudinalData) {
+      const min_il = Math.min(...data.previous_ils);
+      const max_il = Math.max(...data.previous_ils);
+      const current = data.previous_ils[data.previous_ils.length - 1];
+      const movement =
+        current > max_il
+          ? "↑ rising"
+          : current < min_il
+            ? "↓ declining"
+            : "→ stable";
+      corpus += `${data.line_id}: previous ILs ${JSON.stringify(data.previous_ils)} ${movement}\n`;
+    }
+  }
+
+  // Section 4: Conceptual resonance (the node)
+  if (nodeText) {
+    corpus += "\n=== CONCEPTUAL RESONANCE ===\n";
+    corpus += nodeText + "\n";
+  }
+
+  corpus += "\n=== CONSTITUTION ===\n";
+  corpus += PILL_META[pillId]?.proibicoes || "";
+  corpus += "\n";
+  corpus += PILL_META[pillId]?.instrucao_especial || "";
+  corpus += "\n";
+
+  return corpus;
+};
+
+const buildOracularPrompt = (pillId: string): string => {
+  const tensao = PILL_META[pillId]?.tensao || "unknown tension";
+
+  return `You are Reed, the oracular voice of rdwth. You speak from deep structural knowledge of this person's development, but you never reveal the machinery.
+
+Your task: Craft a 1-2 sentence reflection — an "eco" — that honors the person's words in this pill while holding the tension they named (${tensao}).
+
+Your voice is:
+- Suggestive, not deterministic ("there is something..." not "you are...")
+- Precise and warm, speaking as if you know more than you say
+- Anchored in their language and emotional register
+- The last line should create a bridge toward Reed conversation — something unfinished that pulls them to talk
+
+What you NEVER do:
+- Synthesize or resolve their words ("you said X but also Y")
+- Make identity claims or claim you know who they are
+- Mention or reference structural parameters (lines, dimensions, stages, CGG)
+- Quote or reference the conceptual node text
+- Close the thought ("there's more here", "worth exploring")
+- Use generic patterns or clichés
+
+The eco ends where conversation begins. Make them wonder how you knew that.`;
+};
+
+const persistAudit = async (
+  supabase: any,
+  ipe_cycle_id: string,
+  component: string,
+  prompt_version: string,
+  input_tokens: number,
+  output_tokens: number,
+  raw_output: string,
+  parsed_output: string,
+  parse_success: boolean,
+  retry_count: number,
+  model: string
+) => {
+  try {
+    await supabase.from("scoring_audit").insert([
+      {
+        ipe_cycle_id,
+        component,
+        prompt_version,
+        input_tokens,
+        output_tokens,
+        raw_output,
+        parsed_output,
+        parse_success,
+        retry_count,
+        model,
+        scored_at: new Date().toISOString(),
+      },
+    ]);
+  } catch (err) {
+    console.error("persistAudit error:", err);
+  }
+};
+
+const persistEcoText = async (
   supabase: any,
   ipe_cycle_id: string,
   pill_id: string,
   eco_text: string
-): Promise<void> {
-  const { error } = await supabase
-    .from("pill_responses")
-    .update({ eco_text })
-    .eq("ipe_cycle_id", ipe_cycle_id)
-    .eq("pill_id", pill_id);
-  if (error) console.error("ECO_TEXT_PERSIST_ERROR:", error);
-}
-
-// ─────────────────────────────────────────
-// HANDLER
-// ─────────────────────────────────────────
-Deno.serve(async (req: Request): Promise<Response> => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
-  if (req.method !== "POST") return json({ error: "INVALID_INPUT", message: "Method not allowed" }, 400);
-
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return json({ error: "UNAUTHORIZED", message: "Missing authorization" }, 401);
-  }
-
-  let body: Record<string, unknown>;
+) => {
   try {
-    body = await req.json();
-  } catch {
-    return json({ error: "INVALID_INPUT", message: "Body must be valid JSON" }, 400);
+    await supabase
+      .from("pill_responses")
+      .update({ eco_text, completed_at: new Date().toISOString() })
+      .eq("ipe_cycle_id", ipe_cycle_id)
+      .eq("pill_id", pill_id);
+  } catch (err) {
+    console.error("persistEcoText error:", err);
+  }
+};
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: CORS_HEADERS });
   }
 
+  const auth_header = req.headers.get("Authorization");
+  if (!auth_header) {
+    return json({ error: "Missing authorization header" }, 401);
+  }
+
+  const token = auth_header.replace("Bearer ", "");
+  const supabase_url = Deno.env.get("SUPABASE_URL");
+  const supabase_key = Deno.env.get("SUPABASE_ANON_KEY");
+
+  if (!supabase_url || !supabase_key) {
+    return json({ error: "Missing Supabase configuration" }, 500);
+  }
+
+  const supabase = createClient(supabase_url, supabase_key, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+
+  // Get authenticated user
+  const { data: auth_data, error: auth_error } = await supabase.auth.getUser(
+    token
+  );
+  if (auth_error || !auth_data.user) {
+    return json({ error: "Unauthorized" }, 401);
+  }
+
+  const user_id = auth_data.user.id;
+
+  // Parse request body
+  const body = await req.json().catch(() => ({}));
   const { ipe_cycle_id, pill_id } = body;
-  if (typeof ipe_cycle_id !== "string" || typeof pill_id !== "string") {
-    return json({ error: "INVALID_INPUT", message: "ipe_cycle_id and pill_id required" }, 400);
+
+  if (!ipe_cycle_id || !pill_id) {
+    return json(
+      { error: "Missing ipe_cycle_id or pill_id" },
+      400
+    );
   }
 
-  // Optional: user name for personalized eco
-  const user_name = typeof body.user_name === "string" && body.user_name.trim() ? body.user_name.trim() : null;
-
-  const VALID_PILLS: PillId[] = ["PI", "PII", "PIII", "PIV", "PV", "PVI"];
-  if (!VALID_PILLS.includes(pill_id as PillId)) {
-    return json({ error: "INVALID_INPUT", message: "pill_id inválido" }, 400);
-  }
-
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    { auth: { persistSession: false } }
-  );
-  const anthropic = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY")! });
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser(
-    authHeader.replace("Bearer ", "")
-  );
-  if (authError || !user) return json({ error: "UNAUTHORIZED", message: "Invalid token" }, 401);
-
-  const { data: cycleCheck, error: cycleCheckErr } = await supabase
+  // Validate cycle ownership
+  const { data: cycle_data, error: cycle_error } = await supabase
     .from("ipe_cycles")
-    .select("id, status")
+    .select("id, user_id")
     .eq("id", ipe_cycle_id)
-    .eq("user_id", user.id)
     .single();
 
-  if (cycleCheckErr || !cycleCheck) {
-    return json({ error: "NOT_FOUND", message: "Cycle not found" }, 404);
-  }
-  if (cycleCheck.status === "abandoned") {
-    return json({ error: "INVALID_INPUT", message: "Cycle is abandoned" }, 400);
+  if (cycle_error || !cycle_data || cycle_data.user_id !== user_id) {
+    return json({ error: "Cycle not found or unauthorized" }, 404);
   }
 
-  const { data: pillResponse, error: prErr } = await supabase
+  // Load pill response
+  const { data: pill_response_data, error: pill_error } = await supabase
     .from("pill_responses")
     .select("*")
     .eq("ipe_cycle_id", ipe_cycle_id)
     .eq("pill_id", pill_id)
-    .maybeSingle();
+    .single();
 
-  if (prErr || !pillResponse) {
-    return json({ error: "NOT_FOUND", message: "Pill response not found" }, 404);
-  }
-  if (!pillResponse.completed_at) {
-    return json({ error: "INVALID_INPUT", message: "Pill M4 not yet completed" }, 400);
+  if (pill_error || !pill_response_data) {
+    return json({ error: "Pill response not found" }, 404);
   }
 
-  // Idempotência
-  if (pillResponse.eco_text) {
-    return json({ eco_text: pillResponse.eco_text, scoring_audit_id: "", cached: true }, 200);
-  }
+  const pill_response: PillResponse = pill_response_data;
 
   const component = `eco_${pill_id}`;
-  const { data: promptRow } = await supabase
+
+  // Idempotency: return cached eco if already exists
+  if (pill_response.eco_text) {
+    return json({ eco_text: pill_response.eco_text, scoring_audit_id: "", cached: true });
+  }
+
+  // Fetch all data sources
+  const structural_context = await fetchStructuralContext(supabase, user_id);
+  const eco_node = await selectEcoNode(
+    supabase,
+    structural_context?.cgg ?? null
+  );
+  const longitudinal_data = await fetchLongitudinalData(
+    supabase,
+    user_id,
+    ipe_cycle_id,
+    pill_id
+  );
+
+  // Build corpus and prompt
+  const corpus = buildOracularCorpus(
+    pill_id,
+    pill_response,
+    structural_context,
+    eco_node,
+    longitudinal_data
+  );
+
+  let prompt_text = buildOracularPrompt(pill_id);
+
+  // Check for active prompt version in DB (component = eco_PI, eco_PII, etc.)
+  const { data: prompt_version_data } = await supabase
     .from("prompt_versions")
-    .select("id, version, prompt_text")
+    .select("prompt_text")
     .eq("component", component)
     .eq("active", true)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  let systemPrompt: string;
-  let promptVersion: string;
-
-  if (promptRow?.prompt_text) {
-    systemPrompt = promptRow.prompt_text;
-    promptVersion = promptRow.version;
-  } else {
-    systemPrompt = buildEmbeddedSystemPrompt(pill_id as PillId);
-    promptVersion = EMBEDDED_PROMPT_VERSION;
-    console.warn(`ECO_PROMPT_FALLBACK: no active prompt for ${component}, using ${promptVersion}`);
+  if (prompt_version_data?.prompt_text) {
+    prompt_text = prompt_version_data.prompt_text;
   }
 
-  const { corpus, m2Text, m4Text } = buildEcoCorpus(
-    pill_id as PillId,
-    pillResponse as Record<string, unknown>
-  );
-  const lang = detectLanguage(m2Text, m4Text);
-  const nivel = detectNivelPersona(ipe_cycle_id);
-
-  const hasMinCorpus = corpus.includes("WHAT THE PERSON SHARED") || corpus.includes("ALIGNMENT MOMENT");
-  const auditId = crypto.randomUUID();
-
-  if (!hasMinCorpus) {
-    const fallback = getFallbackEco(lang);
-    await persistAudit(supabase, {
-      id: auditId, ipe_cycle_id, component,
-      prompt_version: promptVersion, input_tokens: 0, output_tokens: 0,
-      raw_output: "[corpus_insuficiente — fallback]",
-      parsed_output: { eco_text: fallback, reason: "corpus_insuficiente" },
-      parse_success: false, retry_count: 0, model: "FALLBACK",
-    });
+  // Initialize LLM client
+  const anthropic_key = Deno.env.get("ANTHROPIC_API_KEY");
+  if (!anthropic_key) {
+    const fallback = getFallbackEco(
+      pill_id,
+      detectLanguage(
+        (pill_response.m4_resposta?.percepcao as string) ||
+          pill_response.m2_resposta ||
+          ""
+      )
+    );
     await persistEcoText(supabase, ipe_cycle_id, pill_id, fallback);
-    return json({ eco_text: fallback, scoring_audit_id: auditId, fallback: true }, 200);
+    await persistAudit(
+      supabase,
+      ipe_cycle_id,
+      component,
+      "embedded-v3.0",
+      0,
+      0,
+      "",
+      fallback,
+      true,
+      0,
+      "fallback-no-key"
+    );
+    return json({ eco_text: fallback, scoring_audit_id: "", cached: false });
   }
 
-  const nameInstruction = user_name
-    ? `\nThe person's name is "${user_name}". You may use it once at the start, naturally — no forced phrasing.\n\n`
-    : "\n\n";
+  const anthropic = new Anthropic({ apiKey: anthropic_key });
 
-  const userMessage =
-    `${nivelInstrucao(nivel)}${nameInstruction}` +
-    `Here is everything this person shared during the pill. Read it, find the one thing that carries weight, and write the echo.\n\n` +
-    `${corpus}\n\n` +
-    `Echo:`;
-
-  let ecoText = "";
-  let success = false;
-  let input_tokens = 0;
-  let output_tokens = 0;
-  let last_raw = "";
+  let eco_text: string | null = null;
   let retry_count = 0;
+  const max_retries = 2;
+  let last_error: string = "";
 
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    retry_count = attempt;
+  while (retry_count <= max_retries && !eco_text) {
     try {
       const response = await anthropic.messages.create({
-        model: ECO_MODEL,
-        max_tokens: 256, // reduced from 512 — eco should be shorter
-        temperature: ECO_TEMPERATURE,
-        system: systemPrompt,
-        messages: [{ role: "user", content: userMessage }],
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 150,
+        temperature: 0.45,
+        system: prompt_text,
+        messages: [
+          {
+            role: "user",
+            content: `Context for the eco:\n\n${corpus}\n\nNow craft the 1-2 sentence eco for this person.`,
+          },
+        ],
       });
 
-      input_tokens = response.usage?.input_tokens ?? 0;
-      output_tokens = response.usage?.output_tokens ?? 0;
-      last_raw = (response.content[0] as { type: string; text: string }).text.trim();
+      const content = response.content[0];
+      if (content && "text" in content) {
+        eco_text = content.text.trim();
 
-      if (last_raw.length < 10) {
-        console.warn(`ECO_TOO_SHORT attempt=${attempt}`);
-        continue;
+        // Persist audit
+        await persistAudit(
+          supabase,
+          ipe_cycle_id,
+          component,
+          "embedded-v3.0",
+          response.usage.input_tokens,
+          response.usage.output_tokens,
+          eco_text,
+          eco_text,
+          true,
+          retry_count,
+          "claude-sonnet-4-20250514"
+        );
       }
+    } catch (err: any) {
+      last_error = err.message || String(err);
+      retry_count++;
 
-      ecoText = last_raw;
-      success = true;
-      break;
-    } catch (err) {
-      console.error(`ECO_LLM_ERROR attempt=${attempt}:`, err);
-      last_raw = `[error: ${err instanceof Error ? err.message : String(err)}]`;
+      if (retry_count <= max_retries) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
     }
   }
 
-  if (!success || !ecoText) {
-    ecoText = getFallbackEco(lang);
+  // Fallback if LLM failed
+  if (!eco_text) {
+    const lang = detectLanguage(
+      (pill_response.m4_resposta?.percepcao as string) ||
+        pill_response.m2_resposta ||
+        ""
+    );
+    eco_text = getFallbackEco(pill_id, lang);
+
+    await persistAudit(
+      supabase,
+      ipe_cycle_id,
+      component,
+      "embedded-v3.0",
+      0,
+      0,
+      last_error,
+      eco_text,
+      false,
+      retry_count,
+      "fallback-error"
+    );
   }
 
-  await persistAudit(supabase, {
-    id: auditId, ipe_cycle_id, component,
-    prompt_version: promptVersion, input_tokens, output_tokens,
-    raw_output: last_raw,
-    parsed_output: { eco_text: ecoText },
-    parse_success: success, retry_count,
-    model: success ? ECO_MODEL : "FALLBACK",
-  });
-  await persistEcoText(supabase, ipe_cycle_id, pill_id, ecoText);
+  // Persist eco text
+  await persistEcoText(supabase, ipe_cycle_id, pill_id, eco_text);
 
-  return json({ eco_text: ecoText, scoring_audit_id: auditId }, 200);
+  return json({ eco_text, scoring_audit_id: "", cached: false });
 });
