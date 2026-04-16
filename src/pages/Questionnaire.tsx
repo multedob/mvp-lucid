@@ -2,7 +2,7 @@
 // Fluxo: /plan → /next-block loop → lucid-engine
 // Design system: _rdwth — mesmo padrão visual das Pills (header-label + date, Footer component)
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, forwardRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { callEdgeFunction, getCurrentUserVersion, getToday } from '@/lib/api'
@@ -33,38 +33,40 @@ type Phase =
 // Subcomponents — mesmo padrão do PillFlow
 // ─────────────────────────────────────────
 
-function Header() {
+const Header = forwardRef<HTMLDivElement>((_, ref) => {
   const navigate = useNavigate()
   return (
     <>
-      <div className="r-header">
+      <div ref={ref} className="r-header">
         <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · questionário</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
     </>
   )
-}
+});
+Header.displayName = "Header";
 
-function Footer({
-  onContinue,
-  continueLabel = "send",
-  onFallback,
-  fallbackLabel,
-  onEthics,
-  disabled = false,
-}: {
+interface QFooterProps {
   onContinue?: () => void
   continueLabel?: string
   onFallback?: () => void
   fallbackLabel?: string
   onEthics?: () => void
   disabled?: boolean
-}) {
+}
+const Footer = forwardRef<HTMLDivElement, QFooterProps>(({
+  onContinue,
+  continueLabel = "send",
+  onFallback,
+  fallbackLabel,
+  onEthics,
+  disabled = false,
+}, ref) => {
   return (
     <>
       <div className="r-line" />
-      <div className="r-footer">
+      <div ref={ref} className="r-footer">
         {onFallback && fallbackLabel && (
           <span className="r-footer-action" onClick={onFallback}>
             {fallbackLabel}
@@ -91,19 +93,21 @@ function Footer({
       </div>
     </>
   )
-}
+});
+Footer.displayName = "Footer";
 
-function InvisibleTextarea({
-  value,
-  onChange,
-  disabled = false,
-  onCmdEnter,
-}: {
+interface QTextareaProps {
   value: string
   onChange: (v: string) => void
   disabled?: boolean
   onCmdEnter?: () => void
-}) {
+}
+const InvisibleTextarea = forwardRef<HTMLDivElement, QTextareaProps>(({
+  value,
+  onChange,
+  disabled = false,
+  onCmdEnter,
+}, fwdRef) => {
   const ref = useRef<HTMLTextAreaElement>(null)
   const valueRef = useRef(value)
   const recogRef = useRef<any>(null)
@@ -164,7 +168,7 @@ function InvisibleTextarea({
   )
 
   return (
-    <div className="r-input-wrap">
+    <div ref={fwdRef} className="r-input-wrap">
       <textarea
         ref={ref}
         className="r-textarea"
@@ -215,7 +219,8 @@ function InvisibleTextarea({
       </div>
     </div>
   )
-}
+});
+InvisibleTextarea.displayName = "InvisibleTextarea";
 
 // ─────────────────────────────────────────
 // Component
