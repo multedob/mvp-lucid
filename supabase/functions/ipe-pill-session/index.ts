@@ -143,7 +143,25 @@ Deno.serve(async (req: Request): Promise<Response> => {
       // variation_key: tracks which content variation was shown to the user
       // Optional for backward compatibility (null = legacy/V1 hardcoded content)
       const variation_key = (body.variation_key as string) ?? null;
-      update      = { m1_tempo_segundos: tempo, ...(variation_key ? { variation_key } : {}) };
+      // Reset all subsequent fields when re-starting a pill
+      update = {
+        m1_tempo_segundos: tempo,
+        ...(variation_key ? { variation_key } : {}),
+        m2_resposta: null,
+        m2_cal_signals: null,
+        m2_audio_url: null,
+        m2_transcription_live: null,
+        m2_transcription_final: null,
+        m2_audio_duration_ms: null,
+        m3_respostas: null,
+        m4_resposta: null,
+        m4_audio_url: null,
+        m4_transcription_live: null,
+        m4_transcription_final: null,
+        m4_audio_duration_ms: null,
+        completed_at: null,
+        eco_text: null,
+      };
       next_moment = "M2";
       break;
     }
