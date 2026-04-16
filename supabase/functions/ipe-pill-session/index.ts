@@ -257,7 +257,23 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return json({ error: "INTERNAL_ERROR", message: "Failed to persist pill response" }, 500);
   }
 
-  // ─── M4 completo: atualizar ciclo
+  // ─── M1 re-start: limpar ciclo e scoring antigo
+  if (moment === "M1") {
+    const completedSet = new Set<string>(cycle.pills_completed ?? []);
+    if (completedSet.has(pill_id)) {
+      completedSet.delete(pill_id);
+      await supabase.from("ipe_cycles").update({
+        pills_completed: Array.from(completedSet),
+        status: "pills",
+      }).eq("id", ipe_cycle_id);
+    }
+    // Clear old scoring data for this pill
+    await supabase.from("pill_scoring")
+      .delete()
+      .eq("ipe_cycle_id", ipe_cycle_id)
+      .eq("pill_id", pill_id);
+  }
+
   if (moment === "M4") {
     const completedSet = new Set<string>(cycle.pills_completed ?? []);
     completedSet.add(pill_id);
