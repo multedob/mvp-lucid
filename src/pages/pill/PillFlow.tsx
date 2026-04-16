@@ -1,5 +1,5 @@
 // src/pages/pill/PillFlow.tsx
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, forwardRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunction, getToday } from "@/lib/api";
@@ -187,11 +187,11 @@ const HEADER_LABEL: Record<Moment, string> = {
 
 // ─── Subcomponents ─────────────────────────────────────────────────
 
-function Header({ moment }: { moment: Moment }) {
+const Header = forwardRef<HTMLDivElement, { moment: Moment }>(({ moment }, ref) => {
   const counter = HEADER_LABEL[moment];
   return (
     <>
-      <div className="r-header">
+      <div ref={ref} className="r-header">
         <span className="r-header-label">
           {counter ? `_rdwth · pills · ${counter}` : "_rdwth · pills"}
         </span>
@@ -200,23 +200,25 @@ function Header({ moment }: { moment: Moment }) {
       <div className="r-line" />
     </>
   );
-}
+});
+Header.displayName = "Header";
 
-function Footer({
-  onBack, onContinue, continueLabel = "continue",
-  showEthics = true, onEthics, disabled = false,
-}: {
+interface FooterProps {
   onBack?: () => void;
   onContinue?: () => void;
   continueLabel?: string;
   showEthics?: boolean;
   onEthics?: () => void;
   disabled?: boolean;
-}) {
+}
+const Footer = forwardRef<HTMLDivElement, FooterProps>(({
+  onBack, onContinue, continueLabel = "continue",
+  showEthics = true, onEthics, disabled = false,
+}, ref) => {
   return (
     <>
       <div className="r-line" />
-      <div className="r-footer">
+      <div ref={ref} className="r-footer">
         {onBack && <span className="r-footer-back" onClick={onBack}>‹</span>}
         {onBack && <span className="r-footer-sep">|</span>}
         {onContinue && (
@@ -234,11 +236,12 @@ function Footer({
       </div>
     </>
   );
-}
+});
+Footer.displayName = "Footer";
 
-function InvisibleTextarea({
-  value, onChange, placeholder = "type here",
-}: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+const InvisibleTextarea = forwardRef<HTMLDivElement, {
+  value: string; onChange: (v: string) => void; placeholder?: string;
+}>(({ value, onChange, placeholder = "type here" }, fwdRef) => {
   const ref = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     if (ref.current) {
@@ -247,7 +250,7 @@ function InvisibleTextarea({
     }
   }, [value]);
   return (
-    <div className="r-input-wrap">
+    <div ref={fwdRef} className="r-input-wrap">
       <textarea
         ref={ref} className="r-textarea" value={value}
         onChange={e => onChange(e.target.value)}
@@ -256,7 +259,8 @@ function InvisibleTextarea({
       <div className={`r-send-dot${value.trim() ? " active" : ""}`} />
     </div>
   );
-}
+});
+InvisibleTextarea.displayName = "InvisibleTextarea";
 
 // ─── Main ─────────────────────────────────────────────────────────
 
