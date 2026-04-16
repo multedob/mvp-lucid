@@ -96,10 +96,14 @@ export const RevealText = forwardRef<HTMLElement, RevealTextProps>(({
     }
   }, [text, duration, enabled, shuffledOrder, onComplete])
 
-  const Wrapper = as as keyof JSX.IntrinsicElements
-
   return (
-    <Wrapper ref={fwdRef as any} className={className} style={style}>
+    {as === 'p' ? (
+      <p ref={fwdRef as any} className={className} style={style}>
+    ) : as === 'div' ? (
+      <div ref={fwdRef as any} className={className} style={style}>
+    ) : (
+      <span ref={fwdRef as any} className={className} style={style}>
+    )}
       {text.split('').map((char, i) => {
         // Preserve line breaks explicitly so they always occupy space,
         // even while the surrounding characters are still hidden.
