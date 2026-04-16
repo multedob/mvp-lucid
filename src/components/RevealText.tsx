@@ -14,7 +14,7 @@
 // variant or disable.
 // ============================================================
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { forwardRef, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 
 interface RevealTextProps {
   text: string
@@ -32,7 +32,7 @@ interface RevealTextProps {
   as?: 'span' | 'p' | 'div'
 }
 
-export function RevealText({
+export const RevealText = forwardRef<HTMLElement, RevealTextProps>(({
   text,
   duration = 1500,
   charFadeMs = 280,
@@ -41,7 +41,7 @@ export function RevealText({
   className,
   style,
   as = 'span',
-}: RevealTextProps) {
+}, fwdRef) => {
   const [visible, setVisible] = useState<boolean[]>(() =>
     enabled ? new Array(text.length).fill(false) : new Array(text.length).fill(true)
   )
@@ -99,7 +99,7 @@ export function RevealText({
   const Wrapper = as as keyof JSX.IntrinsicElements
 
   return (
-    <Wrapper className={className} style={style}>
+    <Wrapper ref={fwdRef as any} className={className} style={style}>
       {text.split('').map((char, i) => {
         // Preserve line breaks explicitly so they always occupy space,
         // even while the surrounding characters are still hidden.
@@ -128,4 +128,5 @@ export function RevealText({
       })}
     </Wrapper>
   )
-}
+});
+RevealText.displayName = "RevealText";
