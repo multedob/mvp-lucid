@@ -28,7 +28,7 @@
 //     but recording + Whisper still work.
 // ============================================================
 
-import { useEffect, useRef, useState } from "react";
+import { forwardRef, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunction } from "@/lib/api";
 
@@ -81,7 +81,7 @@ function localeToIso639(locale: string): string {
   return locale.split("-")[0]?.toLowerCase() ?? "en";
 }
 
-export function AudioRecorder({
+export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(({
   userId,
   cycleId,
   pillId,
@@ -91,7 +91,7 @@ export function AudioRecorder({
   onFinalTranscript,
   onAudioStored,
   disabled,
-}: AudioRecorderProps) {
+}, fwdRef) => {
   const [state, setState] = useState<"idle" | "recording" | "processing" | "error">("idle");
   const [elapsedMs, setElapsedMs] = useState(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -261,7 +261,7 @@ export function AudioRecorder({
     : "var(--r-accent, #c8553d)";
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <div ref={fwdRef} style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <button
         type="button"
         onClick={isRecording ? stopRecording : startRecording}
@@ -311,4 +311,5 @@ export function AudioRecorder({
       `}</style>
     </div>
   );
-}
+});
+AudioRecorder.displayName = "AudioRecorder";
