@@ -96,37 +96,32 @@ export const RevealText = forwardRef<HTMLElement, RevealTextProps>(({
     }
   }, [text, duration, enabled, shuffledOrder, onComplete])
 
-  const Wrapper = as as keyof JSX.IntrinsicElements
+  const children = text.split('').map((char, i) => {
+    if (char === '\n') {
+      return <br key={i} />
+    }
+    if (char === ' ') {
+      return ' '
+    }
+    return (
+      <span
+        key={i}
+        style={{
+          opacity: visible[i] ? 1 : 0,
+          transition: `opacity ${charFadeMs}ms ease-out`,
+        }}
+      >
+        {char}
+      </span>
+    )
+  })
 
-  return (
-    <Wrapper ref={fwdRef as any} className={className} style={style}>
-      {text.split('').map((char, i) => {
-        // Preserve line breaks explicitly so they always occupy space,
-        // even while the surrounding characters are still hidden.
-        if (char === '\n') {
-          return <br key={i} />
-        }
-        // Render spaces as plain text nodes so the browser can use them as
-        // soft-wrap opportunities. Wrapping spaces in <span whiteSpace:pre>
-        // eliminates wrap points and causes horizontal overflow on narrow
-        // viewports (mobile). Spaces have no visible glyph, so skipping the
-        // per-char fade on them is imperceptible.
-        if (char === ' ') {
-          return ' '
-        }
-        return (
-          <span
-            key={i}
-            style={{
-              opacity: visible[i] ? 1 : 0,
-              transition: `opacity ${charFadeMs}ms ease-out`,
-            }}
-          >
-            {char}
-          </span>
-        )
-      })}
-    </Wrapper>
-  )
+  if (as === 'p') {
+    return <p ref={fwdRef as any} className={className} style={style}>{children}</p>
+  }
+  if (as === 'div') {
+    return <div ref={fwdRef as any} className={className} style={style}>{children}</div>
+  }
+  return <span ref={fwdRef as any} className={className} style={style}>{children}</span>
 });
 RevealText.displayName = "RevealText";
