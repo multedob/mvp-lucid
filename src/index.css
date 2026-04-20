@@ -69,8 +69,9 @@
   --r-bg-dark:  #121214;
 
   /* accent */
-  --r-accent:   #C04A30;
-  --r-teal:     #1A9FAA;
+  --r-accent:    #C04A30;
+  --r-accent-dk: #1A9FAA;  /* dark-mode accent → teal (T0.1 v1.1) */
+  --r-teal:      #1A9FAA;
 
   /* text hierarchy */
   --r-text:     #1A1410;
@@ -85,6 +86,24 @@
   --r-font-sys:  'IBM Plex Mono', monospace;
   --r-font-ed:   'Urbanist', sans-serif;
   --r-font-mark: 'VT323', monospace;
+
+  /* ─── semantic voice tokens (T0.1 — Eco v1.1) ──────────────────── */
+  /* mapeia cada voz do sistema a uma cor semântica; consumido pelas
+     classes .voice-* e por componentes do M5 Eco. nunca usar hex
+     literal em contexto semântico. */
+  --r-voice-founders:    var(--r-accent);
+  --r-voice-reed-accent: var(--r-accent);
+  --r-voice-user:        var(--r-text);
+  --r-voice-sys:         var(--r-dim);
+}
+
+.dark {
+  /* ─── dark-mode overrides dos tokens --r-* (Eco v1.1) ──────────── */
+  /* só tokens semânticos são re-mapeados; tokens base permanecem. */
+  --r-voice-founders:    var(--r-teal);
+  --r-voice-reed-accent: var(--r-teal);
+  --r-voice-user:        var(--r-text-dk);
+  --r-voice-sys:         var(--r-muted-dk);
 }
 
 /* ─── base ──────────────────────────────────────────────────────── */
@@ -458,4 +477,39 @@ body {
 .r-choice-text.selected {
   font-weight: 800;
   color: var(--r-text);
+}
+
+/* ─── voice classes (T0.2 — Eco v1.1) ──────────────────────────── */
+/* 4 vozes do M5 Eco mapeadas a fonte + peso + cor semântica.
+   usar estas classes em qualquer componente que renderize uma voz;
+   nunca hardcode de cor ou font-family em contexto semântico. */
+
+.voice-sys {
+  font-family: var(--r-font-sys);
+  font-weight: 400;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--r-voice-sys);
+}
+
+.voice-reed {
+  font-family: var(--r-font-ed);
+  font-weight: 800;
+  color: var(--r-text);
+}
+
+.dark .voice-reed { color: var(--r-text-dk); }
+
+.voice-user {
+  font-family: var(--r-font-ed);
+  font-weight: 300;
+  font-style: italic;
+  color: var(--r-voice-user);
+}
+
+.voice-founders {
+  font-family: var(--r-font-sys);
+  font-weight: 400;
+  color: var(--r-voice-founders);
 }
