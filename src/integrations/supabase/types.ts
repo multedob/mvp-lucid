@@ -489,6 +489,59 @@ export type Database = {
         }
         Relationships: []
       }
+      pill_eco_events: {
+        Row: {
+          id: string
+          ipe_cycle_id: string
+          is_fallback: boolean
+          latency_ms: number | null
+          locale: string
+          operator: string
+          pill_id: string
+          raw_payload: Json | null
+          rendered_at: string
+          talk_to_reed_clicked: boolean
+          talk_to_reed_clicked_at: string | null
+          variation: string
+        }
+        Insert: {
+          id?: string
+          ipe_cycle_id: string
+          is_fallback?: boolean
+          latency_ms?: number | null
+          locale?: string
+          operator: string
+          pill_id: string
+          raw_payload?: Json | null
+          rendered_at?: string
+          talk_to_reed_clicked?: boolean
+          talk_to_reed_clicked_at?: string | null
+          variation: string
+        }
+        Update: {
+          id?: string
+          ipe_cycle_id?: string
+          is_fallback?: boolean
+          latency_ms?: number | null
+          locale?: string
+          operator?: string
+          pill_id?: string
+          raw_payload?: Json | null
+          rendered_at?: string
+          talk_to_reed_clicked?: boolean
+          talk_to_reed_clicked_at?: string | null
+          variation?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pill_eco_events_ipe_cycle_id_fkey"
+            columns: ["ipe_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "ipe_cycles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pill_responses: {
         Row: {
           completed_at: string | null
