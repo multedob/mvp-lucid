@@ -75,7 +75,7 @@ function parseEcoJson(raw: string): EcoStructured | null {
   if (!(parsed.operator_hint in MICROTITLE_POOLS)) return null;
 
   const mt = parsed.microtitle.toLowerCase().trim();
-  const validForHint = MICROTITLE_POOLS[parsed.operator_hint as OperatorHint];
+  const validForHint: readonly string[] = MICROTITLE_POOLS[parsed.operator_hint as OperatorHint];
   if (!validForHint.includes(mt) && !ALL_MICROTITLES.includes(mt)) return null;
 
   const q = parsed.question.trim().toLowerCase();
