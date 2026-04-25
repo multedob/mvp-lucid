@@ -75,7 +75,7 @@ function parseEcoJson(raw: string): EcoStructured | null {
   if (!(parsed.operator_hint in MICROTITLE_POOLS)) return null;
 
   const mt = parsed.microtitle.toLowerCase().trim();
-  const validForHint = MICROTITLE_POOLS[parsed.operator_hint as OperatorHint];
+  const validForHint: readonly string[] = MICROTITLE_POOLS[parsed.operator_hint as OperatorHint];
   if (!validForHint.includes(mt) && !ALL_MICROTITLES.includes(mt)) return null;
 
   const q = parsed.question.trim().toLowerCase();
@@ -992,7 +992,8 @@ Deno.serve(async (req) => {
   const max_retries = 2;
   let last_error: string = "";
 
-  let structured_payload: EcoStructured | null = null;\n  while (retry_count <= max_retries && !eco_text) {
+  let structured_payload: EcoStructured | null = null;
+  while (retry_count <= max_retries && !eco_text) {
     try {
       const response = await anthropic.messages.create({
         model: "claude-sonnet-4-20250514",
