@@ -992,7 +992,8 @@ Deno.serve(async (req) => {
   const max_retries = 2;
   let last_error: string = "";
 
-  let structured_payload: EcoStructured | null = null;\n  while (retry_count <= max_retries && !eco_text) {
+  let structured_payload: EcoStructured | null = null;
+  while (retry_count <= max_retries && !eco_text) {
     try {
       const response = await anthropic.messages.create({
         model: "claude-sonnet-4-20250514",
