@@ -1,5 +1,13 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.27.3";
+import { generateEco } from "../_shared/eco/engine.ts";
+import type {
+  EcoInputs,
+  OperatorContext,
+  OperatorId,
+  PillId,
+  Variation,
+} from "../_shared/eco/types.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -83,6 +91,154 @@ interface PillResponse {
   m4_resposta?: Record<string, unknown>;
   m2_cal_signals?: Record<string, unknown>;
   eco_text?: string;
+}
+
+// ─── Adaptadores determinísticos (Fase 2-B) ────────────────────────
+
+/**
+ * Converte a PillResponse do banco em EcoInputs esperados pelo engine.
+ * Mapeia campos M2/M3/M4 preservando convenção `m3_2_abre_mao`.
+ */
+function buildEcoInputs(pr: PillResponse): EcoInputs {
+  const m3 = pr.m3_respostas ?? {};
+  const m4 = pr.m4_resposta ?? {};
+
+  // m3 pode vir com chaves como '3_1_situacao_oposta', '3_2_abre_mao', etc.
+  // Aceita também variantes sem prefixo ('abre_mao', 'situacao_oposta') por
+  // robustez — o engine só exige que o dado chegue, não a chave exata.
+  const pick = (keys: string[]): string | null => {
+    for (const k of keys) {
+      const v = (m3 as Record<string, unknown>)[k];
+      if (typeof v === "string" && v.trim()) return v;
+    }
+    return null;
+  };
+
+  const m3_2_opcao = pick(["3_2_opcao", "opcao"]) as
+    | "A"
+    | "B"
+    | "C"
+    | "D"
+    | null;
+
+  // Construir m4 combinado (texto narrativo do M4) para OP03/OP04.
+  const m4_text_parts: string[] = [];
+  if (typeof m4.percepcao === "string" && m4.percepcao.trim()) {
+    m4_text_parts.push(m4.percepcao.trim());
+  }
+  if (typeof m4.narrativa === "string" && m4.narrativa.trim()) {
+    m4_text_parts.push(m4.narrativa.trim());
+  }
+  if (typeof m4.condicao === "string" && m4.condicao.trim()) {
+    m4_text_parts.push(m4.condicao.trim());
+  }
+  if (typeof m4.tensao === "string" && m4.tensao.trim()) {
+    m4_text_parts.push(m4.tensao.trim());
+  }
+  const m4_combined = m4_text_parts.join(" ").trim() || null;
+
+  return {
+    pill_id: pr.pill_id as PillId,
+    m2: pr.m2_resposta ?? null,
+    m3_1_situacao_oposta: pick(["3_1_situacao_oposta", "situacao_oposta"]),
+    m3_2_opcao,
+    m3_2_abre_mao: pick(["3_2_abre_mao", "abre_mao"]),
+    m3_2_option_label: pick(["3_2_option_label", "option_label"]),
+    m3_3_narrativa: pick(["3_3_narrativa", "narrativa"]),
+    m3_3_condicao: pick(["3_3_condicao", "condicao"]),
+    m4: m4_combined,
+  };
+}
+
+/**
+ * Busca contexto do usuário (§5.2 anti-repetição + §5.3 rotação).
+ * Lê as últimas entradas de `pill_eco_events` no mesmo ciclo (RLS já filtra
+ * por user via ipe_cycles.user_id). Schema real T0.3 usa `operator` e
+ * `rendered_at`. Silenciosamente retorna contexto vazio em caso de erro.
+ */
+async function buildOperatorContext(
+  supabase: any,
+  _user_id: string,
+  ipe_cycle_id: string,
+): Promise<OperatorContext> {
+  try {
+    const { data, error } = await supabase
+      .from("pill_eco_events")
+      .select("operator, variation, pill_id, rendered_at")
+      .eq("ipe_cycle_id", ipe_cycle_id)
+      .order("rendered_at", { ascending: false })
+      .limit(12);
+
+    if (error || !data || data.length === 0) {
+      return {};
+    }
+
+    const previous_operator_in_cycle = data[0]?.operator as OperatorId;
+
+    const recent_variations_by_operator: Partial<
+      Record<OperatorId, Variation[]>
+    > = {};
+    for (const row of data) {
+      const op = row.operator as OperatorId;
+      const v = row.variation as Variation;
+      if (!op || !v) continue;
+      if (!recent_variations_by_operator[op]) {
+        recent_variations_by_operator[op] = [];
+      }
+      recent_variations_by_operator[op]!.push(v);
+    }
+
+    return {
+      previous_operator_in_cycle,
+      recent_variations_by_operator,
+    };
+  } catch (err) {
+    console.error("buildOperatorContext error:", err);
+    return {};
+  }
+}
+
+/**
+ * Persiste evento em `pill_eco_events` (telemetria do caminho determinístico).
+ * Schema real (T0.3): operator (não operator_id), rendered_at (não created_at),
+ * raw_payload (jsonb) abraça fragments + reed_question + debug.
+ * RLS via ipe_cycle_id → ipe_cycles.user_id (não grava user_id explícito).
+ * Não-fatal: log e segue em caso de erro.
+ */
+async function persistEcoEvent(
+  supabase: any,
+  _user_id: string,
+  ipe_cycle_id: string,
+  pill_id: string,
+  operator_id: OperatorId,
+  variation: Variation,
+  is_fallback: boolean,
+  latency_ms: number,
+  fragments: string[],
+  reed_question: string,
+  debug: Record<string, unknown>,
+): Promise<void> {
+  try {
+    await supabase.from("pill_eco_events").insert([
+      {
+        ipe_cycle_id,
+        pill_id,
+        operator: operator_id,
+        variation,
+        is_fallback,
+        latency_ms: Math.round(latency_ms),
+        locale: "pt-BR",
+        rendered_at: new Date().toISOString(),
+        raw_payload: {
+          fragments,
+          reed_question,
+          debug,
+        },
+      },
+    ]);
+  } catch (err) {
+    console.error("persistEcoEvent error:", err);
+  }
 }
 
 const detectLanguage = (text: string): "pt" | "en" => {
@@ -473,12 +629,20 @@ const persistEcoText = async (
   supabase: any,
   ipe_cycle_id: string,
   pill_id: string,
-  eco_text: string
+  eco_text: string,
+  prompt_version_used?: string | null,
 ) => {
   try {
+    const update: Record<string, unknown> = {
+      eco_text,
+      completed_at: new Date().toISOString(),
+    };
+    if (prompt_version_used !== undefined) {
+      update.prompt_version_used = prompt_version_used;
+    }
     await supabase
       .from("pill_responses")
-      .update({ eco_text, completed_at: new Date().toISOString() })
+      .update(update)
       .eq("ipe_cycle_id", ipe_cycle_id)
       .eq("pill_id", pill_id);
   } catch (err) {
@@ -555,10 +719,77 @@ Deno.serve(async (req) => {
   const pill_response: PillResponse = pill_response_data;
 
   const component = `eco_${pill_id}`;
+  const force_regenerate = body?.force_regenerate === true;
 
-  // Idempotency: return cached eco if already exists
-  if (pill_response.eco_text) {
+  // Idempotency: return cached eco if already exists (unless force_regenerate).
+  if (pill_response.eco_text && !force_regenerate) {
     return json({ eco_text: pill_response.eco_text, scoring_audit_id: "", cached: true });
+  }
+
+  // ─── Caminho determinístico (Fase 2-B) ─────────────────────────
+  // Tenta gerar Eco via operadores PT-BR antes de chamar LLM.
+  // Só desce para LLM se TODOS os operadores rejeitarem (is_fallback).
+  try {
+    const eco_inputs = buildEcoInputs(pill_response);
+    const op_context = await buildOperatorContext(
+      supabase,
+      user_id,
+      ipe_cycle_id,
+    );
+    const payload = generateEco(eco_inputs, op_context, { locale: "pt-BR" });
+
+    // Persiste evento sempre — inclusive fallback, para telemetria.
+    await persistEcoEvent(
+      supabase,
+      user_id,
+      ipe_cycle_id,
+      pill_id,
+      payload.operator_id,
+      payload.variation,
+      payload.is_fallback,
+      payload.latency_ms,
+      payload.fragments,
+      payload.reed_question,
+      (payload.debug ?? {}) as Record<string, unknown>,
+    );
+
+    // Se operador determinístico disparou (não é fallback canônico),
+    // entrega o texto verbatim-ancorado e pula LLM.
+    if (!payload.is_fallback) {
+      const det_version = `eco-det-${payload.operator_id}-${payload.variation}`;
+      await persistEcoText(
+        supabase,
+        ipe_cycle_id,
+        pill_id,
+        payload.full_text,
+        det_version,
+      );
+      await persistAudit(
+        supabase,
+        ipe_cycle_id,
+        component,
+        det_version,
+        0,
+        0,
+        "",
+        payload.full_text,
+        true,
+        0,
+        "deterministic-engine",
+      );
+      return json({
+        eco_text: payload.full_text,
+        scoring_audit_id: "",
+        cached: false,
+        deterministic: true,
+        operator_id: payload.operator_id,
+        variation: payload.variation,
+      });
+    }
+    // is_fallback === true → todos operadores rejeitaram. Segue para LLM.
+  } catch (err) {
+    console.error("deterministic engine error:", err);
+    // Não-fatal: segue para LLM.
   }
 
   // Fetch all data sources
@@ -584,11 +815,12 @@ Deno.serve(async (req) => {
   );
 
   let prompt_text = buildOracularPrompt(pill_id);
+  let prompt_version_label = "embedded-v3.0";
 
   // Check for active prompt version in DB (component = eco_PI, eco_PII, etc.)
   const { data: prompt_version_data } = await supabase
     .from("prompt_versions")
-    .select("prompt_text")
+    .select("prompt_text, version")
     .eq("component", component)
     .eq("active", true)
     .order("created_at", { ascending: false })
@@ -597,6 +829,7 @@ Deno.serve(async (req) => {
 
   if (prompt_version_data?.prompt_text) {
     prompt_text = prompt_version_data.prompt_text;
+    prompt_version_label = prompt_version_data.version ?? prompt_version_label;
   }
 
   // Initialize LLM client
@@ -610,12 +843,18 @@ Deno.serve(async (req) => {
           ""
       )
     );
-    await persistEcoText(supabase, ipe_cycle_id, pill_id, fallback);
+    await persistEcoText(
+      supabase,
+      ipe_cycle_id,
+      pill_id,
+      fallback,
+      "fallback-no-key",
+    );
     await persistAudit(
       supabase,
       ipe_cycle_id,
       component,
-      "embedded-v3.0",
+      "fallback-no-key",
       0,
       0,
       "",
@@ -658,7 +897,7 @@ Deno.serve(async (req) => {
           supabase,
           ipe_cycle_id,
           component,
-          "embedded-v3.0",
+          prompt_version_label,
           response.usage.input_tokens,
           response.usage.output_tokens,
           eco_text,
@@ -691,7 +930,7 @@ Deno.serve(async (req) => {
       supabase,
       ipe_cycle_id,
       component,
-      "embedded-v3.0",
+      "fallback-error",
       0,
       0,
       last_error,
@@ -700,10 +939,24 @@ Deno.serve(async (req) => {
       retry_count,
       "fallback-error"
     );
+    await persistEcoText(
+      supabase,
+      ipe_cycle_id,
+      pill_id,
+      eco_text,
+      "fallback-error",
+    );
+    return json({ eco_text, scoring_audit_id: "", cached: false });
   }
 
-  // Persist eco text
-  await persistEcoText(supabase, ipe_cycle_id, pill_id, eco_text);
+  // Persist eco text (LLM success path).
+  await persistEcoText(
+    supabase,
+    ipe_cycle_id,
+    pill_id,
+    eco_text,
+    prompt_version_label,
+  );
 
   return json({ eco_text, scoring_audit_id: "", cached: false });
 });
