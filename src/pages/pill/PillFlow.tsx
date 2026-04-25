@@ -280,7 +280,7 @@ export default function PillFlow() {
     // Prefer browser's language; fall back to en-US. User can effectively
     // override by typing in any language — Web Speech adapts loosely and
     // Whisper auto-detects anyway (locale here is just a hint).
-    audioLocale: typeof navigator !== "undefined" && navigator.language ? navigator.language : "en-US",
+    audioLocale: "pt-BR",
     m2AudioPath: null, m2AudioDurationMs: null, m2TranscriptionLive: "", m2TranscriptionFinal: null,
     m4AudioPath: null, m4AudioDurationMs: null, m4TranscriptionLive: "", m4TranscriptionFinal: null,
   });
