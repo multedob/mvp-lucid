@@ -51,10 +51,6 @@ interface State {
   m3_3_transversal: string;
   m4Input: string;
   ecoText: string;
-  ecoMirror: string;
-  ecoQuestion: string;
-  ecoMicrotitle: string;
-  ecoOperatorHint: string;
   loading: boolean;
   // ─── Audio (M2 & M4) ────────────────────────────────
   userId: string | null;               // filled in initCycle, used for storage path
@@ -279,7 +275,7 @@ export default function PillFlow() {
     m2Input: "", m3_1_posicao: null, m3_1_duasPalavras: "",
     m3_1_situacaoOposta: "", m3_2_opcao: null, m3_2_abreMao: "",
     m3_2_followupC: "", m3_2_followupD: "", m3_3_narrativa: "",
-    m3_3_condicao: "", m3_3_transversal: "", m4Input: "", ecoText: "", ecoMirror: "", ecoQuestion: "", ecoMicrotitle: "", ecoOperatorHint: "cost", loading: false,
+    m3_3_condicao: "", m3_3_transversal: "", m4Input: "", ecoText: "", loading: false,
     userId: null,
     // Prefer browser's language; fall back to en-US. User can effectively
     // override by typing in any language — Web Speech adapts loosely and
@@ -495,57 +491,22 @@ export default function PillFlow() {
       });
 
       let ecoText = "";
-      let ecoMirror = "";
-      let ecoQuestion = "";
-      let ecoMicrotitle = "olha o que reparei";
-      let ecoOperatorHint = "cost";
       try {
         const userName = localStorage.getItem("rdwth_user_name") || undefined;
-        const eco = await callEdgeFunction<{
-          eco_text: string;
-          mirror?: string;
-          question?: string;
-          microtitle?: string;
-          operator_hint?: string;
-        }>("ipe-eco", {
+        const eco = await callEdgeFunction<{ eco_text: string }>("ipe-eco", {
           ipe_cycle_id: state.ipeCycleId, pill_id: state.pillId, ...(userName && { user_name: userName }),
         });
         ecoText = eco.eco_text || "";
-        ecoMirror = eco.mirror || ecoText.split("\n").find(l => l.trim() && !l.startsWith("—")) || ecoText;
-        ecoQuestion = eco.question || "";
-        ecoMicrotitle = eco.microtitle || "olha o que reparei";
-        ecoOperatorHint = eco.operator_hint || "cost";
       } catch (ecoErr) {
         console.error("[PillFlow] ipe-eco failed:", ecoErr);
       }
 
-      setState(s => ({ ...s, ecoText, ecoMirror, ecoQuestion, ecoMicrotitle, ecoOperatorHint, moment: "M5", loading: false }));
+      setState(s => ({ ...s, ecoText, moment: "M5", loading: false }));
     } catch (err) {
       console.error("[PillFlow] submitM4 failed:", err);
       setState(s => ({ ...s, loading: false }));
     }
   };
-
-  // ─── M5 reveal ritual ──────────────────────────────────────
-  const [m5Stage, setM5Stage] = useState(0);
-  const [m5Arrived, setM5Arrived] = useState(false);
-
-  useEffect(() => {
-    if (state.moment !== "M5") {
-      setM5Stage(0);
-      setM5Arrived(false);
-      return;
-    }
-    const arrivalTimer = setTimeout(() => setM5Arrived(true), 800);
-    const stageDelays = [900, 1400, 1900, 2500, 2900, 3400, 4000];
-    const timers = stageDelays.map((delay, i) =>
-      setTimeout(() => setM5Stage(s => Math.max(s, i + 1)), delay)
-    );
-    return () => {
-      clearTimeout(arrivalTimer);
-      timers.forEach(clearTimeout);
-    };
-  }, [state.moment]);
 
   // ─── Content derived from variation (or fallback) ────────────
   const vc = state.variationContent;
@@ -765,50 +726,44 @@ export default function PillFlow() {
     </div>
   );
 
-  // ─── M5: Echo (Fase 3 — protótipo v1.3) ───────────────────────
+  // ─── M5: Echo ─────────────────────────────────────────────────
   return (
-    <div className="r-screen" style={{ position: "relative" }}>
+    <div className="r-screen">
       <Header moment="M5" />
-
-      {/* Arrival ritual */}
-      <div className={`r-arrival${m5Arrived ? " gone" : ""}`}>
-        <span className="r-pulse"></span>
+      <div className="r-scroll" style={{ padding: "28px 24px 16px", display: "flex", flexDirection: "column", gap: 24 }}>
+        <div className="r-reed-sig">REED · {state.cycleDisplay}</div>
+        {state.ecoText ? (
+          state.ecoText.split("\n\n").map((p, i) => (
+            <div key={i} className="r-narrative">
+              <RevealText text={p} duration={2000} charFadeMs={380} />
+            </div>
+          ))
+        ) : (
+          <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-ghost)", letterSpacing: "0.08em", textAlign: "center", padding: "12px 0" }}>
+            reed está escutando<span className="r-dots">...</span>
+          </div>
+        )}
       </div>
-
-      <div className="r-scroll-m5">
-        <div className={`r-microtitle r-stage-in${m5Stage >= 1 ? " show" : ""}`}>
-          {state.ecoMicrotitle || "olha o que reparei"}
-        </div>
-
-        <div className={`r-label r-stage-in${m5Stage >= 2 ? " show" : ""}`}>
-          você disse
-        </div>
-
-        <div className={`r-mirror r-stage-in${m5Stage >= 3 ? " show" : ""}`}>
-          {state.ecoMirror || ""}
-        </div>
-
-        <div className={`r-gap r-stage-in${m5Stage >= 4 ? " show" : ""}`} />
-
-        <div className={`r-label r-stage-in${m5Stage >= 5 ? " show" : ""}`}>
-          reed
-        </div>
-
-        <div className={`r-question r-stage-in${m5Stage >= 6 ? " show" : ""}`}>
-          {state.ecoQuestion || ""}
-        </div>
-
-        <div className={`r-talk r-stage-in${m5Stage >= 7 ? " show" : ""}`}>
-          <a onClick={() => navigate("/reed")}>conversar com reed →</a>
+      <div style={{ padding: "0 24px 12px", flexShrink: 0 }}>
+        <div
+          onClick={() => navigate("/reed")}
+          style={{
+            fontFamily: "var(--r-font-sys)",
+            fontWeight: 400,
+            fontSize: 12,
+            color: "var(--r-accent)",
+            letterSpacing: "0.06em",
+            cursor: "pointer",
+            textAlign: "center",
+            padding: "14px 0",
+            borderTop: "0.5px solid var(--r-ghost)",
+          }}
+        >
+          talk to reed
         </div>
       </div>
-
-      <Footer
-        onBack={() => setState(s => ({ ...s, moment: "M4" }))}
-        onContinue={() => navigate("/pills")}
-        continueLabel="continuar"
-        showEthics={false}
-      />
+      <Footer onBack={() => setState(s => ({ ...s, moment: "M4" }))}
+        onContinue={() => navigate("/pills")} continueLabel="continuar" showEthics={false} />
     </div>
   );
 }
