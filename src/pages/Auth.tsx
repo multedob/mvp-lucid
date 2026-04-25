@@ -28,6 +28,22 @@ export default function Auth() {
     if (error) { setError(error.message); setLoading(false); }
   };
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setError("digite seu email primeiro.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setLoading(false);
+    if (error) return setError(error.message);
+    setMessage("verifique seu email para redefinir a senha.");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -194,6 +210,24 @@ export default function Auth() {
               }}>
                 I confirm I am 16 years or older
               </span>
+            </div>
+          )}
+
+          {/* esqueci a senha — só no signin */}
+          {mode === "signin" && (
+            <div
+              onClick={() => !loading && handleForgotPassword()}
+              style={{
+                fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 9,
+                color: "var(--r-muted)", letterSpacing: "0.04em",
+                cursor: loading ? "default" : "pointer",
+                opacity: loading ? 0.5 : 1,
+                textDecoration: "underline",
+                alignSelf: "flex-start",
+                paddingTop: 2,
+              }}
+            >
+              esqueci a senha
             </div>
           )}
 
