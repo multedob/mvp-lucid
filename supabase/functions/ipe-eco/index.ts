@@ -9,6 +9,97 @@ import type {
   Variation,
 } from "../_shared/eco/types.ts";
 
+
+// ============================================================
+// CAMINHO A — Microtitle pools + JSON parser/validator
+// ============================================================
+
+const MICROTITLE_POOLS = {
+  cost: ["algo está pagando o preço", "tem um custo aqui", "o que isso pede em troca"],
+  repetition: ["olha o que reparei", "uma frase que volta", "algo se repetiu aqui"],
+  inversion: ["tem uma virada aqui", "algo aparece pelo avesso", "duas direções na mesma frase"],
+  contradiction: ["duas coisas ao mesmo tempo", "duas verdades aqui", "algo não bate"],
+  weight: ["onde o ar ficou denso", "uma frase mais pesada", "aqui carregou"],
+  absence: ["o que ficou de fora", "algo não apareceu", "uma ausência que fala"],
+} as const;
+
+type OperatorHint = keyof typeof MICROTITLE_POOLS;
+
+const OPERATOR_TO_HINT: Record<string, OperatorHint> = {
+  OP01: "cost",
+  OP02: "inversion",
+  OP03: "repetition",
+  OP04: "weight",
+  OP05: "contradiction",
+  OP06: "absence",
+};
+
+const ALL_MICROTITLES: string[] = Object.values(MICROTITLE_POOLS).flat();
+
+interface EcoStructured {
+  mirror: string;
+  question: string;
+  microtitle: string;
+  operator_hint: OperatorHint;
+}
+
+function pickMicrotitle(operator_id: string, variation: string): string {
+  const hint = OPERATOR_TO_HINT[operator_id] ?? "cost";
+  const pool = MICROTITLE_POOLS[hint];
+  const idx = ["V0", "V1", "V2", "V3"].indexOf(variation) % pool.length;
+  return pool[idx >= 0 ? idx : 0];
+}
+
+function parseEcoJson(raw: string): EcoStructured | null {
+  if (!raw) return null;
+  let candidate = raw.trim();
+  const fenceMatch = candidate.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (fenceMatch) candidate = fenceMatch[1].trim();
+  const objMatch = candidate.match(/\{[\s\S]*\}/);
+  if (objMatch) candidate = objMatch[0];
+
+  let parsed: any;
+  try {
+    parsed = JSON.parse(candidate);
+  } catch {
+    return null;
+  }
+
+  if (
+    typeof parsed?.mirror !== "string" ||
+    typeof parsed?.question !== "string" ||
+    typeof parsed?.microtitle !== "string" ||
+    typeof parsed?.operator_hint !== "string"
+  ) return null;
+
+  if (!(parsed.operator_hint in MICROTITLE_POOLS)) return null;
+
+  const mt = parsed.microtitle.toLowerCase().trim();
+  const validForHint = MICROTITLE_POOLS[parsed.operator_hint as OperatorHint];
+  if (!validForHint.includes(mt) && !ALL_MICROTITLES.includes(mt)) return null;
+
+  const q = parsed.question.trim().toLowerCase();
+  const hasMark = q.includes("?");
+  const interrogStarters = ["o que", "como", "quando", "onde", "quem", "qual", "por que", "por quê"];
+  const hasInterrogStart = interrogStarters.some(s => q.startsWith(s));
+  if (!hasMark && !hasInterrogStart) return null;
+
+  const qWords = parsed.question.trim().split(/\s+/).length;
+  const totalWords = (parsed.mirror + " " + parsed.question).trim().split(/\s+/).length;
+  if (qWords > 20 || totalWords > 60) return null;
+
+  return {
+    mirror: parsed.mirror.trim(),
+    question: parsed.question.trim(),
+    microtitle: mt,
+    operator_hint: parsed.operator_hint as OperatorHint,
+  };
+}
+
+function structuredToLegacyText(s: EcoStructured): string {
+  return `— você disse —\n\n${s.mirror}\n\n— reed —\n\n${s.question}`;
+}
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -728,7 +819,16 @@ Deno.serve(async (req) => {
 
   // Idempotency: return cached eco if already exists (unless force_regenerate).
   if (pill_response.eco_text && !force_regenerate) {
-    return json({ eco_text: pill_response.eco_text, scoring_audit_id: "", cached: true });
+    return json({
+      eco_text: pill_response.eco_text,
+      mirror: pill_response.eco_text.split("\n")[0] ?? pill_response.eco_text,
+      question: "",
+      microtitle: "",
+      operator_hint: "cost",
+      scoring_audit_id: "",
+      cached: true,
+      deterministic: false,
+    });
   }
 
   // ─── Caminho determinístico (Fase 2-B) ─────────────────────────
@@ -782,13 +882,27 @@ Deno.serve(async (req) => {
         0,
         "deterministic-engine",
       );
+      const _microtitle = pickMicrotitle(payload.operator_id, payload.variation);
+      const _structured: EcoStructured = {
+        mirror: payload.fragments?.length
+          ? `"${payload.fragments[0]}"${payload.fragments.length > 1 ? ` — ${payload.fragments.length} vezes.` : ""}`
+          : (payload.full_text.split("\n")[0] ?? ""),
+        question: payload.reed_question,
+        microtitle: _microtitle,
+        operator_hint: OPERATOR_TO_HINT[payload.operator_id] ?? "cost",
+      };
       return json({
+        mirror: _structured.mirror,
+        question: _structured.question,
+        microtitle: _structured.microtitle,
+        operator_hint: _structured.operator_hint,
         eco_text: payload.full_text,
         scoring_audit_id: "",
         cached: false,
         deterministic: true,
         operator_id: payload.operator_id,
         variation: payload.variation,
+        prompt_version_used: `eco-det-${payload.operator_id}-${payload.variation}`,
       });
     }
     // is_fallback === true → todos operadores rejeitaram. Segue para LLM.
@@ -878,24 +992,33 @@ Deno.serve(async (req) => {
   const max_retries = 2;
   let last_error: string = "";
 
-  while (retry_count <= max_retries && !eco_text) {
+  let structured_payload: EcoStructured | null = null;\n  while (retry_count <= max_retries && !eco_text) {
     try {
       const response = await anthropic.messages.create({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 150,
+        max_tokens: 400,
         temperature: 0.45,
         system: prompt_text,
         messages: [
           {
             role: "user",
-            content: `Context for the eco:\n\n${corpus}\n\nNow craft the 1-2 sentence eco for this person.`,
+            content: `Contexto da pessoa:\n\n${corpus}\n\nGere o eco JSON conforme as instruções do system prompt. Retorne APENAS o JSON, sem texto antes ou depois, sem cercas markdown.`,
           },
         ],
       });
 
       const content = response.content[0];
       if (content && "text" in content) {
-        eco_text = content.text.trim();
+        const raw = content.text.trim();
+        const parsed = parseEcoJson(raw);
+
+        if (parsed) {
+          eco_text = structuredToLegacyText(parsed);
+          structured_payload = parsed;
+        } else {
+          console.warn("[ipe-eco] LLM JSON inválido. Raw:", raw.slice(0, 200));
+          eco_text = ""; // mantém vazio para retry/fallback
+        }
 
         // Persist audit
         await persistAudit(
