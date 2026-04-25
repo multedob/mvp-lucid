@@ -12,6 +12,7 @@ import type {
 
 // ============================================================
 // CAMINHO A — Microtitle pools + JSON parser/validator
+// EXPANSÃO v2.c.1: 10 hints (vertical slice OP03 PVI semantic)
 // ============================================================
 
 const MICROTITLE_POOLS = {
@@ -21,10 +22,15 @@ const MICROTITLE_POOLS = {
   contradiction: ["duas coisas ao mesmo tempo", "duas verdades aqui", "algo não bate"],
   weight: ["onde o ar ficou denso", "uma frase mais pesada", "aqui carregou"],
   absence: ["o que ficou de fora", "algo não apareceu", "uma ausência que fala"],
+  paradox: ["tem um nó aqui", "uma frase em duas direções", "algo se contradiz"],
+  cycle: ["voltou em outro lugar", "isso já passou por aqui", "tem ressonância"],
+  silence: ["uma porta entreaberta", "algo que não foi até o fim", "tem espaço em branco aqui"],
+  temporal_shift: ["o tempo mudou de lado", "o ontem virou agora", "algo do passado virou presente"],
 } as const;
 
 type OperatorHint = keyof typeof MICROTITLE_POOLS;
 
+// Mapeamento operador determinístico → hint (Caminho A determinístico)
 const OPERATOR_TO_HINT: Record<string, OperatorHint> = {
   OP01: "cost",
   OP02: "inversion",
@@ -34,6 +40,22 @@ const OPERATOR_TO_HINT: Record<string, OperatorHint> = {
   OP06: "absence",
 };
 
+// Mapeamento reverso para persistência LLM em pill_eco_events.operator
+// OP07-OP10 não existem como operadores determinísticos ainda — usados só como
+// rótulo de telemetria quando LLM escolhe livremente esses padrões.
+const HINT_TO_OPERATOR_LLM: Record<OperatorHint, string> = {
+  cost: "OP01",
+  inversion: "OP02",
+  repetition: "OP03",
+  weight: "OP04",
+  contradiction: "OP05",
+  absence: "OP06",
+  paradox: "OP07",
+  cycle: "OP08",
+  silence: "OP09",
+  temporal_shift: "OP10",
+};
+
 const ALL_MICROTITLES: string[] = Object.values(MICROTITLE_POOLS).flat();
 
 interface EcoStructured {
@@ -41,6 +63,7 @@ interface EcoStructured {
   question: string;
   microtitle: string;
   operator_hint: OperatorHint;
+  node_resonance_used?: boolean;
 }
 
 function pickMicrotitle(operator_id: string, variation: string): string {
@@ -80,7 +103,10 @@ function parseEcoJson(raw: string): EcoStructured | null {
 
   const q = parsed.question.trim().toLowerCase();
   const hasMark = q.includes("?");
-  const interrogStarters = ["o que", "como", "quando", "onde", "quem", "qual", "por que", "por quê"];
+  const interrogStarters = [
+    "o que", "como", "quando", "onde", "quem", "qual",
+    "por que", "por quê", "será", "será que", "e se",
+  ];
   const hasInterrogStart = interrogStarters.some(s => q.startsWith(s));
   if (!hasMark && !hasInterrogStart) return null;
 
@@ -93,11 +119,25 @@ function parseEcoJson(raw: string): EcoStructured | null {
     question: parsed.question.trim(),
     microtitle: mt,
     operator_hint: parsed.operator_hint as OperatorHint,
+    node_resonance_used: typeof parsed.node_resonance_used === "boolean"
+      ? parsed.node_resonance_used
+      : false,
   };
 }
 
 function structuredToLegacyText(s: EcoStructured): string {
   return `— você disse —\n\n${s.mirror}\n\n— reed —\n\n${s.question}`;
+}
+
+// Extrai fragments entre aspas (curvas ou retas) do mirror
+function extractQuotedFragments(text: string): string[] {
+  const matches: string[] = [];
+  const re = /["""]([^"""]+)["""]/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    matches.push(m[1]);
+  }
+  return matches;
 }
 
 const CORS_HEADERS = {
@@ -186,17 +226,10 @@ interface PillResponse {
 
 // ─── Adaptadores determinísticos (Fase 2-B) ────────────────────────
 
-/**
- * Converte a PillResponse do banco em EcoInputs esperados pelo engine.
- * Mapeia campos M2/M3/M4 preservando convenção `m3_2_abre_mao`.
- */
 function buildEcoInputs(pr: PillResponse): EcoInputs {
   const m3 = pr.m3_respostas ?? {};
   const m4 = pr.m4_resposta ?? {};
 
-  // m3 pode vir com chaves como '3_1_situacao_oposta', '3_2_abre_mao', etc.
-  // Aceita também variantes sem prefixo ('abre_mao', 'situacao_oposta') por
-  // robustez — o engine só exige que o dado chegue, não a chave exata.
   const pick = (keys: string[]): string | null => {
     for (const k of keys) {
       const v = (m3 as Record<string, unknown>)[k];
@@ -212,7 +245,6 @@ function buildEcoInputs(pr: PillResponse): EcoInputs {
     | "D"
     | null;
 
-  // Construir m4 combinado (texto narrativo do M4) para OP03/OP04.
   const m4_text_parts: string[] = [];
   if (typeof m4.percepcao === "string" && m4.percepcao.trim()) {
     m4_text_parts.push(m4.percepcao.trim());
@@ -241,12 +273,6 @@ function buildEcoInputs(pr: PillResponse): EcoInputs {
   };
 }
 
-/**
- * Busca contexto do usuário (§5.2 anti-repetição + §5.3 rotação).
- * Lê as últimas entradas de `pill_eco_events` no mesmo ciclo (RLS já filtra
- * por user via ipe_cycles.user_id). Schema real T0.3 usa `operator` e
- * `rendered_at`. Silenciosamente retorna contexto vazio em caso de erro.
- */
 async function buildOperatorContext(
   supabase: any,
   _user_id: string,
@@ -290,10 +316,8 @@ async function buildOperatorContext(
 }
 
 /**
- * Persiste evento em `pill_eco_events` (telemetria do caminho determinístico).
- * Schema real (T0.3): operator (não operator_id), rendered_at (não created_at),
- * raw_payload (jsonb) abraça fragments + reed_question + debug.
- * RLS via ipe_cycle_id → ipe_cycles.user_id (não grava user_id explícito).
+ * Persiste evento em pill_eco_events.
+ * Estendido v2.c.1: aceita node_resonance_used (boolean) como coluna top-level.
  * Não-fatal: log e segue em caso de erro.
  */
 async function persistEcoEvent(
@@ -301,13 +325,14 @@ async function persistEcoEvent(
   _user_id: string,
   ipe_cycle_id: string,
   pill_id: string,
-  operator_id: OperatorId,
+  operator_id: string, // afrouxado de OperatorId pra aceitar OP07-OP10 do LLM
   variation: Variation,
   is_fallback: boolean,
   latency_ms: number,
   fragments: string[],
   reed_question: string,
   debug: Record<string, unknown>,
+  node_resonance_used: boolean = false,
 ): Promise<void> {
   try {
     await supabase.from("pill_eco_events").insert([
@@ -325,6 +350,7 @@ async function persistEcoEvent(
           reed_question,
           debug,
         },
+        node_resonance_used,
       },
     ]);
   } catch (err) {
@@ -335,26 +361,10 @@ async function persistEcoEvent(
 const detectLanguage = (text: string): "pt" | "en" => {
   if (!text) return "pt";
   const pt_words = [
-    "você",
-    "estar",
-    "ir",
-    "fazer",
-    "querer",
-    "pode",
-    "aqui",
-    "agora",
+    "você", "estar", "ir", "fazer", "querer", "pode", "aqui", "agora",
   ];
   const en_words = [
-    "you",
-    "be",
-    "go",
-    "do",
-    "want",
-    "can",
-    "here",
-    "now",
-    "the",
-    "and",
+    "you", "be", "go", "do", "want", "can", "here", "now", "the", "and",
   ];
   const words = text.toLowerCase().split(/\s+/);
   const pt_count = words.filter((w) => pt_words.includes(w)).length;
@@ -452,7 +462,6 @@ const selectEcoNode = async (
   try {
     const stage = cgg ?? 1.0;
 
-    // scores is JSONB — filter stage + density in query, then post-filter safe scores in JS
     const { data, error } = await supabase
       .from("rag_corpus")
       .select("node_id, content_text, stage_min, stage_max, scores")
@@ -465,10 +474,9 @@ const selectEcoNode = async (
       return null;
     }
 
-    // Post-filter: only nodes with safe scores (teleology=0, prescriptive=0, normative=0)
     const safe_nodes = data.filter((n: any) => {
       const s = n.scores;
-      if (!s) return true; // no scores = assume safe
+      if (!s) return true;
       return (
         (s.teleology_score ?? s.teleology ?? 0) === 0 &&
         (s.prescriptive_score ?? s.prescriptive ?? 0) === 0 &&
@@ -477,7 +485,6 @@ const selectEcoNode = async (
     });
 
     if (safe_nodes.length === 0) {
-      // Fallback: pick any density-1 node in range
       return data[0]?.content_text || null;
     }
 
@@ -580,7 +587,6 @@ const buildOracularCorpus = (
 ): string => {
   let corpus = "";
 
-  // Section 1: What the person shared
   corpus += "=== WHAT THE PERSON SHARED IN THIS PILL ===\n";
 
   if (pillResponse.m4_resposta) {
@@ -610,12 +616,10 @@ const buildOracularCorpus = (
     }
   }
 
-  // Section 2: Structural position (invisible to user)
   if (structuralContext) {
     corpus += "\n=== STRUCTURAL POSITION (invisible to user) ===\n";
     corpus += `CGG: ${structuralContext.cgg.toFixed(2)} | D1: ${structuralContext.d1.toFixed(2)} | D2: ${structuralContext.d2.toFixed(2)} | D3: ${structuralContext.d3.toFixed(2)} | D4: ${structuralContext.d4.toFixed(2)}\n`;
 
-    // Determine stage band from CGG
     let stage = "unknown";
     if (structuralContext.cgg < 1.5) stage = "F1 (Formation)";
     else if (structuralContext.cgg < 2.5) stage = "F2 (Formation)";
@@ -626,7 +630,6 @@ const buildOracularCorpus = (
     corpus += `Stage: ${stage}\n`;
   }
 
-  // Section 3: Longitudinal signal
   if (longitudinalData.length > 0) {
     corpus += "\n=== LONGITUDINAL SIGNAL ===\n";
     for (const data of longitudinalData) {
@@ -643,7 +646,6 @@ const buildOracularCorpus = (
     }
   }
 
-  // Section 4: Conceptual resonance (the node)
   if (nodeText) {
     corpus += "\n=== CONCEPTUAL RESONANCE ===\n";
     corpus += nodeText + "\n";
@@ -682,6 +684,12 @@ What you NEVER do:
 The eco ends where conversation begins. Make them wonder how you knew that.`;
 };
 
+/**
+ * persistAudit corrigido v2.c.1:
+ * raw_output recebe a string crua do LLM, parsed_output recebe JSON.stringify
+ * do EcoStructured. Permite query posterior do node_resonance_used + estrutura
+ * completa via scoring_audit.
+ */
 const persistAudit = async (
   supabase: any,
   ipe_cycle_id: string,
@@ -768,7 +776,6 @@ Deno.serve(async (req) => {
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
 
-  // Get authenticated user
   const { data: auth_data, error: auth_error } = await supabase.auth.getUser(
     token
   );
@@ -778,7 +785,6 @@ Deno.serve(async (req) => {
 
   const user_id = auth_data.user.id;
 
-  // Parse request body
   const body = await req.json().catch(() => ({}));
   const { ipe_cycle_id, pill_id } = body;
 
@@ -789,7 +795,6 @@ Deno.serve(async (req) => {
     );
   }
 
-  // Validate cycle ownership
   const { data: cycle_data, error: cycle_error } = await supabase
     .from("ipe_cycles")
     .select("id, user_id")
@@ -800,7 +805,6 @@ Deno.serve(async (req) => {
     return json({ error: "Cycle not found or unauthorized" }, 404);
   }
 
-  // Load pill response
   const { data: pill_response_data, error: pill_error } = await supabase
     .from("pill_responses")
     .select("*")
@@ -817,7 +821,6 @@ Deno.serve(async (req) => {
   const component = `eco_${pill_id}`;
   const force_regenerate = body?.force_regenerate === true;
 
-  // Idempotency: return cached eco if already exists (unless force_regenerate).
   if (pill_response.eco_text && !force_regenerate) {
     return json({
       eco_text: pill_response.eco_text,
@@ -832,8 +835,6 @@ Deno.serve(async (req) => {
   }
 
   // ─── Caminho determinístico (Fase 2-B) ─────────────────────────
-  // Tenta gerar Eco via operadores PT-BR antes de chamar LLM.
-  // Só desce para LLM se TODOS os operadores rejeitarem (is_fallback).
   try {
     const eco_inputs = buildEcoInputs(pill_response);
     const op_context = await buildOperatorContext(
@@ -843,7 +844,6 @@ Deno.serve(async (req) => {
     );
     const payload = generateEco(eco_inputs, op_context, { locale: "pt-BR" });
 
-    // Persiste evento sempre — inclusive fallback, para telemetria.
     await persistEcoEvent(
       supabase,
       user_id,
@@ -856,10 +856,9 @@ Deno.serve(async (req) => {
       payload.fragments,
       payload.reed_question,
       (payload.debug ?? {}) as Record<string, unknown>,
+      false, // determinístico nunca usa node
     );
 
-    // Se operador determinístico disparou (não é fallback canônico),
-    // entrega o texto verbatim-ancorado e pula LLM.
     if (!payload.is_fallback) {
       const det_version = `eco-det-${payload.operator_id}-${payload.variation}`;
       await persistEcoText(
@@ -905,13 +904,11 @@ Deno.serve(async (req) => {
         prompt_version_used: `eco-det-${payload.operator_id}-${payload.variation}`,
       });
     }
-    // is_fallback === true → todos operadores rejeitaram. Segue para LLM.
   } catch (err) {
     console.error("deterministic engine error:", err);
-    // Não-fatal: segue para LLM.
   }
 
-  // Fetch all data sources
+  // ─── Caminho LLM ────────────────────────────────────────────────
   const structural_context = await fetchStructuralContext(supabase, user_id);
   const eco_node = await selectEcoNode(
     supabase,
@@ -924,7 +921,6 @@ Deno.serve(async (req) => {
     pill_id
   );
 
-  // Build corpus and prompt
   const corpus = buildOracularCorpus(
     pill_id,
     pill_response,
@@ -936,7 +932,6 @@ Deno.serve(async (req) => {
   let prompt_text = buildOracularPrompt(pill_id);
   let prompt_version_label = "embedded-v3.0";
 
-  // Check for active prompt version in DB (component = eco_PI, eco_PII, etc.)
   const { data: prompt_version_data } = await supabase
     .from("prompt_versions")
     .select("prompt_text, version")
@@ -951,7 +946,6 @@ Deno.serve(async (req) => {
     prompt_version_label = prompt_version_data.version ?? prompt_version_label;
   }
 
-  // Initialize LLM client
   const anthropic_key = Deno.env.get("ANTHROPIC_API_KEY");
   if (!anthropic_key) {
     const fallback = getFallbackEco(
@@ -991,10 +985,13 @@ Deno.serve(async (req) => {
   let retry_count = 0;
   const max_retries = 2;
   let last_error: string = "";
+  let raw_llm_output: string = "";
+  let llm_t0: number = Date.now();
 
   let structured_payload: EcoStructured | null = null;
   while (retry_count <= max_retries && !eco_text) {
     try {
+      llm_t0 = Date.now();
       const response = await anthropic.messages.create({
         model: "claude-sonnet-4-20250514",
         max_tokens: 400,
@@ -1011,6 +1008,7 @@ Deno.serve(async (req) => {
       const content = response.content[0];
       if (content && "text" in content) {
         const raw = content.text.trim();
+        raw_llm_output = raw;
         const parsed = parseEcoJson(raw);
 
         if (parsed) {
@@ -1018,10 +1016,10 @@ Deno.serve(async (req) => {
           structured_payload = parsed;
         } else {
           console.warn("[ipe-eco] LLM JSON inválido. Raw:", raw.slice(0, 200));
-          eco_text = ""; // mantém vazio para retry/fallback
+          eco_text = "";
         }
 
-        // Persist audit
+        // CORRIGIDO: raw_output = string crua, parsed_output = JSON estruturado
         await persistAudit(
           supabase,
           ipe_cycle_id,
@@ -1029,9 +1027,9 @@ Deno.serve(async (req) => {
           prompt_version_label,
           response.usage.input_tokens,
           response.usage.output_tokens,
-          eco_text,
-          eco_text,
-          true,
+          raw_llm_output,
+          structured_payload ? JSON.stringify(structured_payload) : "",
+          parsed !== null,
           retry_count,
           "claude-sonnet-4-20250514"
         );
@@ -1046,7 +1044,7 @@ Deno.serve(async (req) => {
     }
   }
 
-  // Fallback if LLM failed
+  // Fallback se LLM falhar
   if (!eco_text) {
     const lang = detectLanguage(
       (pill_response.m4_resposta?.percepcao as string) ||
@@ -1078,7 +1076,7 @@ Deno.serve(async (req) => {
     return json({ eco_text, scoring_audit_id: "", cached: false });
   }
 
-  // Persist eco text (LLM success path).
+  // ─── Persistência LLM bem-sucedido ─────────────────────────────
   await persistEcoText(
     supabase,
     ipe_cycle_id,
@@ -1087,5 +1085,44 @@ Deno.serve(async (req) => {
     prompt_version_label,
   );
 
-  return json({ eco_text, scoring_audit_id: "", cached: false });
+  // NOVO v2.c.1: persiste evento LLM em pill_eco_events com node_resonance_used
+  if (structured_payload) {
+    const llm_latency = Date.now() - llm_t0;
+    const llm_operator = HINT_TO_OPERATOR_LLM[structured_payload.operator_hint] ?? "OP01";
+    const fragments = extractQuotedFragments(structured_payload.mirror);
+
+    await persistEcoEvent(
+      supabase,
+      user_id,
+      ipe_cycle_id,
+      pill_id,
+      llm_operator,
+      "V0" as Variation, // LLM não usa variação fixa
+      false,
+      llm_latency,
+      fragments,
+      structured_payload.question,
+      {
+        microtitle: structured_payload.microtitle,
+        operator_hint: structured_payload.operator_hint,
+        prompt_version: prompt_version_label,
+        node_used: eco_node !== null,
+        retry_count,
+        model: "claude-sonnet-4-20250514",
+      },
+      structured_payload.node_resonance_used ?? false,
+    );
+  }
+
+  return json({
+    eco_text,
+    mirror: structured_payload?.mirror ?? "",
+    question: structured_payload?.question ?? "",
+    microtitle: structured_payload?.microtitle ?? "",
+    operator_hint: structured_payload?.operator_hint ?? "cost",
+    scoring_audit_id: "",
+    cached: false,
+    deterministic: false,
+    prompt_version_used: prompt_version_label,
+  });
 });
