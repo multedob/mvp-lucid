@@ -1,1 +1,716 @@
-[\n    {\n        "id": "4d0331e7-0deb-43cb-8b95-327240ef18b4",\n        "locale": "en",\n        "content": {\n            "hint": null,\n            "fallback": null,\n            "principal": "Think of a situation where you were doing something important — and something or someone pushed in another direction. What was organizing you in that moment? And what happened to that direction when the pressure came?",\n            "subfallback": null\n        },\n        "block_id": "L1.1",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V1"\n    },\n    {\n        "id": "cb7e5d1e-8824-4021-880a-824a75925445",\n        "locale": "en",\n        "content": {\n            "hint": "Focus on an actual moment when you had to choose between competing pulls.",\n            "fallback": null,\n            "principal": "Describe a time when your original plan got interrupted — a genuine conflict between what you'd set out to do and what someone else needed or what circumstances demanded. Did you stay with your original intention, shift to the new thing, or split between the two? What made you decide?",\n            "subfallback": null\n        },\n        "block_id": "L1.1",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V2"\n    },\n    {\n        "id": "48a675b5-af4f-4c43-bcaa-9268a3176e1d",\n        "locale": "en",\n        "content": {\n            "hint": "This is a values-based anchor: internal misalignment, not external pressure.",\n            "fallback": null,\n            "principal": "Think of a time when you realized what you were doing wasn't aligned with what actually matters to you — not because someone told you, but because you felt it. What were you doing, and what was the signal that told you something was off?",\n            "subfallback": null\n        },\n        "block_id": "L1.1",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V3"\n    },\n    {\n        "id": "b3578fba-8cbd-4dce-9be7-bb13e7f422b9",\n        "locale": "en",\n        "content": {\n            "hint": null,\n            "fallback": null,\n            "principal": "Think of a time when you were tired, unwilling, or couldn't see the point — and there was something that needed to be done. Did you continue, stop, or do it halfway? And if you continued — what kept you going? If you stopped — what was missing?",\n            "subfallback": null\n        },\n        "block_id": "L1.2",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V1"\n    },\n    {\n        "id": "f3d67063-bf4e-46a2-afca-23032bfd2587",\n        "locale": "en",\n        "content": {\n            "hint": "This is about endurance over a longer arc — not an initial unwillingness, but fatigue setting in during the work.",\n            "fallback": null,\n            "principal": "Describe a situation where you were doing something that mattered to you — but over time, the struggle became real. The effort stayed hard, or the reward started to look less clear, or the cost got higher. What happened? Did you stay with it, find a different way, or eventually step back?",\n            "subfallback": null\n        },\n        "block_id": "L1.2",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V2"\n    },\n    {\n        "id": "f60310a7-1e15-460c-a40c-d9eca90bb23f",\n        "locale": "en",\n        "content": {\n            "hint": "The focus is on the moment when continuing becomes a conscious choice, not automatic.",\n            "fallback": null,\n            "principal": "Think of a time when you committed to something and then hit a point where continuing felt genuinely difficult — not just one bad day, but a sustained difficulty where you had to choose to keep going or let it go. What made you decide what to do?",\n            "subfallback": null\n        },\n        "block_id": "L1.2",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V3"\n    },\n    {\n        "id": "4cbc771b-0586-4120-804f-a70b5db087c6",\n        "locale": "en",\n        "content": {\n            "hint": null,\n            "fallback": null,\n            "principal": "Think of a time when you finished something and thought the result was good — and someone evaluated it differently. What happened to your criterion of 'good enough' when that evaluation came?",\n            "subfallback": null\n        },\n        "block_id": "L1.3",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V1"\n    },\n    {\n        "id": "97fa0394-de6d-4d2b-a17c-329601f6c469",\n        "locale": "en",\n        "content": {\n            "hint": "This captures the moment when what you judge as finished meets real resistance from the user/recipient.",\n            "fallback": null,\n            "principal": "Describe a situation where you completed work that met your own standards — and then the person receiving it pushed back, asked for changes, or indicated it wasn't what they needed. How did you take that feedback? Did you defend your work, revise it, or something else?",\n            "subfallback": null\n        },\n        "block_id": "L1.3",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V2"\n    },\n    {\n        "id": "f1665b0e-ba6b-439e-b673-5837b58a5993",\n        "locale": "en",\n        "content": {\n            "hint": "The focus is on learning quality through full cycle — not judgment clash in the moment, but realization that follows real-world use.",\n            "fallback": null,\n            "principal": "Think of a time when you delivered something you believed in — and only later discovered it hadn't accomplished what you'd intended, or it had created unintended consequences you hadn't foreseen. What happened to your sense of what 'good work' means when you saw the actual impact?",\n            "subfallback": null\n        },\n        "block_id": "L1.3",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V3"\n    },\n    {\n        "id": "48aa6530-e063-4c31-9e12-c0041f7bf0c2",\n        "locale": "en",\n        "content": {\n            "hint": null,\n            "fallback": null,\n            "principal": "Think of an experience that could have changed the way you do things — at work, at home, in any area. Something that showed you something new or different. Did something actually change? If it did — what, and did the change stick? Or did things gradually go back to how they were?",\n            "subfallback": null\n        },\n        "block_id": "L1.4",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V1"\n    },\n    {\n        "id": "60d20ab9-cb89-4c86-8888-647925008d2e",\n        "locale": "en",\n        "content": {\n            "hint": "The focus is whether insight became actual behavior change.",\n            "fallback": null,\n            "principal": "Recall a moment when you learned a better way to do something — either from watching someone, from failing at your old way, or from trying something experimental. Did that learning shift how you actually operate now, or did you drift back to your habits?",\n            "subfallback": null\n        },\n        "block_id": "L1.4",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V2"\n    },\n    {\n        "id": "ceee2cde-e678-435e-aa25-ae63212c4d3a",\n        "locale": "en",\n        "content": {\n            "hint": "This is about whether you genuinely evolve your practice, or just hear the lesson.",\n            "fallback": null,\n            "principal": "Think of a time when feedback or experience revealed that your usual approach wasn't working as well as you thought. Did you actually integrate that and adjust — or did it fade without changing much?",\n            "subfallback": null\n        },\n        "block_id": "L1.4",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V3"\n    },\n    {\n        "id": "9950a2ee-a31a-4788-813b-eefae5836ac8",\n        "locale": "en",\n        "content": {\n            "hint": null,\n            "fallback": null,\n            "principal": "Think of a moment when you felt something intensely — anger, fear, frustration, shame, deep sadness — in a situation where you needed to keep functioning. Describe that moment briefly. Then: what did you do with what you were feeling? Did something organize your behavior in that moment, or did the emotion determine what happened?",\n            "subfallback": null\n        },\n        "block_id": "L2.1",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V1"\n    },\n    {\n        "id": "63794250-d766-44f8-90fd-8355cf33bbd8",\n        "locale": "en",\n        "content": {\n            "hint": "The question is whether the feeling controlled your actions, or whether you had agency in the moment.",\n            "fallback": null,\n            "principal": "Recall a situation where a strong emotion arrived while you had a job to do — you were afraid, furious, deeply hurt, or ashamed, but you still had to show up. What happened in that moment? Did the emotion take over what you did, or did something allow you to act despite it?",\n            "subfallback": null\n        },\n        "block_id": "L2.1",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V2"\n    },\n    {\n        "id": "db3e4317-a104-4fa3-9777-58b5a541cb7e",\n        "locale": "en",\n        "content": {\n            "hint": "This probes what happens when emotion and responsibility collide.",\n            "fallback": null,\n            "principal": "Think of a time when you felt something powerfully — and it mattered what you did next. Describe briefly: what was the emotion, what was at stake, and what did you actually do? Did you express it, contain it, let it drive your choices, or manage it somehow?",\n            "subfallback": null\n        },\n        "block_id": "L2.1",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V3"\n    },\n    {\n        "id": "2628da48-d40c-44e2-b9e5-8df7aa79e919",\n        "locale": "en",\n        "content": {\n            "hint": null,\n            "fallback": null,\n            "principal": "Think of a time when you became interested in something that had nothing to do with what you do day to day — something outside your area, your work, your usual domain. What happened when you went after it?",\n            "subfallback": null\n        },\n        "block_id": "L2.2",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V1"\n    },\n    {\n        "id": "f1136ad9-c13b-43f5-b52c-6eceeffbe209",\n        "locale": "en",\n        "content": {\n            "hint": "This captures the relational angle: curiosity arriving through another person, not self-initiated.",\n            "fallback": null,\n            "principal": "Describe a situation where someone you respect — or an experience — exposed you to an idea or skill that wasn't part of your world. You hadn't been looking for it, but when you encountered it, something caught. What did you do with that exposure? Did it change anything in how you work or think?",\n            "subfallback": null\n        },\n        "block_id": "L2.2",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V2"\n    },\n    {\n        "id": "d0d70e8e-cef2-4b03-b587-db5c9f3ba724",\n        "locale": "en",\n        "content": {\n            "hint": "The focus is on curiosity born from necessity or friction, not abstract interest.",\n            "fallback": null,\n            "principal": "Think of a time when you hit a problem or limitation in your regular work — and realized you didn't have the knowledge or skill to solve it well. Did that gap pull you toward learning something new? Or did you work around it?",\n            "subfallback": null\n        },\n        "block_id": "L2.2",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V3"\n    },\n    {\n        "id": "c1371ce8-7c92-4f72-a767-c9679b8b3acb",\n        "locale": "en",\n        "content": {\n            "hint": null,\n            "fallback": null,\n            "principal": "Think of a phase of your life when several important things competed for your energy and attention at the same time — work, personal project, relationships, health, any combination. Not an atypical week, but a period when the demand was real and simultaneous. What ended up organizing where your energy went? How did you decide — or not decide — what got attention and what waited?",\n            "subfallback": null\n        },\n        "block_id": "L2.3",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V1"\n    },\n    {\n        "id": "290fbf75-d570-4f82-80fd-4460115132d1",\n        "locale": "en",\n        "content": {\n            "hint": "The question is whether you have a decision-making architecture for competing demands.",\n            "fallback": null,\n            "principal": "Recall a time when you had multiple significant commitments or responsibilities pulling at you simultaneously — no single crisis, but a real stretch where everything mattered. Describe how you navigated that. What principle or instinct guided where you focused? Or did you just react moment to moment?",\n            "subfallback": null\n        },\n        "block_id": "L2.3",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V2"\n    },\n    {\n        "id": "f0c077a2-091e-4cf4-93a1-cf407ea3e04d",\n        "locale": "en",\n        "content": {\n            "hint": "This reveals whether you have clarity about what gets priority when everything can't get everything.",\n            "fallback": null,\n            "principal": "Think of a period when you were managing several important areas at once — relationships, work, something personal, maybe health or growth. How did you actually allocate your time and energy? Was there a logic to it, or did it feel more like chaos?",\n            "subfallback": null\n        },\n        "block_id": "L2.3",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V3"\n    },\n    {\n        "id": "f8616f2a-ba7c-4f84-8ccc-5c38c6203729",\n        "locale": "en",\n        "content": {\n            "hint": null,\n            "fallback": null,\n            "principal": "Think of the last time you discovered something about yourself that you didn't know — or didn't see. It could have come from another person, a situation, or a moment alone. What happened?",\n            "subfallback": null\n        },\n        "block_id": "L2.4",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V1"\n    },\n    {\n        "id": "4ca0f03f-93cb-43cd-a60c-6ca822e6f57b",\n        "locale": "en",\n        "content": {\n            "hint": "The discovery doesn't have to be dramatic; it's about gaining a clearer self-image.",\n            "fallback": null,\n            "principal": "Describe a moment when you encountered a reflection of yourself — from another person's honest observation, or from seeing yourself in an unexpected context — that revealed something you hadn't recognized. What shifted in how you understand yourself?",\n            "subfallback": null\n        },\n        "block_id": "L2.4",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V2"\n    },\n    {\n        "id": "9491bb1b-ac6a-46b9-8090-11319d91e81b",\n        "locale": "en",\n        "content": {\n            "hint": "This is self-discovered: you noticed something about yourself without external reflection.",\n            "fallback": null,\n            "principal": "Think of a moment when you caught yourself behaving in a way that surprised you — you did or said something and then thought, 'Where did that come from?' What did that unexpected behavior teach you about who you're becoming?",\n            "subfallback": null\n        },\n        "block_id": "L2.4",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V3"\n    },\n    {\n        "id": "7cc48763-3a6a-408c-b6b5-a5a73dc4151e",\n        "locale": "en",\n        "content": {\n            "hint": null,\n            "fallback": null,\n            "principal": "Think of a situation where you worked together with other people to do something — and had to find how to contribute in that process. What did you do together? And what, in that work, was specifically your contribution?",\n            "subfallback": null\n        },\n        "block_id": "L3.1",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V1"\n    },\n    {\n        "id": "663e2f3e-2800-4f14-8ec6-6d3bc9356bc2",\n        "locale": "en",\n        "content": {\n            "hint": "This is about seeing yourself within a larger collaborative structure.",\n            "fallback": null,\n            "principal": "Recall a time when you were part of a team or group working toward a shared goal — not just alongside people, but interdependently. Describe what the group was creating or solving. Then: what was distinctly your role or part in it?",\n            "subfallback": null\n        },\n        "block_id": "L3.1",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V2"\n    },\n    {\n        "id": "4518c025-7b69-40c0-bec7-99aa6d850309",\n        "locale": "en",\n        "content": {\n            "hint": "The question is how you position yourself and contribute within a collaborative constraint.",\n            "fallback": null,\n            "principal": "Think of the last time you were in a group working on something that required real coordination — where people depended on each other to deliver. What was specifically your part, and how did it connect to what others were doing?",\n            "subfallback": null\n        },\n        "block_id": "L3.1",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V3"\n    },\n    {\n        "id": "5c1ebcdd-6076-44c0-8345-282a477aedcf",\n        "locale": "en",\n        "content": {\n            "hint": null,\n            "fallback": null,\n            "principal": "Think of a situation where the group around you operated in a way that wasn't yours — a practice, an unspoken rule, or a way of doing things that you saw differently. What was that difference? And what did you do?",\n            "subfallback": null\n        },\n        "block_id": "L3.2",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V1"\n    },\n    {\n        "id": "3616671f-6cec-4ef0-bab9-ff4c26a023bc",\n        "locale": "en",\n        "content": {\n            "hint": "The focus is on your agency when you encounter a group culture that isn't yours.",\n            "fallback": null,\n            "principal": "Describe a context where you observed the group or community operating according to norms, habits, or values that didn't align with how you saw things. What was the difference in perspective? How did you respond — did you adapt, resist, speak up, observe quietly, or something else?",\n            "subfallback": null\n        },\n        "block_id": "L3.2",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V2"\n    },\n    {\n        "id": "58aeee08-07c7-40c9-a5a2-5f7f3a8c266b",\n        "locale": "en",\n        "content": {\n            "hint": "This probes how you navigate being inside a system you see differently.",\n            "fallback": null,\n            "principal": "Think of a time when you were in a group with an established way of doing something — a shared understanding or practice — that you experienced as off or misaligned with your own view. What did you do about that?",\n            "subfallback": null\n        },\n        "block_id": "L3.2",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V3"\n    },\n    {\n        "id": "c5131685-ce0a-4509-a0dd-761875d2b540",\n        "locale": "en",\n        "content": {\n            "hint": null,\n            "fallback": null,\n            "principal": "Think of a situation where things got difficult between you and someone — a tension that didn't resolve quickly. What happened? And how did things stay between you while it lasted?",\n            "subfallback": null\n        },\n        "block_id": "L3.3",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V1"\n    },\n    {\n        "id": "c4d909fc-20a8-488e-a137-0085e5b5e54b",\n        "locale": "en",\n        "content": {\n            "hint": "Not a fight that got resolved in one conversation — a period of unresolved difficulty.",\n            "fallback": null,\n            "principal": "Describe a conflict or sustained tension with someone in your life — something that lingered, wasn't quick to resolve, and created awkwardness or distance. What happened while you were stuck in that conflict? How did you and that person relate to each other?",\n            "subfallback": null\n        },\n        "block_id": "L3.3",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V2"\n    },\n    {\n        "id": "8e097565-d4a4-427a-ad5a-2f1cb764d1a0",\n        "locale": "en",\n        "content": {\n            "hint": "The focus is on your internal experience during conflict, not the interpersonal dynamic.",\n            "fallback": null,\n            "principal": "Think of a time when you were in a disagreement with someone important — and you noticed what was happening inside you during the conflict. Were you trying to win, trying to understand, trying to escape? What did you actually do with that awareness?",\n            "subfallback": null\n        },\n        "block_id": "L3.3",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V3"\n    },\n    {\n        "id": "e1bc34c0-53d8-45ca-aeea-90c690e913c5",\n        "locale": "en",\n        "content": {\n            "hint": null,\n            "fallback": null,\n            "principal": "Think of a time when you realized — on your own or because someone showed you — that something you did affected a person in a significant way. What happened when that realization arrived?",\n            "subfallback": null\n        },\n        "block_id": "L3.4",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V1"\n    },\n    {\n        "id": "8c89e3d3-8dce-4911-9b03-db02b14ee7da",\n        "locale": "en",\n        "content": {\n            "hint": "This is about the moment when you see your own agency from the other person's side.",\n            "fallback": null,\n            "principal": "Recall a moment when you became aware that an action of yours, or something you said, had impacted someone more deeply than you'd understood — maybe they told you, or you suddenly saw it. How did you take that in? What did you do?",\n            "subfallback": null\n        },\n        "block_id": "L3.4",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V2"\n    },\n    {\n        "id": "455b7870-2792-4297-ad02-1224443bb12d",\n        "locale": "en",\n        "content": {\n            "hint": "The focus is on delayed recognition: realizing influence you didn't see in the moment.",\n            "fallback": null,\n            "principal": "Think of something you did or said months ago — maybe even longer — that you later realized had a bigger effect on someone than you thought at the time. How did you come to understand that delayed impact? What did you do about it?",\n            "subfallback": null\n        },\n        "block_id": "L3.4",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V3"\n    },\n    {\n        "id": "03512f2f-8cde-4d96-884a-4d6264134c29",\n        "locale": "en",\n        "content": {\n            "hint": null,\n            "fallback": null,\n            "principal": "Think of a time when you realized — on your own or because someone showed you — that something you did affected a person in a significant way. What happened when that realization arrived?",\n            "subfallback": null\n        },\n        "block_id": "L3.4_CP",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V1"\n    },\n    {\n        "id": "3c604396-dd8e-4f4e-89c2-99696f82b294",\n        "locale": "en",\n        "content": {\n            "hint": "This version emphasizes the relational feedback loop.",\n            "fallback": null,\n            "principal": "Describe a situation where someone showed you directly — through their words or their withdrawal — that your behavior had harmed or significantly affected them. How did you respond to that confrontation?",\n            "subfallback": null\n        },\n        "block_id": "L3.4_CP",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V2"\n    },\n    {\n        "id": "61d90a88-ac10-463a-97cc-bdc7cb155b59",\n        "locale": "en",\n        "content": {\n            "hint": "Some realizations come slow; this captures the slower version of accountability.",\n            "fallback": null,\n            "principal": "Think of an instance where you gradually understood that your actions had ripple effects for another person. Did you address it? What made you act or stay silent?",\n            "subfallback": null\n        },\n        "block_id": "L3.4_CP",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V3"\n    },\n    {\n        "id": "3f6037ad-c01c-4a3e-b818-24d62012634d",\n        "locale": "en",\n        "content": {\n            "hint": null,\n            "fallback": null,\n            "principal": "Think of a situation you experienced — at work, at home, in any context — where the outcome depended on how several things connected. It could be something that went wrong when you didn't expect it, or something that worked in a way that surprised you. What did you notice about how those things influenced each other?",\n            "subfallback": null\n        },\n        "block_id": "L4.1",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V1"\n    },\n    {\n        "id": "cae91a70-b290-493e-9e88-a3a965c063d3",\n        "locale": "en",\n        "content": {\n            "hint": "This probes whether you can see systems — how parts affect the whole.",\n            "fallback": null,\n            "principal": "Tell me about a specific time when something went differently than expected — and when you looked closer, you realized it was because of multiple factors affecting each other, not just one cause. What were those factors, and how did they connect?",\n            "subfallback": null\n        },\n        "block_id": "L4.1",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V2"\n    },\n    {\n        "id": "e0b6b6f2-1bcd-4091-9ced-b89d6aa46c7a",\n        "locale": "en",\n        "content": {\n            "hint": "The focus is on pattern recognition: can you hold multiple influences in view at once?",\n            "fallback": null,\n            "principal": "Think of a moment when you realized the outcome wasn't about one thing going right or wrong — it was about how several things interacted. Describe that moment: what were the elements, and what did you see about their connections?",\n            "subfallback": null\n        },\n        "block_id": "L4.1",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V3"\n    },\n    {\n        "id": "d26ffdd2-1fad-4c78-ab37-2ee503bc83a3",\n        "locale": "en",\n        "content": {\n            "hint": null,\n            "fallback": null,\n            "principal": "Think of a decision you made thinking about what would happen after — big or small. Something where you looked ahead and tried to anticipate what that choice would produce over time. What did you take into account about what could happen further ahead?",\n            "subfallback": null\n        },\n        "block_id": "L4.2",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V1"\n    },\n    {\n        "id": "175f4fff-36d1-4c1d-b9e9-0b64a4cbe4ef",\n        "locale": "en",\n        "content": {\n            "hint": "This captures the temporal angle: how you negotiate between immediate and delayed consequences in real time.",\n            "fallback": null,\n            "principal": "Recall a time when you chose to do something differently than you normally would — because you were thinking about a longer-term consequence. You sacrificed something immediate to avoid or build something further out. What was that trade, and did it work out the way you anticipated?",\n            "subfallback": null\n        },\n        "block_id": "L4.2",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V2"\n    },\n    {\n        "id": "56e7d645-9229-4333-a7e3-0759b8188723",\n        "locale": "en",\n        "content": {\n            "hint": "The focus is simplified: did your choice account for impact on another person's future?",\n            "fallback": null,\n            "principal": "Think of a decision where you realized — either before or after — that your choice would affect not just you but someone else's future. Were you aware of that influence at the time? How did it shape what you chose?",\n            "subfallback": null\n        },\n        "block_id": "L4.2",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V3"\n    },\n    {\n        "id": "9b0537ab-c5b9-4e66-acd9-9a8624981146",\n        "locale": "en",\n        "content": {\n            "hint": null,\n            "fallback": null,\n            "principal": "Think of a situation where what you knew — an idea, a reading, an experience — was relevant, but the context around you wasn't familiar with it. People didn't expect to hear that from you, or the subject wasn't obvious in that environment. What did you do with what you knew in that situation?",\n            "subfallback": null\n        },\n        "block_id": "L4.3",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V1"\n    },\n    {\n        "id": "0f863cd3-9dac-4fa5-be94-fdfe7dd29336",\n        "locale": "en",\n        "content": {\n            "hint": "This is about the authority to speak what you know even when it's unexpected.",\n            "fallback": null,\n            "principal": "Recall a moment when you had knowledge or insight about something — from study, experience, or understanding — that seemed valuable in a situation, but the people around you didn't recognize it as relevant or didn't expect you to offer it. How did you navigate that? Did you speak it, hold it, or something in between?",\n            "subfallback": null\n        },\n        "block_id": "L4.3",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V2"\n    },\n    {\n        "id": "3db36df5-10dc-4168-9ca1-5917c8a81548",\n        "locale": "en",\n        "content": {\n            "hint": "The focus is on your agency around truth-telling in contexts where you're not automatically believed.",\n            "fallback": null,\n            "principal": "Think of a time when you understood something important about a situation — something others in the room didn't see or weren't framing — and you had to decide whether to surface it. What made you decide what to do?",\n            "subfallback": null\n        },\n        "block_id": "L4.3",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V3"\n    },\n    {\n        "id": "ec9885b3-c656-4364-a21b-e35e55063502",\n        "locale": "en",\n        "content": {\n            "hint": null,\n            "fallback": null,\n            "principal": "Think of a situation where you were in a group — a meeting, a conversation, a project — and something changed in the dynamic from how you were present. Not necessarily from what you said, but from your presence itself. What happened? How did you notice that change?",\n            "subfallback": null\n        },\n        "block_id": "L4.4",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V1"\n    },\n    {\n        "id": "1399e36d-50dc-42fd-848f-442ab9dc1855",\n        "locale": "en",\n        "content": {\n            "hint": "This is about presence as influence; not action, but being.",\n            "fallback": null,\n            "principal": "Think of a specific time in a group — a meeting, a tense conversation, a collaborative moment — where something shifted in the room, and you suspect it had to do with how you were showing up, not what you said. What happened? How did you notice the shift?",\n            "subfallback": null\n        },\n        "block_id": "L4.4",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V2"\n    },\n    {\n        "id": "eb8c2d6f-b4b3-46fd-933e-717c78087321",\n        "locale": "en",\n        "content": {\n            "hint": "The focus is on sensing your own impact through group responsiveness.",\n            "fallback": null,\n            "principal": "Recall a specific group interaction where you noticed that your own state — your energy, your listening, your emotional register — seemed to affect how others engaged. What was happening, and what changed?",\n            "subfallback": null\n        },\n        "block_id": "L4.4",\n        "ipe_level": 1.0,\n        "created_at": "2026-04-14T17:58:41.688185+00:00",\n        "variation_key": "V3"\n    }\n]
+[
+    {
+        "id": "4d0331e7-0deb-43cb-8b95-327240ef18b4",
+        "locale": "en",
+        "content": {
+            "hint": null,
+            "fallback": null,
+            "principal": "Think of a situation where you were doing something important — and something or someone pushed in another direction. What was organizing you in that moment? And what happened to that direction when the pressure came?",
+            "subfallback": null
+        },
+        "block_id": "L1.1",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V1"
+    },
+    {
+        "id": "cb7e5d1e-8824-4021-880a-824a75925445",
+        "locale": "en",
+        "content": {
+            "hint": "Focus on an actual moment when you had to choose between competing pulls.",
+            "fallback": null,
+            "principal": "Describe a time when your original plan got interrupted — a genuine conflict between what you'd set out to do and what someone else needed or what circumstances demanded. Did you stay with your original intention, shift to the new thing, or split between the two? What made you decide?",
+            "subfallback": null
+        },
+        "block_id": "L1.1",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V2"
+    },
+    {
+        "id": "48a675b5-af4f-4c43-bcaa-9268a3176e1d",
+        "locale": "en",
+        "content": {
+            "hint": "This is a values-based anchor: internal misalignment, not external pressure.",
+            "fallback": null,
+            "principal": "Think of a time when you realized what you were doing wasn't aligned with what actually matters to you — not because someone told you, but because you felt it. What were you doing, and what was the signal that told you something was off?",
+            "subfallback": null
+        },
+        "block_id": "L1.1",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V3"
+    },
+    {
+        "id": "b3578fba-8cbd-4dce-9be7-bb13e7f422b9",
+        "locale": "en",
+        "content": {
+            "hint": null,
+            "fallback": null,
+            "principal": "Think of a time when you were tired, unwilling, or couldn't see the point — and there was something that needed to be done. Did you continue, stop, or do it halfway? And if you continued — what kept you going? If you stopped — what was missing?",
+            "subfallback": null
+        },
+        "block_id": "L1.2",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V1"
+    },
+    {
+        "id": "f3d67063-bf4e-46a2-afca-23032bfd2587",
+        "locale": "en",
+        "content": {
+            "hint": "This is about endurance over a longer arc — not an initial unwillingness, but fatigue setting in during the work.",
+            "fallback": null,
+            "principal": "Describe a situation where you were doing something that mattered to you — but over time, the struggle became real. The effort stayed hard, or the reward started to look less clear, or the cost got higher. What happened? Did you stay with it, find a different way, or eventually step back?",
+            "subfallback": null
+        },
+        "block_id": "L1.2",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V2"
+    },
+    {
+        "id": "f60310a7-1e15-460c-a40c-d9eca90bb23f",
+        "locale": "en",
+        "content": {
+            "hint": "The focus is on the moment when continuing becomes a conscious choice, not automatic.",
+            "fallback": null,
+            "principal": "Think of a time when you committed to something and then hit a point where continuing felt genuinely difficult — not just one bad day, but a sustained difficulty where you had to choose to keep going or let it go. What made you decide what to do?",
+            "subfallback": null
+        },
+        "block_id": "L1.2",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V3"
+    },
+    {
+        "id": "4cbc771b-0586-4120-804f-a70b5db087c6",
+        "locale": "en",
+        "content": {
+            "hint": null,
+            "fallback": null,
+            "principal": "Think of a time when you finished something and thought the result was good — and someone evaluated it differently. What happened to your criterion of 'good enough' when that evaluation came?",
+            "subfallback": null
+        },
+        "block_id": "L1.3",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V1"
+    },
+    {
+        "id": "97fa0394-de6d-4d2b-a17c-329601f6c469",
+        "locale": "en",
+        "content": {
+            "hint": "This captures the moment when what you judge as finished meets real resistance from the user/recipient.",
+            "fallback": null,
+            "principal": "Describe a situation where you completed work that met your own standards — and then the person receiving it pushed back, asked for changes, or indicated it wasn't what they needed. How did you take that feedback? Did you defend your work, revise it, or something else?",
+            "subfallback": null
+        },
+        "block_id": "L1.3",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V2"
+    },
+    {
+        "id": "f1665b0e-ba6b-439e-b673-5837b58a5993",
+        "locale": "en",
+        "content": {
+            "hint": "The focus is on learning quality through full cycle — not judgment clash in the moment, but realization that follows real-world use.",
+            "fallback": null,
+            "principal": "Think of a time when you delivered something you believed in — and only later discovered it hadn't accomplished what you'd intended, or it had created unintended consequences you hadn't foreseen. What happened to your sense of what 'good work' means when you saw the actual impact?",
+            "subfallback": null
+        },
+        "block_id": "L1.3",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V3"
+    },
+    {
+        "id": "48aa6530-e063-4c31-9e12-c0041f7bf0c2",
+        "locale": "en",
+        "content": {
+            "hint": null,
+            "fallback": null,
+            "principal": "Think of an experience that could have changed the way you do things — at work, at home, in any area. Something that showed you something new or different. Did something actually change? If it did — what, and did the change stick? Or did things gradually go back to how they were?",
+            "subfallback": null
+        },
+        "block_id": "L1.4",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V1"
+    },
+    {
+        "id": "60d20ab9-cb89-4c86-8888-647925008d2e",
+        "locale": "en",
+        "content": {
+            "hint": "The focus is whether insight became actual behavior change.",
+            "fallback": null,
+            "principal": "Recall a moment when you learned a better way to do something — either from watching someone, from failing at your old way, or from trying something experimental. Did that learning shift how you actually operate now, or did you drift back to your habits?",
+            "subfallback": null
+        },
+        "block_id": "L1.4",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V2"
+    },
+    {
+        "id": "ceee2cde-e678-435e-aa25-ae63212c4d3a",
+        "locale": "en",
+        "content": {
+            "hint": "This is about whether you genuinely evolve your practice, or just hear the lesson.",
+            "fallback": null,
+            "principal": "Think of a time when feedback or experience revealed that your usual approach wasn't working as well as you thought. Did you actually integrate that and adjust — or did it fade without changing much?",
+            "subfallback": null
+        },
+        "block_id": "L1.4",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V3"
+    },
+    {
+        "id": "9950a2ee-a31a-4788-813b-eefae5836ac8",
+        "locale": "en",
+        "content": {
+            "hint": null,
+            "fallback": null,
+            "principal": "Think of a moment when you felt something intensely — anger, fear, frustration, shame, deep sadness — in a situation where you needed to keep functioning. Describe that moment briefly. Then: what did you do with what you were feeling? Did something organize your behavior in that moment, or did the emotion determine what happened?",
+            "subfallback": null
+        },
+        "block_id": "L2.1",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V1"
+    },
+    {
+        "id": "63794250-d766-44f8-90fd-8355cf33bbd8",
+        "locale": "en",
+        "content": {
+            "hint": "The question is whether the feeling controlled your actions, or whether you had agency in the moment.",
+            "fallback": null,
+            "principal": "Recall a situation where a strong emotion arrived while you had a job to do — you were afraid, furious, deeply hurt, or ashamed, but you still had to show up. What happened in that moment? Did the emotion take over what you did, or did something allow you to act despite it?",
+            "subfallback": null
+        },
+        "block_id": "L2.1",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V2"
+    },
+    {
+        "id": "db3e4317-a104-4fa3-9777-58b5a541cb7e",
+        "locale": "en",
+        "content": {
+            "hint": "This probes what happens when emotion and responsibility collide.",
+            "fallback": null,
+            "principal": "Think of a time when you felt something powerfully — and it mattered what you did next. Describe briefly: what was the emotion, what was at stake, and what did you actually do? Did you express it, contain it, let it drive your choices, or manage it somehow?",
+            "subfallback": null
+        },
+        "block_id": "L2.1",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V3"
+    },
+    {
+        "id": "2628da48-d40c-44e2-b9e5-8df7aa79e919",
+        "locale": "en",
+        "content": {
+            "hint": null,
+            "fallback": null,
+            "principal": "Think of a time when you became interested in something that had nothing to do with what you do day to day — something outside your area, your work, your usual domain. What happened when you went after it?",
+            "subfallback": null
+        },
+        "block_id": "L2.2",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V1"
+    },
+    {
+        "id": "f1136ad9-c13b-43f5-b52c-6eceeffbe209",
+        "locale": "en",
+        "content": {
+            "hint": "This captures the relational angle: curiosity arriving through another person, not self-initiated.",
+            "fallback": null,
+            "principal": "Describe a situation where someone you respect — or an experience — exposed you to an idea or skill that wasn't part of your world. You hadn't been looking for it, but when you encountered it, something caught. What did you do with that exposure? Did it change anything in how you work or think?",
+            "subfallback": null
+        },
+        "block_id": "L2.2",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V2"
+    },
+    {
+        "id": "d0d70e8e-cef2-4b03-b587-db5c9f3ba724",
+        "locale": "en",
+        "content": {
+            "hint": "The focus is on curiosity born from necessity or friction, not abstract interest.",
+            "fallback": null,
+            "principal": "Think of a time when you hit a problem or limitation in your regular work — and realized you didn't have the knowledge or skill to solve it well. Did that gap pull you toward learning something new? Or did you work around it?",
+            "subfallback": null
+        },
+        "block_id": "L2.2",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V3"
+    },
+    {
+        "id": "c1371ce8-7c92-4f72-a767-c9679b8b3acb",
+        "locale": "en",
+        "content": {
+            "hint": null,
+            "fallback": null,
+            "principal": "Think of a phase of your life when several important things competed for your energy and attention at the same time — work, personal project, relationships, health, any combination. Not an atypical week, but a period when the demand was real and simultaneous. What ended up organizing where your energy went? How did you decide — or not decide — what got attention and what waited?",
+            "subfallback": null
+        },
+        "block_id": "L2.3",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V1"
+    },
+    {
+        "id": "290fbf75-d570-4f82-80fd-4460115132d1",
+        "locale": "en",
+        "content": {
+            "hint": "The question is whether you have a decision-making architecture for competing demands.",
+            "fallback": null,
+            "principal": "Recall a time when you had multiple significant commitments or responsibilities pulling at you simultaneously — no single crisis, but a real stretch where everything mattered. Describe how you navigated that. What principle or instinct guided where you focused? Or did you just react moment to moment?",
+            "subfallback": null
+        },
+        "block_id": "L2.3",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V2"
+    },
+    {
+        "id": "f0c077a2-091e-4cf4-93a1-cf407ea3e04d",
+        "locale": "en",
+        "content": {
+            "hint": "This reveals whether you have clarity about what gets priority when everything can't get everything.",
+            "fallback": null,
+            "principal": "Think of a period when you were managing several important areas at once — relationships, work, something personal, maybe health or growth. How did you actually allocate your time and energy? Was there a logic to it, or did it feel more like chaos?",
+            "subfallback": null
+        },
+        "block_id": "L2.3",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V3"
+    },
+    {
+        "id": "f8616f2a-ba7c-4f84-8ccc-5c38c6203729",
+        "locale": "en",
+        "content": {
+            "hint": null,
+            "fallback": null,
+            "principal": "Think of the last time you discovered something about yourself that you didn't know — or didn't see. It could have come from another person, a situation, or a moment alone. What happened?",
+            "subfallback": null
+        },
+        "block_id": "L2.4",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V1"
+    },
+    {
+        "id": "4ca0f03f-93cb-43cd-a60c-6ca822e6f57b",
+        "locale": "en",
+        "content": {
+            "hint": "The discovery doesn't have to be dramatic; it's about gaining a clearer self-image.",
+            "fallback": null,
+            "principal": "Describe a moment when you encountered a reflection of yourself — from another person's honest observation, or from seeing yourself in an unexpected context — that revealed something you hadn't recognized. What shifted in how you understand yourself?",
+            "subfallback": null
+        },
+        "block_id": "L2.4",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V2"
+    },
+    {
+        "id": "9491bb1b-ac6a-46b9-8090-11319d91e81b",
+        "locale": "en",
+        "content": {
+            "hint": "This is self-discovered: you noticed something about yourself without external reflection.",
+            "fallback": null,
+            "principal": "Think of a moment when you caught yourself behaving in a way that surprised you — you did or said something and then thought, 'Where did that come from?' What did that unexpected behavior teach you about who you're becoming?",
+            "subfallback": null
+        },
+        "block_id": "L2.4",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V3"
+    },
+    {
+        "id": "7cc48763-3a6a-408c-b6b5-a5a73dc4151e",
+        "locale": "en",
+        "content": {
+            "hint": null,
+            "fallback": null,
+            "principal": "Think of a situation where you worked together with other people to do something — and had to find how to contribute in that process. What did you do together? And what, in that work, was specifically your contribution?",
+            "subfallback": null
+        },
+        "block_id": "L3.1",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V1"
+    },
+    {
+        "id": "663e2f3e-2800-4f14-8ec6-6d3bc9356bc2",
+        "locale": "en",
+        "content": {
+            "hint": "This is about seeing yourself within a larger collaborative structure.",
+            "fallback": null,
+            "principal": "Recall a time when you were part of a team or group working toward a shared goal — not just alongside people, but interdependently. Describe what the group was creating or solving. Then: what was distinctly your role or part in it?",
+            "subfallback": null
+        },
+        "block_id": "L3.1",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V2"
+    },
+    {
+        "id": "4518c025-7b69-40c0-bec7-99aa6d850309",
+        "locale": "en",
+        "content": {
+            "hint": "The question is how you position yourself and contribute within a collaborative constraint.",
+            "fallback": null,
+            "principal": "Think of the last time you were in a group working on something that required real coordination — where people depended on each other to deliver. What was specifically your part, and how did it connect to what others were doing?",
+            "subfallback": null
+        },
+        "block_id": "L3.1",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V3"
+    },
+    {
+        "id": "5c1ebcdd-6076-44c0-8345-282a477aedcf",
+        "locale": "en",
+        "content": {
+            "hint": null,
+            "fallback": null,
+            "principal": "Think of a situation where the group around you operated in a way that wasn't yours — a practice, an unspoken rule, or a way of doing things that you saw differently. What was that difference? And what did you do?",
+            "subfallback": null
+        },
+        "block_id": "L3.2",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V1"
+    },
+    {
+        "id": "3616671f-6cec-4ef0-bab9-ff4c26a023bc",
+        "locale": "en",
+        "content": {
+            "hint": "The focus is on your agency when you encounter a group culture that isn't yours.",
+            "fallback": null,
+            "principal": "Describe a context where you observed the group or community operating according to norms, habits, or values that didn't align with how you saw things. What was the difference in perspective? How did you respond — did you adapt, resist, speak up, observe quietly, or something else?",
+            "subfallback": null
+        },
+        "block_id": "L3.2",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V2"
+    },
+    {
+        "id": "58aeee08-07c7-40c9-a5a2-5f7f3a8c266b",
+        "locale": "en",
+        "content": {
+            "hint": "This probes how you navigate being inside a system you see differently.",
+            "fallback": null,
+            "principal": "Think of a time when you were in a group with an established way of doing something — a shared understanding or practice — that you experienced as off or misaligned with your own view. What did you do about that?",
+            "subfallback": null
+        },
+        "block_id": "L3.2",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V3"
+    },
+    {
+        "id": "c5131685-ce0a-4509-a0dd-761875d2b540",
+        "locale": "en",
+        "content": {
+            "hint": null,
+            "fallback": null,
+            "principal": "Think of a situation where things got difficult between you and someone — a tension that didn't resolve quickly. What happened? And how did things stay between you while it lasted?",
+            "subfallback": null
+        },
+        "block_id": "L3.3",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V1"
+    },
+    {
+        "id": "c4d909fc-20a8-488e-a137-0085e5b5e54b",
+        "locale": "en",
+        "content": {
+            "hint": "Not a fight that got resolved in one conversation — a period of unresolved difficulty.",
+            "fallback": null,
+            "principal": "Describe a conflict or sustained tension with someone in your life — something that lingered, wasn't quick to resolve, and created awkwardness or distance. What happened while you were stuck in that conflict? How did you and that person relate to each other?",
+            "subfallback": null
+        },
+        "block_id": "L3.3",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V2"
+    },
+    {
+        "id": "8e097565-d4a4-427a-ad5a-2f1cb764d1a0",
+        "locale": "en",
+        "content": {
+            "hint": "The focus is on your internal experience during conflict, not the interpersonal dynamic.",
+            "fallback": null,
+            "principal": "Think of a time when you were in a disagreement with someone important — and you noticed what was happening inside you during the conflict. Were you trying to win, trying to understand, trying to escape? What did you actually do with that awareness?",
+            "subfallback": null
+        },
+        "block_id": "L3.3",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V3"
+    },
+    {
+        "id": "e1bc34c0-53d8-45ca-aeea-90c690e913c5",
+        "locale": "en",
+        "content": {
+            "hint": null,
+            "fallback": null,
+            "principal": "Think of a time when you realized — on your own or because someone showed you — that something you did affected a person in a significant way. What happened when that realization arrived?",
+            "subfallback": null
+        },
+        "block_id": "L3.4",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V1"
+    },
+    {
+        "id": "8c89e3d3-8dce-4911-9b03-db02b14ee7da",
+        "locale": "en",
+        "content": {
+            "hint": "This is about the moment when you see your own agency from the other person's side.",
+            "fallback": null,
+            "principal": "Recall a moment when you became aware that an action of yours, or something you said, had impacted someone more deeply than you'd understood — maybe they told you, or you suddenly saw it. How did you take that in? What did you do?",
+            "subfallback": null
+        },
+        "block_id": "L3.4",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V2"
+    },
+    {
+        "id": "455b7870-2792-4297-ad02-1224443bb12d",
+        "locale": "en",
+        "content": {
+            "hint": "The focus is on delayed recognition: realizing influence you didn't see in the moment.",
+            "fallback": null,
+            "principal": "Think of something you did or said months ago — maybe even longer — that you later realized had a bigger effect on someone than you thought at the time. How did you come to understand that delayed impact? What did you do about it?",
+            "subfallback": null
+        },
+        "block_id": "L3.4",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V3"
+    },
+    {
+        "id": "03512f2f-8cde-4d96-884a-4d6264134c29",
+        "locale": "en",
+        "content": {
+            "hint": null,
+            "fallback": null,
+            "principal": "Think of a time when you realized — on your own or because someone showed you — that something you did affected a person in a significant way. What happened when that realization arrived?",
+            "subfallback": null
+        },
+        "block_id": "L3.4_CP",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V1"
+    },
+    {
+        "id": "3c604396-dd8e-4f4e-89c2-99696f82b294",
+        "locale": "en",
+        "content": {
+            "hint": "This version emphasizes the relational feedback loop.",
+            "fallback": null,
+            "principal": "Describe a situation where someone showed you directly — through their words or their withdrawal — that your behavior had harmed or significantly affected them. How did you respond to that confrontation?",
+            "subfallback": null
+        },
+        "block_id": "L3.4_CP",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V2"
+    },
+    {
+        "id": "61d90a88-ac10-463a-97cc-bdc7cb155b59",
+        "locale": "en",
+        "content": {
+            "hint": "Some realizations come slow; this captures the slower version of accountability.",
+            "fallback": null,
+            "principal": "Think of an instance where you gradually understood that your actions had ripple effects for another person. Did you address it? What made you act or stay silent?",
+            "subfallback": null
+        },
+        "block_id": "L3.4_CP",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V3"
+    },
+    {
+        "id": "3f6037ad-c01c-4a3e-b818-24d62012634d",
+        "locale": "en",
+        "content": {
+            "hint": null,
+            "fallback": null,
+            "principal": "Think of a situation you experienced — at work, at home, in any context — where the outcome depended on how several things connected. It could be something that went wrong when you didn't expect it, or something that worked in a way that surprised you. What did you notice about how those things influenced each other?",
+            "subfallback": null
+        },
+        "block_id": "L4.1",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V1"
+    },
+    {
+        "id": "cae91a70-b290-493e-9e88-a3a965c063d3",
+        "locale": "en",
+        "content": {
+            "hint": "This probes whether you can see systems — how parts affect the whole.",
+            "fallback": null,
+            "principal": "Tell me about a specific time when something went differently than expected — and when you looked closer, you realized it was because of multiple factors affecting each other, not just one cause. What were those factors, and how did they connect?",
+            "subfallback": null
+        },
+        "block_id": "L4.1",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V2"
+    },
+    {
+        "id": "e0b6b6f2-1bcd-4091-9ced-b89d6aa46c7a",
+        "locale": "en",
+        "content": {
+            "hint": "The focus is on pattern recognition: can you hold multiple influences in view at once?",
+            "fallback": null,
+            "principal": "Think of a moment when you realized the outcome wasn't about one thing going right or wrong — it was about how several things interacted. Describe that moment: what were the elements, and what did you see about their connections?",
+            "subfallback": null
+        },
+        "block_id": "L4.1",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V3"
+    },
+    {
+        "id": "d26ffdd2-1fad-4c78-ab37-2ee503bc83a3",
+        "locale": "en",
+        "content": {
+            "hint": null,
+            "fallback": null,
+            "principal": "Think of a decision you made thinking about what would happen after — big or small. Something where you looked ahead and tried to anticipate what that choice would produce over time. What did you take into account about what could happen further ahead?",
+            "subfallback": null
+        },
+        "block_id": "L4.2",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V1"
+    },
+    {
+        "id": "175f4fff-36d1-4c1d-b9e9-0b64a4cbe4ef",
+        "locale": "en",
+        "content": {
+            "hint": "This captures the temporal angle: how you negotiate between immediate and delayed consequences in real time.",
+            "fallback": null,
+            "principal": "Recall a time when you chose to do something differently than you normally would — because you were thinking about a longer-term consequence. You sacrificed something immediate to avoid or build something further out. What was that trade, and did it work out the way you anticipated?",
+            "subfallback": null
+        },
+        "block_id": "L4.2",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V2"
+    },
+    {
+        "id": "56e7d645-9229-4333-a7e3-0759b8188723",
+        "locale": "en",
+        "content": {
+            "hint": "The focus is simplified: did your choice account for impact on another person's future?",
+            "fallback": null,
+            "principal": "Think of a decision where you realized — either before or after — that your choice would affect not just you but someone else's future. Were you aware of that influence at the time? How did it shape what you chose?",
+            "subfallback": null
+        },
+        "block_id": "L4.2",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V3"
+    },
+    {
+        "id": "9b0537ab-c5b9-4e66-acd9-9a8624981146",
+        "locale": "en",
+        "content": {
+            "hint": null,
+            "fallback": null,
+            "principal": "Think of a situation where what you knew — an idea, a reading, an experience — was relevant, but the context around you wasn't familiar with it. People didn't expect to hear that from you, or the subject wasn't obvious in that environment. What did you do with what you knew in that situation?",
+            "subfallback": null
+        },
+        "block_id": "L4.3",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V1"
+    },
+    {
+        "id": "0f863cd3-9dac-4fa5-be94-fdfe7dd29336",
+        "locale": "en",
+        "content": {
+            "hint": "This is about the authority to speak what you know even when it's unexpected.",
+            "fallback": null,
+            "principal": "Recall a moment when you had knowledge or insight about something — from study, experience, or understanding — that seemed valuable in a situation, but the people around you didn't recognize it as relevant or didn't expect you to offer it. How did you navigate that? Did you speak it, hold it, or something in between?",
+            "subfallback": null
+        },
+        "block_id": "L4.3",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V2"
+    },
+    {
+        "id": "3db36df5-10dc-4168-9ca1-5917c8a81548",
+        "locale": "en",
+        "content": {
+            "hint": "The focus is on your agency around truth-telling in contexts where you're not automatically believed.",
+            "fallback": null,
+            "principal": "Think of a time when you understood something important about a situation — something others in the room didn't see or weren't framing — and you had to decide whether to surface it. What made you decide what to do?",
+            "subfallback": null
+        },
+        "block_id": "L4.3",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V3"
+    },
+    {
+        "id": "ec9885b3-c656-4364-a21b-e35e55063502",
+        "locale": "en",
+        "content": {
+            "hint": null,
+            "fallback": null,
+            "principal": "Think of a situation where you were in a group — a meeting, a conversation, a project — and something changed in the dynamic from how you were present. Not necessarily from what you said, but from your presence itself. What happened? How did you notice that change?",
+            "subfallback": null
+        },
+        "block_id": "L4.4",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V1"
+    },
+    {
+        "id": "1399e36d-50dc-42fd-848f-442ab9dc1855",
+        "locale": "en",
+        "content": {
+            "hint": "This is about presence as influence; not action, but being.",
+            "fallback": null,
+            "principal": "Think of a specific time in a group — a meeting, a tense conversation, a collaborative moment — where something shifted in the room, and you suspect it had to do with how you were showing up, not what you said. What happened? How did you notice the shift?",
+            "subfallback": null
+        },
+        "block_id": "L4.4",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V2"
+    },
+    {
+        "id": "eb8c2d6f-b4b3-46fd-933e-717c78087321",
+        "locale": "en",
+        "content": {
+            "hint": "The focus is on sensing your own impact through group responsiveness.",
+            "fallback": null,
+            "principal": "Recall a specific group interaction where you noticed that your own state — your energy, your listening, your emotional register — seemed to affect how others engaged. What was happening, and what changed?",
+            "subfallback": null
+        },
+        "block_id": "L4.4",
+        "ipe_level": 1.0,
+        "created_at": "2026-04-14T17:58:41.688185+00:00",
+        "variation_key": "V3"
+    }
+]
