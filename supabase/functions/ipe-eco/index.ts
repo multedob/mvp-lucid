@@ -626,27 +626,32 @@ const persistAudit = async (
 };
 
 const persistEcoText = async (
-  supabase: any,
+  _ignoredSupabase: any,
   ipe_cycle_id: string,
   pill_id: string,
   eco_text: string,
   prompt_version_used?: string | null,
 ) => {
-  try {
-    const update: Record<string, unknown> = {
-      eco_text,
-      completed_at: new Date().toISOString(),
-    };
-    if (prompt_version_used !== undefined) {
-      update.prompt_version_used = prompt_version_used;
-    }
-    await supabase
-      .from("pill_responses")
-      .update(update)
-      .eq("ipe_cycle_id", ipe_cycle_id)
-      .eq("pill_id", pill_id);
-  } catch (err) {
-    console.error("persistEcoText error:", err);
+  const admin = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+  const update: Record<string, unknown> = {
+    eco_text,
+    completed_at: new Date().toISOString(),
+  };
+  if (prompt_version_used !== undefined) {
+    update.prompt_version_used = prompt_version_used;
+  }
+  const { error: updateErr } = await admin
+    .from("pill_responses")
+    .update(update)
+    .eq("ipe_cycle_id", ipe_cycle_id)
+    .eq("pill_id", pill_id);
+  if (updateErr) {
+    console.error("[persistEcoText] UPDATE error:", JSON.stringify(updateErr));
+  } else {
+    console.log("[persistEcoText] UPDATE ok pill_id=" + pill_id);
   }
 };
 
