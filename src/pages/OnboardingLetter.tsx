@@ -247,7 +247,7 @@ export default function OnboardingLetter() {
               opacity: 0.7,
             }}
           >
-            Read With Insight
+            Read With
           </div>
         </div>
 

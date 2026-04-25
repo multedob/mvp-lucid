@@ -325,7 +325,7 @@ export default function Splash() {
           letterSpacing: "0.06em",
           lineHeight: 1.8,
         }}>
-          read with insight.
+          read with
         </div>
       </div>
 
