@@ -87,7 +87,7 @@ const Footer = forwardRef<HTMLDivElement, QFooterProps>(({
         )}
         {onEthics && (
           <span className="r-footer-ethics" onClick={onEthics}>
-            i'd rather not
+            prefiro não responder
           </span>
         )}
       </div>

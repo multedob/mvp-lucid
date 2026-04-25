@@ -68,12 +68,12 @@ interface State {
 // ─── Fallback content (V1 hardcoded — used when variation selector fails) ────
 
 const FALLBACK_PILLS: Record<PillId, { tensao: string; frase: string }> = {
-  PI:   { tensao: "I ↔ Belonging",       frase: "I moved. Not everything moved with me." },
-  PII:  { tensao: "I ↔ Role",            frase: "Still doing what I've always done. But something inside isn't with it anymore." },
-  PIII: { tensao: "Presence ↔ Distance", frase: "It's over. And now I can see what I couldn't while it was happening." },
-  PIV:  { tensao: "Clarity ↔ Action",    frase: "I know what's right. And I'm carrying the weight of acting on it." },
-  PV:   { tensao: "Inside ↔ Outside",    frase: "No crisis. Just an openness with nowhere to go yet." },
-  PVI:  { tensao: "Movement ↔ Pause",    frase: "Building something that matters. The vertigo is part of the work." },
+  PI:   { tensao: "Eu ↔ Pertencimento",       frase: "I moved. Not everything moved with me." },
+  PII:  { tensao: "Eu ↔ Papel",            frase: "Still doing what I've always done. But something inside isn't with it anymore." },
+  PIII: { tensao: "Presença ↔ Distância", frase: "It's over. And now I can see what I couldn't while it was happening." },
+  PIV:  { tensao: "Clareza ↔ Ação",    frase: "I know what's right. And I'm carrying the weight of acting on it." },
+  PV:   { tensao: "Dentro ↔ Fora",    frase: "No crisis. Just an openness with nowhere to go yet." },
+  PVI:  { tensao: "Movimento ↔ Pausa",    frase: "Building something that matters. The vertigo is part of the work." },
 };
 
 const FALLBACK_M2: Record<PillId, string> = {
@@ -161,7 +161,7 @@ function getM3_2(pillId: PillId, vc: PillVariationContent | null) {
     scenario: FALLBACK_M3_2_SITUACAO[pillId],
     options: FALLBACK_M3_2_OPCOES[pillId].map(o => ({
       id: o.id, text: o.text,
-      followup: o.id === "C" ? "What would that third path look like in practice?" : o.id === "D" ? "What specifically would you need to understand before deciding?" : "What do you give up when you choose this?",
+      followup: o.id === "C" ? "What would that third path look like in practice?" : o.id === "D" ? "What specifically would you need to understand before deciding?" : "O que você abre mão ao escolher isso?",
       followupType: (o.id === "C" || o.id === "D") ? "question" as const : "cost" as const,
     })),
   };
@@ -212,7 +212,7 @@ interface FooterProps {
   disabled?: boolean;
 }
 const Footer = forwardRef<HTMLDivElement, FooterProps>(({
-  onBack, onContinue, continueLabel = "continue",
+  onBack, onContinue, continueLabel = "continuar",
   showEthics = true, onEthics, disabled = false,
 }, ref) => {
   return (
@@ -231,7 +231,7 @@ const Footer = forwardRef<HTMLDivElement, FooterProps>(({
           </span>
         )}
         {showEthics && onEthics && (
-          <span className="r-footer-ethics" onClick={onEthics}>i'd rather not</span>
+          <span className="r-footer-ethics" onClick={onEthics}>prefiro não responder</span>
         )}
       </div>
     </>
@@ -528,7 +528,7 @@ export default function PillFlow() {
       </div>
       <div style={{ flex: 1 }} />
       <Footer onBack={() => navigate("/home")} onContinue={submitM1}
-        continueLabel={state.loading ? "..." : "begin"}
+        continueLabel={state.loading ? "..." : "começar"}
         showEthics onEthics={() => handleEthics("M1")}
         disabled={state.loading || !state.ipeCycleId} />
     </div>
@@ -562,7 +562,7 @@ export default function PillFlow() {
         )}
       </div>
       <Footer onBack={() => setState(s => ({ ...s, moment: "M1" }))} onContinue={submitM2}
-        continueLabel={state.loading ? "..." : "continue"}
+        continueLabel={state.loading ? "..." : "continuar"}
         showEthics onEthics={() => handleEthics("M2")} disabled={state.loading} />
     </div>
   );
@@ -590,8 +590,8 @@ export default function PillFlow() {
         <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10, color: "var(--r-dim)", textAlign: "center", marginTop: 14 }}>{m3_1Content.poleRight}</div>
         {state.m3_1_posicao !== null && (
           <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 12 }}>
-            <InvisibleTextarea value={state.m3_1_duasPalavras} onChange={v => setState(s => ({ ...s, m3_1_duasPalavras: v }))} placeholder="two words for this position" />
-            <InvisibleTextarea value={state.m3_1_situacaoOposta} onChange={v => setState(s => ({ ...s, m3_1_situacaoOposta: v }))} placeholder="what would the opposite look like?" />
+            <InvisibleTextarea value={state.m3_1_duasPalavras} onChange={v => setState(s => ({ ...s, m3_1_duasPalavras: v }))} placeholder="duas palavras para essa posição" />
+            <InvisibleTextarea value={state.m3_1_situacaoOposta} onChange={v => setState(s => ({ ...s, m3_1_situacaoOposta: v }))} placeholder="como seria o oposto?" />
           </div>
         )}
       </div>
@@ -633,7 +633,7 @@ export default function PillFlow() {
           {state.m3_2_opcao && (
             <div style={{ marginBottom: 24 }}>
               <div className="r-question" style={{ marginBottom: 12, fontSize: 14 }}>
-                {selectedOption?.followupType === "cost" ? selectedOption.followup : "What do you give up when you choose this?"}
+                {selectedOption?.followupType === "cost" ? selectedOption.followup : "O que você abre mão ao escolher isso?"}
               </div>
               <InvisibleTextarea value={state.m3_2_abreMao} onChange={v => setState(s => ({ ...s, m3_2_abreMao: v }))} />
             </div>
@@ -667,7 +667,7 @@ export default function PillFlow() {
         <div style={{ height: 24 }} />
       </div>
       <Footer onBack={() => setState(s => ({ ...s, moment: "M3_2" }))} onContinue={submitM3}
-        continueLabel={state.loading ? "..." : "continue"}
+        continueLabel={state.loading ? "..." : "continuar"}
         showEthics onEthics={() => handleEthics("M3")}
         disabled={state.loading || !state.m3_3_narrativa.trim() || !state.m3_3_condicao.trim()} />
     </div>
@@ -700,7 +700,7 @@ export default function PillFlow() {
         </div>
       </div>
       <Footer onBack={() => setState(s => ({ ...s, moment: "M3_3" }))} onContinue={submitM4}
-        continueLabel={state.loading ? "..." : "continue"}
+        continueLabel={state.loading ? "..." : "continuar"}
         showEthics onEthics={() => handleEthics("M4")} disabled={state.loading} />
     </div>
   );
@@ -719,7 +719,7 @@ export default function PillFlow() {
           ))
         ) : (
           <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-ghost)", letterSpacing: "0.08em", textAlign: "center", padding: "12px 0" }}>
-            reed is listening<span className="r-dots">...</span>
+            reed está escutando<span className="r-dots">...</span>
           </div>
         )}
       </div>
@@ -742,7 +742,7 @@ export default function PillFlow() {
         </div>
       </div>
       <Footer onBack={() => setState(s => ({ ...s, moment: "M4" }))}
-        onContinue={() => navigate("/pills")} continueLabel="continue" showEthics={false} />
+        onContinue={() => navigate("/pills")} continueLabel="continuar" showEthics={false} />
     </div>
   );
 }

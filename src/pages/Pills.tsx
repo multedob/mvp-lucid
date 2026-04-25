@@ -14,12 +14,12 @@ type PillId = "PI" | "PII" | "PIII" | "PIV" | "PV" | "PVI";
 const PILL_ORDER: PillId[] = ["PI", "PII", "PIII", "PIV", "PV", "PVI"];
 
 const PILL_TENSAO: Record<PillId, string> = {
-  PI:   "I ↔ Belonging",
-  PII:  "I ↔ Role",
-  PIII: "Presence ↔ Distance",
-  PIV:  "Clarity ↔ Action",
-  PV:   "Inside ↔ Outside",
-  PVI:  "Movement ↔ Pause",
+  PI:   "Eu ↔ Pertencimento",
+  PII:  "Eu ↔ Papel",
+  PIII: "Presença ↔ Distância",
+  PIV:  "Clareza ↔ Ação",
+  PV:   "Dentro ↔ Fora",
+  PVI:  "Movimento ↔ Pausa",
 };
 
 export default function Pills() {
