@@ -380,7 +380,10 @@ export default function PillFlow() {
         ipe_cycle_id: state.ipeCycleId, pill_id: state.pillId,
         moment: apiMoment, payload: {}, protecao_etica: true,
       });
-    } catch (_) {}
+    } catch (err) {
+      console.error("[PillFlow] handleEthics failed:", err);
+      // proteção ética não-bloqueante: log + segue (não exibe alert pra preservar UX)
+    }
     advance();
   };
 
@@ -395,7 +398,13 @@ export default function PillFlow() {
         variation_key: state.variationKey, // persisted in pill_responses
       });
       setState(s => ({ ...s, pillResponseId: r.pill_response_id, moment: "M2", loading: false }));
-    } catch { setState(s => ({ ...s, moment: "M2", loading: false })); }
+    } catch (err) {
+      console.error("[PillFlow] submitM1 failed:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      alert("Erro ao iniciar Pill (M1): " + msg);
+      setState(s => ({ ...s, loading: false }));
+      return;
+    }
   };
 
   const submitM2 = async () => {
@@ -414,7 +423,13 @@ export default function PillFlow() {
           transcription_final:  state.m2TranscriptionFinal,
         },
       });
-    } catch (_) {}
+    } catch (err) {
+      console.error("[PillFlow] submitM2 failed:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      alert("Erro ao salvar M2: " + msg);
+      setState(s => ({ ...s, loading: false }));
+      return;
+    }
     setState(s => ({ ...s, moment: "M3_1", loading: false }));
   };
 
