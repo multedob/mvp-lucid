@@ -140,6 +140,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<RootRedirect />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/age" element={<AgeCheck />} />
           <Route path="/consent" element={<Consent />} />
           <Route path="/letter" element={<OnboardingLetter />} />
