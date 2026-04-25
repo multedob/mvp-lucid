@@ -249,7 +249,7 @@ export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(({
 
   const buttonLabel = isRecording
     ? isNearLimit
-      ? \`para em \${remainingSec}s\`
+      ? `para em ${remainingSec}s`
       : `recording ${mm}:${ss}`
     : isProcessing
       ? "ajustando…"
