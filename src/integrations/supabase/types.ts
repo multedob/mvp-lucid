@@ -562,6 +562,7 @@ export type Database = {
           m4_transcription_final: string | null
           m4_transcription_live: string | null
           pill_id: string
+          prompt_version_used: string | null
           variation_key: string | null
         }
         Insert: {
@@ -583,6 +584,7 @@ export type Database = {
           m4_transcription_final?: string | null
           m4_transcription_live?: string | null
           pill_id: string
+          prompt_version_used?: string | null
           variation_key?: string | null
         }
         Update: {
@@ -604,6 +606,7 @@ export type Database = {
           m4_transcription_final?: string | null
           m4_transcription_live?: string | null
           pill_id?: string
+          prompt_version_used?: string | null
           variation_key?: string | null
         }
         Relationships: [
