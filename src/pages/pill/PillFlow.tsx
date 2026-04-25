@@ -241,7 +241,7 @@ Footer.displayName = "Footer";
 
 const InvisibleTextarea = forwardRef<HTMLDivElement, {
   value: string; onChange: (v: string) => void; placeholder?: string;
-}>(({ value, onChange, placeholder = "type here" }, fwdRef) => {
+}>(({ value, onChange, placeholder = "escreva aqui" }, fwdRef) => {
   const ref = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     if (ref.current) {
@@ -444,7 +444,13 @@ export default function PillFlow() {
           })(),
         },
       });
-    } catch (_) {}
+    } catch (err) {
+      console.error("[PillFlow] submitM3 failed:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      alert("Erro ao salvar M3: " + msg + "\n\nVer console (F12) para detalhes.");
+      setState(s => ({ ...s, loading: false }));
+      return;  // NÃO avançar para M4 se M3 falhou
+    }
     setState(s => ({ ...s, moment: "M4", loading: false }));
   };
 
