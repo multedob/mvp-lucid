@@ -7,6 +7,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Splash from "./pages/Splash";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import Home from "./pages/Home";
 import OnboardingLetter from "./pages/OnboardingLetter";
 import AgeCheck from "./pages/AgeCheck";
