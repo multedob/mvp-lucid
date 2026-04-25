@@ -249,11 +249,11 @@ export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(({
 
   const buttonLabel = isRecording
     ? isNearLimit
-      ? `stops in ${remainingSec}s`
+      ? \`para em \${remainingSec}s\`
       : `recording ${mm}:${ss}`
     : isProcessing
-      ? "polishing…"
-      : "record";
+      ? "ajustando…"
+      : "gravar";
 
   // Color shifts to a warning hue near the limit.
   const accentColor = isNearLimit
@@ -266,7 +266,7 @@ export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(({
         type="button"
         onClick={isRecording ? stopRecording : startRecording}
         disabled={disabled || isProcessing || state === "error"}
-        aria-label={isRecording ? "stop recording" : "start recording"}
+        aria-label={isRecording ? "parar gravação" : "começar gravação"}
         style={{
           display: "flex",
           alignItems: "center",
