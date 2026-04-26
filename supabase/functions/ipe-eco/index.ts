@@ -1,143 +1,28 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.27.3";
-import { generateEco } from "../_shared/eco/engine.ts";
-import type {
-  EcoInputs,
-  OperatorContext,
-  OperatorId,
-  PillId,
-  Variation,
-} from "../_shared/eco/types.ts";
-
+import { detectPatternLLM, HINT_TO_OPERATOR } from "../_shared/eco/llm-detector.ts";
+import type { DetectorOutput } from "../_shared/eco/llm-detector.ts";
 
 // ============================================================
-// CAMINHO A — Microtitle pools + JSON parser/validator
-// EXPANSÃO v2.c.1: 10 hints (vertical slice OP03 PVI semantic)
+// V2.C.2 — ARQUITETURA HIBRIDA
+// 1. Detector LLM (Haiku) identifica operator_hint
+// 2. Renderer LLM (Sonnet) gera eco-CONVITE com padrão pré-detectado
+// 3. Backend sorteia CTA contextual da tabela reed_ctas (anti-repetição)
+// 4. Frontend renderiza eco_lines como prosa contínua + CTA no botão
 // ============================================================
 
-const MICROTITLE_POOLS = {
-  cost: ["algo está pagando o preço", "tem um custo aqui", "o que isso pede em troca"],
-  repetition: ["olha o que reparei", "uma frase que volta", "algo se repetiu aqui"],
-  inversion: ["tem uma virada aqui", "algo aparece pelo avesso", "duas direções na mesma frase"],
-  contradiction: ["duas coisas ao mesmo tempo", "duas verdades aqui", "algo não bate"],
-  weight: ["onde o ar ficou denso", "uma frase mais pesada", "aqui carregou"],
-  absence: ["o que ficou de fora", "algo não apareceu", "uma ausência que fala"],
-  paradox: ["tem um nó aqui", "uma frase em duas direções", "algo se contradiz"],
-  cycle: ["voltou em outro lugar", "isso já passou por aqui", "tem ressonância"],
-  silence: ["uma porta entreaberta", "algo que não foi até o fim", "tem espaço em branco aqui"],
-  temporal_shift: ["o tempo mudou de lado", "o ontem virou agora", "algo do passado virou presente"],
-} as const;
+const VALID_HINTS = [
+  "cost", "weight", "paradox", "silence", "temporal_shift",
+  "inversion", "cycle", "repetition", "absence", "contradiction",
+] as const;
 
-type OperatorHint = keyof typeof MICROTITLE_POOLS;
-
-// Mapeamento operador determinístico → hint (Caminho A determinístico)
-const OPERATOR_TO_HINT: Record<string, OperatorHint> = {
-  OP01: "cost",
-  OP02: "inversion",
-  OP03: "repetition",
-  OP04: "weight",
-  OP05: "contradiction",
-  OP06: "absence",
-};
-
-// Mapeamento reverso para persistência LLM em pill_eco_events.operator
-// OP07-OP10 não existem como operadores determinísticos ainda — usados só como
-// rótulo de telemetria quando LLM escolhe livremente esses padrões.
-const HINT_TO_OPERATOR_LLM: Record<OperatorHint, string> = {
-  cost: "OP01",
-  inversion: "OP02",
-  repetition: "OP03",
-  weight: "OP04",
-  contradiction: "OP05",
-  absence: "OP06",
-  paradox: "OP07",
-  cycle: "OP08",
-  silence: "OP09",
-  temporal_shift: "OP10",
-};
-
-const ALL_MICROTITLES: string[] = Object.values(MICROTITLE_POOLS).flat();
+type OperatorHint = typeof VALID_HINTS[number];
 
 interface EcoStructured {
-  mirror: string;
-  question: string;
-  microtitle: string;
+  eco_lines: string[];
+  microtitle: string | null;
   operator_hint: OperatorHint;
-  node_resonance_used?: boolean;
-}
-
-function pickMicrotitle(operator_id: string, variation: string): string {
-  const hint = OPERATOR_TO_HINT[operator_id] ?? "cost";
-  const pool = MICROTITLE_POOLS[hint];
-  const idx = ["V0", "V1", "V2", "V3"].indexOf(variation) % pool.length;
-  return pool[idx >= 0 ? idx : 0];
-}
-
-function parseEcoJson(raw: string): EcoStructured | null {
-  if (!raw) return null;
-  let candidate = raw.trim();
-  const fenceMatch = candidate.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-  if (fenceMatch) candidate = fenceMatch[1].trim();
-  const objMatch = candidate.match(/\{[\s\S]*\}/);
-  if (objMatch) candidate = objMatch[0];
-
-  let parsed: any;
-  try {
-    parsed = JSON.parse(candidate);
-  } catch {
-    return null;
-  }
-
-  if (
-    typeof parsed?.mirror !== "string" ||
-    typeof parsed?.question !== "string" ||
-    typeof parsed?.microtitle !== "string" ||
-    typeof parsed?.operator_hint !== "string"
-  ) return null;
-
-  if (!(parsed.operator_hint in MICROTITLE_POOLS)) return null;
-
-  const mt = parsed.microtitle.toLowerCase().trim();
-  const validForHint: readonly string[] = MICROTITLE_POOLS[parsed.operator_hint as OperatorHint];
-  if (!validForHint.includes(mt) && !ALL_MICROTITLES.includes(mt)) return null;
-
-  const q = parsed.question.trim().toLowerCase();
-  const hasMark = q.includes("?");
-  const interrogStarters = [
-    "o que", "como", "quando", "onde", "quem", "qual",
-    "por que", "por quê", "será", "será que", "e se",
-  ];
-  const hasInterrogStart = interrogStarters.some(s => q.startsWith(s));
-  if (!hasMark && !hasInterrogStart) return null;
-
-  const qWords = parsed.question.trim().split(/\s+/).length;
-  const totalWords = (parsed.mirror + " " + parsed.question).trim().split(/\s+/).length;
-  if (qWords > 20 || totalWords > 60) return null;
-
-  return {
-    mirror: parsed.mirror.trim(),
-    question: parsed.question.trim(),
-    microtitle: mt,
-    operator_hint: parsed.operator_hint as OperatorHint,
-    node_resonance_used: typeof parsed.node_resonance_used === "boolean"
-      ? parsed.node_resonance_used
-      : false,
-  };
-}
-
-function structuredToLegacyText(s: EcoStructured): string {
-  return `— você disse —\n\n${s.mirror}\n\n— reed —\n\n${s.question}`;
-}
-
-// Extrai fragments entre aspas (curvas ou retas) do mirror
-function extractQuotedFragments(text: string): string[] {
-  const matches: string[] = [];
-  const re = /["""]([^"""]+)["""]/g;
-  let m;
-  while ((m = re.exec(text)) !== null) {
-    matches.push(m[1]);
-  }
-  return matches;
+  node_resonance_used: boolean;
 }
 
 const CORS_HEADERS = {
@@ -152,67 +37,14 @@ const json = (data: unknown, status = 200) =>
     headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
   });
 
-const PILL_LINES: Record<string, string[]> = {
-  PI: ["L1.1", "L2.1", "L3.1", "L3.2", "L4.4"],
-  PII: ["L1.2", "L1.3", "L1.4", "L2.1", "L2.3", "L3.4"],
-  PIII: ["L1.4", "L2.1", "L2.2", "L3.4", "L4.2"],
-  PIV: ["L1.1", "L3.2", "L3.3", "L3.4", "L4.1", "L4.2"],
-  PV: ["L1.1", "L2.2", "L4.1", "L4.2", "L4.3"],
-  PVI: ["L1.2", "L1.3", "L1.4", "L2.3", "L3.1", "L4.1", "L4.2"],
+const PILL_META: Record<string, { tensao: string; proibicoes: string }> = {
+  PI:   { tensao: "I ↔ Belonging",        proibicoes: `"pertencimento", "você sempre foi", "lugar de origem".` },
+  PII:  { tensao: "I ↔ Role",             proibicoes: `"papel", "função", "missão", "vocação".` },
+  PIII: { tensao: "Presence ↔ Distance",  proibicoes: `"agora você sabe", "valeu a pena", "superou".` },
+  PIV:  { tensao: "Clarity ↔ Action",     proibicoes: `"agora é hora de agir", "basta executar".` },
+  PV:   { tensao: "Inside ↔ Outside",     proibicoes: `"sua missão", "seu propósito".` },
+  PVI:  { tensao: "Movement ↔ Pause",     proibicoes: `"você precisa descansar", "se cuide", "tire um tempo".` },
 };
-
-const PILL_META: Record<
-  string,
-  {
-    tensao: string;
-    proibicoes: string;
-    instrucao_especial: string;
-  }
-> = {
-  PI: {
-    tensao: "I ↔ Belonging",
-    proibicoes: `Proibido: "pertencimento", "você sempre foi", "quem você é", "você pertence", "lugar de origem". Não resolve a tensão — honra o custo real do deslocamento.`,
-    instrucao_especial: `PI: tensão entre eu e pertencimento.`,
-  },
-  PII: {
-    tensao: "I ↔ Role",
-    proibicoes: `Proibido: "papel", "função", "missão", "propósito profissional", "sua vocação". Não define o papel correto.`,
-    instrucao_especial: `PII: tensão entre eu e papel exercido.`,
-  },
-  PIII: {
-    tensao: "Presence ↔ Distance",
-    proibicoes: `Proibido: "agora você sabe", "a lição que fica", "você cresceu", "tudo faz sentido", "valeu a pena", "superou". Nunca fecha a retrospectiva.`,
-    instrucao_especial: `PIII: tensão entre presença e distância.`,
-  },
-  PIV: {
-    tensao: "Clarity ↔ Action",
-    proibicoes: `Proibido: "agora é hora de agir", "você sabe o que fazer", "o caminho está claro", "basta executar". Não prescreve movimento.`,
-    instrucao_especial: `PIV: tensão entre clareza e ação.`,
-  },
-  PV: {
-    tensao: "Inside ↔ Outside",
-    proibicoes: `Proibido: "o que você busca é", "a resposta pode estar em", "você está pronto para", "seu propósito", "sua missão". A abertura é a condição — não a preenche.`,
-    instrucao_especial: `PV: tensão entre dentro e fora.`,
-  },
-  PVI: {
-    tensao: "Movement ↔ Pause",
-    proibicoes: `Proibido: "você precisa descansar", "o ritmo está te consumindo", "pare antes que seja tarde", "você está construindo algo grandioso". Não julga o ritmo.`,
-    instrucao_especial: `PVI: tensão entre movimento e pausa.`,
-  },
-};
-
-interface StructuralContext {
-  cgg: number;
-  d1: number;
-  d2: number;
-  d3: number;
-  d4: number;
-}
-
-interface LongitudinalDataPoint {
-  line_id: string;
-  previous_ils: number[];
-}
 
 interface PillResponse {
   ipe_cycle_id: string;
@@ -220,248 +52,191 @@ interface PillResponse {
   m2_resposta?: string;
   m3_respostas?: Record<string, string>;
   m4_resposta?: Record<string, unknown>;
-  m2_cal_signals?: Record<string, unknown>;
   eco_text?: string;
 }
 
-// ─── Adaptadores determinísticos (Fase 2-B) ────────────────────────
+// ─── Parse JSON do Sonnet ─────────────────────────────────────────
 
-function buildEcoInputs(pr: PillResponse): EcoInputs {
-  const m3 = pr.m3_respostas ?? {};
-  const m4 = pr.m4_resposta ?? {};
+function parseEcoJsonV2c2(raw: string): EcoStructured | null {
+  if (!raw) return null;
+  let candidate = raw.trim();
+  const fence = candidate.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (fence) candidate = fence[1].trim();
+  const obj = candidate.match(/\{[\s\S]*\}/);
+  if (obj) candidate = obj[0];
 
-  const pick = (keys: string[]): string | null => {
-    for (const k of keys) {
-      const v = (m3 as Record<string, unknown>)[k];
-      if (typeof v === "string" && v.trim()) return v;
-    }
-    return null;
-  };
+  let parsed: any;
+  try { parsed = JSON.parse(candidate); }
+  catch { return null; }
 
-  const m3_2_opcao = pick(["3_2_opcao", "opcao"]) as
-    | "A"
-    | "B"
-    | "C"
-    | "D"
-    | null;
-
-  const m4_text_parts: string[] = [];
-  if (typeof m4.percepcao === "string" && m4.percepcao.trim()) {
-    m4_text_parts.push(m4.percepcao.trim());
-  }
-  if (typeof m4.narrativa === "string" && m4.narrativa.trim()) {
-    m4_text_parts.push(m4.narrativa.trim());
-  }
-  if (typeof m4.condicao === "string" && m4.condicao.trim()) {
-    m4_text_parts.push(m4.condicao.trim());
-  }
-  if (typeof m4.tensao === "string" && m4.tensao.trim()) {
-    m4_text_parts.push(m4.tensao.trim());
-  }
-  const m4_combined = m4_text_parts.join(" ").trim() || null;
+  if (!Array.isArray(parsed?.eco_lines) || parsed.eco_lines.length === 0) return null;
+  if (!parsed.eco_lines.every((l: any) => typeof l === "string")) return null;
+  if (parsed.eco_lines.length > 6) return null;
+  if (!VALID_HINTS.includes(parsed.operator_hint)) return null;
 
   return {
-    pill_id: pr.pill_id as PillId,
-    m2: pr.m2_resposta ?? null,
-    m3_1_situacao_oposta: pick(["3_1_situacao_oposta", "situacao_oposta"]),
-    m3_2_opcao,
-    m3_2_abre_mao: pick(["3_2_abre_mao", "abre_mao"]),
-    m3_2_option_label: pick(["3_2_option_label", "option_label"]),
-    m3_3_narrativa: pick(["3_3_narrativa", "narrativa"]),
-    m3_3_condicao: pick(["3_3_condicao", "condicao"]),
-    m4: m4_combined,
+    eco_lines: parsed.eco_lines.map((l: string) => l.trim()),
+    microtitle: typeof parsed.microtitle === "string" && parsed.microtitle.trim()
+      ? parsed.microtitle.trim().toLowerCase()
+      : null,
+    operator_hint: parsed.operator_hint,
+    node_resonance_used: parsed.node_resonance_used === true,
   };
 }
 
-async function buildOperatorContext(
+function ecoLinesToText(s: EcoStructured): string {
+  const parts: string[] = [];
+  if (s.microtitle) parts.push(s.microtitle);
+  parts.push(...s.eco_lines);
+  return parts.join("\n");
+}
+
+// ─── Sorteio CTA contextual com anti-repetição ────────────────────
+
+async function pickContextualCTA(
   supabase: any,
-  _user_id: string,
+  hint: string,
   ipe_cycle_id: string,
-): Promise<OperatorContext> {
+): Promise<string> {
   try {
-    const { data, error } = await supabase
+    const { data: ctas, error } = await supabase
+      .from("reed_ctas")
+      .select("text_pt_br")
+      .eq("hint", hint)
+      .eq("active", true);
+
+    if (error || !ctas || ctas.length === 0) {
+      return "conversar com reed →"; // fallback genérico
+    }
+
+    // Anti-repetição: pega últimos CTAs usados no ciclo
+    const { data: recent } = await supabase
       .from("pill_eco_events")
-      .select("operator, variation, pill_id, rendered_at")
+      .select("raw_payload")
       .eq("ipe_cycle_id", ipe_cycle_id)
       .order("rendered_at", { ascending: false })
-      .limit(12);
+      .limit(5);
 
-    if (error || !data || data.length === 0) {
-      return {};
-    }
+    const recent_ctas = new Set<string>(
+      (recent ?? [])
+        .map((r: any) => r.raw_payload?.cta_text)
+        .filter((c: any): c is string => typeof c === "string"),
+    );
 
-    const previous_operator_in_cycle = data[0]?.operator as OperatorId;
-
-    const recent_variations_by_operator: Partial<
-      Record<OperatorId, Variation[]>
-    > = {};
-    for (const row of data) {
-      const op = row.operator as OperatorId;
-      const v = row.variation as Variation;
-      if (!op || !v) continue;
-      if (!recent_variations_by_operator[op]) {
-        recent_variations_by_operator[op] = [];
-      }
-      recent_variations_by_operator[op]!.push(v);
-    }
-
-    return {
-      previous_operator_in_cycle,
-      recent_variations_by_operator,
-    };
+    const candidates = ctas.filter((c: any) => !recent_ctas.has(c.text_pt_br));
+    const pool = candidates.length > 0 ? candidates : ctas;
+    return pool[Math.floor(Math.random() * pool.length)].text_pt_br;
   } catch (err) {
-    console.error("buildOperatorContext error:", err);
-    return {};
+    console.error("[pickContextualCTA] error:", err);
+    return "conversar com reed →";
   }
 }
 
-/**
- * Persiste evento em pill_eco_events.
- * Estendido v2.c.1: aceita node_resonance_used (boolean) como coluna top-level.
- * Não-fatal: log e segue em caso de erro.
- */
+// ─── Persistência ────────────────────────────────────────────────
+
 async function persistEcoEvent(
   supabase: any,
-  _user_id: string,
   ipe_cycle_id: string,
   pill_id: string,
-  operator_id: string, // afrouxado de OperatorId pra aceitar OP07-OP10 do LLM
-  variation: Variation,
+  operator_id: string,
   is_fallback: boolean,
   latency_ms: number,
-  fragments: string[],
-  reed_question: string,
-  debug: Record<string, unknown>,
-  node_resonance_used: boolean = false,
+  eco: EcoStructured | null,
+  cta_text: string,
+  detector_output: DetectorOutput | null,
+  prompt_version: string,
 ): Promise<void> {
   try {
-    await supabase.from("pill_eco_events").insert([
-      {
-        ipe_cycle_id,
-        pill_id,
-        operator: operator_id,
-        variation,
-        is_fallback,
-        latency_ms: Math.round(latency_ms),
-        locale: "pt-BR",
-        rendered_at: new Date().toISOString(),
-        raw_payload: {
-          fragments,
-          reed_question,
-          debug,
-        },
-        node_resonance_used,
+    await supabase.from("pill_eco_events").insert([{
+      ipe_cycle_id,
+      pill_id,
+      operator: operator_id,
+      variation: "V0",
+      is_fallback,
+      latency_ms: Math.round(latency_ms),
+      locale: "pt-BR",
+      rendered_at: new Date().toISOString(),
+      raw_payload: {
+        eco_lines: eco?.eco_lines ?? [],
+        microtitle: eco?.microtitle ?? null,
+        cta_text,
+        detector: detector_output,
+        prompt_version,
       },
-    ]);
+      node_resonance_used: eco?.node_resonance_used ?? false,
+    }]);
   } catch (err) {
-    console.error("persistEcoEvent error:", err);
+    console.error("[persistEcoEvent] error:", err);
   }
 }
 
-const detectLanguage = (text: string): "pt" | "en" => {
-  if (!text) return "pt";
-  const pt_words = [
-    "você", "estar", "ir", "fazer", "querer", "pode", "aqui", "agora",
-  ];
-  const en_words = [
-    "you", "be", "go", "do", "want", "can", "here", "now", "the", "and",
-  ];
-  const words = text.toLowerCase().split(/\s+/);
-  const pt_count = words.filter((w) => pt_words.includes(w)).length;
-  const en_count = words.filter((w) => en_words.includes(w)).length;
-  return en_count > pt_count ? "en" : "pt";
-};
+async function persistEcoText(
+  ipe_cycle_id: string,
+  pill_id: string,
+  eco_text: string,
+  prompt_version_used: string,
+) {
+  const admin = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+  const { error } = await admin
+    .from("pill_responses")
+    .update({ eco_text, completed_at: new Date().toISOString(), prompt_version_used })
+    .eq("ipe_cycle_id", ipe_cycle_id)
+    .eq("pill_id", pill_id);
+  if (error) console.error("[persistEcoText] error:", JSON.stringify(error));
+}
 
-const getFallbackEco = (pillId: string, language: "pt" | "en"): string => {
-  const fallbacks: Record<string, Record<"pt" | "en", string>> = {
-    PI: {
-      pt: "Há algo em sua raiz que ainda pulsa — talvez não no lugar de origem, mas no que você carrega.",
-      en: "There is something in your roots that still pulses — perhaps not in the place of origin, but in what you carry.",
-    },
-    PII: {
-      pt: "O papel que você exerce guarda mais sobre você do que imaginava.",
-      en: "The role you play holds more about you than you imagined.",
-    },
-    PIII: {
-      pt: "A distância entre então e agora marca quem você foi, não quem você é.",
-      en: "The distance between then and now marks who you were, not who you are.",
-    },
-    PIV: {
-      pt: "Clareza sem movimento é apenas um espelho — a ação está no próximo passo.",
-      en: "Clarity without movement is just a mirror — action is in the next step.",
-    },
-    PV: {
-      pt: "O que você busca fora reflete o que ainda não reconheceu dentro.",
-      en: "What you seek outside reflects what you have not yet recognized within.",
-    },
-    PVI: {
-      pt: "Cada pausa é um respiro do sistema — nem preguiça, nem crise.",
-      en: "Every pause is a breath of the system — neither laziness nor crisis.",
-    },
-  };
-  return (fallbacks[pillId]?.[language] ||
-    fallbacks[pillId]?.pt ||
-    "Há muito mais aqui do que o eco consegue dizer.");
-};
+// ─── Corpus pro Sonnet com detector_output injetado ──────────────
 
-const fetchStructuralContext = async (
-  supabase: any,
-  user_id: string
-): Promise<StructuralContext | null> => {
-  try {
-    const { data: user_data, error: user_error } = await supabase
-      .from("users")
-      .select("version")
-      .eq("id", user_id)
-      .single();
+function buildCorpusForRenderer(
+  pill_response: PillResponse,
+  detector: DetectorOutput,
+  node_text: string | null,
+): string {
+  let corpus = "";
 
-    if (user_error || !user_data || user_data.version === 0) {
-      return null;
+  corpus += "=== PADRÃO DETECTADO ===\n";
+  corpus += `operator_hint: ${detector.operator_hint}\n`;
+  corpus += `theme: ${detector.theme}\n`;
+  corpus += `fragments: ${JSON.stringify(detector.fragments)}\n`;
+  corpus += `reasoning: ${detector.reasoning}\n`;
+  corpus += `confidence: ${detector.confidence.toFixed(2)}\n\n`;
+
+  corpus += "=== O QUE A PESSOA DISSE ===\n";
+  if (pill_response.m2_resposta) corpus += `M2: ${pill_response.m2_resposta}\n`;
+  if (pill_response.m3_respostas && typeof pill_response.m3_respostas === "object") {
+    for (const [k, v] of Object.entries(pill_response.m3_respostas)) {
+      if (v) corpus += `M3.${k}: ${v}\n`;
     }
-
-    const { data: cycle_data, error: cycle_error } = await supabase
-      .from("cycles")
-      .select("id")
-      .eq("user_id", user_id)
-      .order("id", { ascending: false })
-      .limit(1)
-      .single();
-
-    if (cycle_error || !cycle_data) {
-      return null;
-    }
-
-    const { data: snapshot_data, error: snapshot_error } = await supabase
-      .from("structural_snapshots")
-      .select("snapshot_json")
-      .eq("cycle_id", cycle_data.id)
-      .single();
-
-    if (snapshot_error || !snapshot_data) {
-      return null;
-    }
-
-    const snap = snapshot_data.snapshot_json;
-    return {
-      cgg: parseFloat(snap.cgg) || 1.0,
-      d1: parseFloat(snap.d1) || 1.0,
-      d2: parseFloat(snap.d2) || 1.0,
-      d3: parseFloat(snap.d3) || 1.0,
-      d4: parseFloat(snap.d4) || 1.0,
-    };
-  } catch (err) {
-    console.error("fetchStructuralContext error:", err);
-    return null;
   }
-};
+  if (pill_response.m4_resposta && typeof pill_response.m4_resposta === "object") {
+    for (const [k, v] of Object.entries(pill_response.m4_resposta as Record<string, unknown>)) {
+      if (typeof v === "string" && v.trim()) corpus += `M4.${k}: ${v}\n`;
+    }
+  }
 
-const selectEcoNode = async (
-  supabase: any,
-  cgg: number | null
-): Promise<string | null> => {
+  if (node_text) {
+    corpus += "\n=== CONCEPTUAL RESONANCE (node) ===\n";
+    corpus += node_text + "\n";
+  }
+
+  const meta = PILL_META[pill_response.pill_id];
+  if (meta) {
+    corpus += "\n=== TENSÃO E PROIBIÇÕES ===\n";
+    corpus += `tensão: ${meta.tensao}\n`;
+    corpus += `proibições: ${meta.proibicoes}\n`;
+  }
+
+  return corpus;
+}
+
+// ─── Node selector (mantido do v2.c.1) ────────────────────────────
+
+const selectEcoNode = async (supabase: any, cgg: number | null): Promise<string | null> => {
   try {
     const stage = cgg ?? 1.0;
-
     const { data, error } = await supabase
       .from("rag_corpus")
       .select("node_id, content_text, stage_min, stage_max, scores")
@@ -469,658 +244,206 @@ const selectEcoNode = async (
       .gte("stage_max", stage)
       .eq("density_class", 1)
       .order("node_id");
+    if (error || !data || data.length === 0) return null;
 
-    if (error || !data || data.length === 0) {
-      return null;
-    }
-
-    const safe_nodes = data.filter((n: any) => {
+    const safe = data.filter((n: any) => {
       const s = n.scores;
       if (!s) return true;
-      return (
-        (s.teleology_score ?? s.teleology ?? 0) === 0 &&
-        (s.prescriptive_score ?? s.prescriptive ?? 0) === 0 &&
-        (s.normative_score ?? s.normative ?? 0) === 0
-      );
+      return (s.teleology_score ?? 0) === 0 && (s.prescriptive_score ?? 0) === 0 && (s.normative_score ?? 0) === 0;
     });
-
-    if (safe_nodes.length === 0) {
-      return data[0]?.content_text || null;
-    }
-
-    let closest = safe_nodes[0];
-    let min_distance = Math.min(
-      Math.abs(stage - closest.stage_min),
-      Math.abs(stage - closest.stage_max)
-    );
-
-    for (const node of safe_nodes) {
-      const dist = Math.min(
-        Math.abs(stage - node.stage_min),
-        Math.abs(stage - node.stage_max)
-      );
-      if (dist < min_distance) {
-        min_distance = dist;
-        closest = node;
-      }
-    }
-
-    return closest.content_text || null;
+    const pool = safe.length > 0 ? safe : data;
+    return pool[Math.floor(Math.random() * pool.length)].content_text || null;
   } catch (err) {
     console.error("selectEcoNode error:", err);
     return null;
   }
 };
 
-const fetchLongitudinalData = async (
-  supabase: any,
-  user_id: string,
-  current_ipe_cycle_id: string,
-  pill_id: string
-): Promise<LongitudinalDataPoint[]> => {
+const fetchCgg = async (supabase: any, user_id: string): Promise<number | null> => {
   try {
-    const lines = PILL_LINES[pill_id] || [];
-    if (lines.length === 0) {
-      return [];
-    }
-
-    const { data: cycle_ids, error: cycle_error } = await supabase
-      .from("ipe_cycles")
-      .select("id")
-      .eq("user_id", user_id)
-      .neq("id", current_ipe_cycle_id)
-      .order("cycle_number", { ascending: false });
-
-    if (cycle_error || !cycle_ids || cycle_ids.length === 0) {
-      return [];
-    }
-
-    const { data: scoring_data, error: scoring_error } = await supabase
-      .from("pill_scoring")
-      .select("corpus_linhas")
-      .eq("pill_id", pill_id)
-      .in(
-        "ipe_cycle_id",
-        cycle_ids.map((c: any) => c.id)
-      );
-
-    if (scoring_error || !scoring_data) {
-      return [];
-    }
-
-    const result: LongitudinalDataPoint[] = [];
-    const line_map: Record<string, number[]> = {};
-
-    for (const record of scoring_data) {
-      const corpus = record.corpus_linhas;
-      if (!corpus) continue;
-
-      for (const line_id of lines) {
-        if (corpus[line_id]?.IL_sinal?.numerico !== undefined) {
-          if (!line_map[line_id]) {
-            line_map[line_id] = [];
-          }
-          line_map[line_id].push(corpus[line_id].IL_sinal.numerico);
-        }
-      }
-    }
-
-    for (const [line_id, ils] of Object.entries(line_map)) {
-      if (ils.length > 0) {
-        result.push({ line_id, previous_ils: ils });
-      }
-    }
-
-    return result;
-  } catch (err) {
-    console.error("fetchLongitudinalData error:", err);
-    return [];
-  }
+    const { data: cycle } = await supabase
+      .from("cycles").select("id").eq("user_id", user_id).order("id", { ascending: false }).limit(1).single();
+    if (!cycle) return null;
+    const { data: snap } = await supabase
+      .from("structural_snapshots").select("snapshot_json").eq("cycle_id", cycle.id).single();
+    return snap?.snapshot_json?.cgg ? parseFloat(snap.snapshot_json.cgg) : null;
+  } catch { return null; }
 };
 
-const buildOracularCorpus = (
-  pillId: string,
-  pillResponse: PillResponse,
-  structuralContext: StructuralContext | null,
-  nodeText: string | null,
-  longitudinalData: LongitudinalDataPoint[]
-): string => {
-  let corpus = "";
-
-  corpus += "=== WHAT THE PERSON SHARED IN THIS PILL ===\n";
-
-  if (pillResponse.m4_resposta) {
-    const m4 = pillResponse.m4_resposta;
-    if (m4.percepcao) {
-      corpus += `Percepcao: ${m4.percepcao}\n`;
-    }
-    if (m4.narrativa) {
-      corpus += `Narrativa: ${m4.narrativa}\n`;
-    }
-    if (m4.condicao) {
-      corpus += `Condicao: ${m4.condicao}\n`;
-    }
-    if (m4.tensao) {
-      corpus += `Tensao: ${m4.tensao}\n`;
-    }
-  }
-
-  if (
-    pillResponse.m3_respostas &&
-    typeof pillResponse.m3_respostas === "object"
-  ) {
-    for (const [key, value] of Object.entries(pillResponse.m3_respostas)) {
-      if (value) {
-        corpus += `M3 (${key}): ${value}\n`;
-      }
-    }
-  }
-
-  if (structuralContext) {
-    corpus += "\n=== STRUCTURAL POSITION (invisible to user) ===\n";
-    corpus += `CGG: ${structuralContext.cgg.toFixed(2)} | D1: ${structuralContext.d1.toFixed(2)} | D2: ${structuralContext.d2.toFixed(2)} | D3: ${structuralContext.d3.toFixed(2)} | D4: ${structuralContext.d4.toFixed(2)}\n`;
-
-    let stage = "unknown";
-    if (structuralContext.cgg < 1.5) stage = "F1 (Formation)";
-    else if (structuralContext.cgg < 2.5) stage = "F2 (Formation)";
-    else if (structuralContext.cgg < 3.5) stage = "P1 (Post-Formation)";
-    else if (structuralContext.cgg < 4.5) stage = "P2 (Post-Formation)";
-    else stage = "Beyond";
-
-    corpus += `Stage: ${stage}\n`;
-  }
-
-  if (longitudinalData.length > 0) {
-    corpus += "\n=== LONGITUDINAL SIGNAL ===\n";
-    for (const data of longitudinalData) {
-      const min_il = Math.min(...data.previous_ils);
-      const max_il = Math.max(...data.previous_ils);
-      const current = data.previous_ils[data.previous_ils.length - 1];
-      const movement =
-        current > max_il
-          ? "↑ rising"
-          : current < min_il
-            ? "↓ declining"
-            : "→ stable";
-      corpus += `${data.line_id}: previous ILs ${JSON.stringify(data.previous_ils)} ${movement}\n`;
-    }
-  }
-
-  if (nodeText) {
-    corpus += "\n=== CONCEPTUAL RESONANCE ===\n";
-    corpus += nodeText + "\n";
-  }
-
-  corpus += "\n=== CONSTITUTION ===\n";
-  corpus += PILL_META[pillId]?.proibicoes || "";
-  corpus += "\n";
-  corpus += PILL_META[pillId]?.instrucao_especial || "";
-  corpus += "\n";
-
-  return corpus;
-};
-
-const buildOracularPrompt = (pillId: string): string => {
-  const tensao = PILL_META[pillId]?.tensao || "unknown tension";
-
-  return `You are Reed, the oracular voice of rdwth. You speak from deep structural knowledge of this person's development, but you never reveal the machinery.
-
-Your task: Craft a 1-2 sentence reflection — an "eco" — that honors the person's words in this pill while holding the tension they named (${tensao}).
-
-Your voice is:
-- Suggestive, not deterministic ("there is something..." not "you are...")
-- Precise and warm, speaking as if you know more than you say
-- Anchored in their language and emotional register
-- The last line should create a bridge toward Reed conversation — something unfinished that pulls them to talk
-
-What you NEVER do:
-- Synthesize or resolve their words ("you said X but also Y")
-- Make identity claims or claim you know who they are
-- Mention or reference structural parameters (lines, dimensions, stages, CGG)
-- Quote or reference the conceptual node text
-- Close the thought ("there's more here", "worth exploring")
-- Use generic patterns or clichés
-
-The eco ends where conversation begins. Make them wonder how you knew that.`;
-};
-
-/**
- * persistAudit corrigido v2.c.1:
- * raw_output recebe a string crua do LLM, parsed_output recebe JSON.stringify
- * do EcoStructured. Permite query posterior do node_resonance_used + estrutura
- * completa via scoring_audit.
- */
-const persistAudit = async (
-  supabase: any,
-  ipe_cycle_id: string,
-  component: string,
-  prompt_version: string,
-  input_tokens: number,
-  output_tokens: number,
-  raw_output: string,
-  parsed_output: string,
-  parse_success: boolean,
-  retry_count: number,
-  model: string
-) => {
-  try {
-    await supabase.from("scoring_audit").insert([
-      {
-        ipe_cycle_id,
-        component,
-        prompt_version,
-        input_tokens,
-        output_tokens,
-        raw_output,
-        parsed_output,
-        parse_success,
-        retry_count,
-        model,
-        scored_at: new Date().toISOString(),
-      },
-    ]);
-  } catch (err) {
-    console.error("persistAudit error:", err);
-  }
-};
-
-const persistEcoText = async (
-  _ignoredSupabase: any,
-  ipe_cycle_id: string,
-  pill_id: string,
-  eco_text: string,
-  prompt_version_used?: string | null,
-) => {
-  const admin = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
-  const update: Record<string, unknown> = {
-    eco_text,
-    completed_at: new Date().toISOString(),
-  };
-  if (prompt_version_used !== undefined) {
-    update.prompt_version_used = prompt_version_used;
-  }
-  const { error: updateErr } = await admin
-    .from("pill_responses")
-    .update(update)
-    .eq("ipe_cycle_id", ipe_cycle_id)
-    .eq("pill_id", pill_id);
-  if (updateErr) {
-    console.error("[persistEcoText] UPDATE error:", JSON.stringify(updateErr));
-  } else {
-    console.log("[persistEcoText] UPDATE ok pill_id=" + pill_id);
-  }
-};
+// ─── Handler ──────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: CORS_HEADERS });
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
 
   const auth_header = req.headers.get("Authorization");
-  if (!auth_header) {
-    return json({ error: "Missing authorization header" }, 401);
-  }
+  if (!auth_header) return json({ error: "Missing authorization" }, 401);
 
   const token = auth_header.replace("Bearer ", "");
   const supabase_url = Deno.env.get("SUPABASE_URL");
   const supabase_key = Deno.env.get("SUPABASE_ANON_KEY");
-
-  if (!supabase_url || !supabase_key) {
-    return json({ error: "Missing Supabase configuration" }, 500);
-  }
+  if (!supabase_url || !supabase_key) return json({ error: "Missing config" }, 500);
 
   const supabase = createClient(supabase_url, supabase_key, {
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
 
-  const { data: auth_data, error: auth_error } = await supabase.auth.getUser(
-    token
-  );
-  if (auth_error || !auth_data.user) {
-    return json({ error: "Unauthorized" }, 401);
-  }
-
+  const { data: auth_data, error: auth_error } = await supabase.auth.getUser(token);
+  if (auth_error || !auth_data.user) return json({ error: "Unauthorized" }, 401);
   const user_id = auth_data.user.id;
 
   const body = await req.json().catch(() => ({}));
   const { ipe_cycle_id, pill_id } = body;
-
-  if (!ipe_cycle_id || !pill_id) {
-    return json(
-      { error: "Missing ipe_cycle_id or pill_id" },
-      400
-    );
-  }
+  const force_regenerate = body?.force_regenerate === true;
+  if (!ipe_cycle_id || !pill_id) return json({ error: "Missing ipe_cycle_id or pill_id" }, 400);
 
   const { data: cycle_data, error: cycle_error } = await supabase
-    .from("ipe_cycles")
-    .select("id, user_id")
-    .eq("id", ipe_cycle_id)
-    .single();
-
+    .from("ipe_cycles").select("id, user_id").eq("id", ipe_cycle_id).single();
   if (cycle_error || !cycle_data || cycle_data.user_id !== user_id) {
     return json({ error: "Cycle not found or unauthorized" }, 404);
   }
 
   const { data: pill_response_data, error: pill_error } = await supabase
-    .from("pill_responses")
-    .select("*")
-    .eq("ipe_cycle_id", ipe_cycle_id)
-    .eq("pill_id", pill_id)
-    .single();
-
-  if (pill_error || !pill_response_data) {
-    return json({ error: "Pill response not found" }, 404);
-  }
+    .from("pill_responses").select("*").eq("ipe_cycle_id", ipe_cycle_id).eq("pill_id", pill_id).single();
+  if (pill_error || !pill_response_data) return json({ error: "Pill response not found" }, 404);
 
   const pill_response: PillResponse = pill_response_data;
-
   const component = `eco_${pill_id}`;
-  const force_regenerate = body?.force_regenerate === true;
 
+  // Idempotência
   if (pill_response.eco_text && !force_regenerate) {
     return json({
       eco_text: pill_response.eco_text,
-      mirror: pill_response.eco_text.split("\n")[0] ?? pill_response.eco_text,
-      question: "",
-      microtitle: "",
+      eco_lines: pill_response.eco_text.split("\n").filter(Boolean),
+      microtitle: null,
       operator_hint: "cost",
-      scoring_audit_id: "",
+      cta_text: "conversar com reed →",
       cached: true,
+    });
+  }
+
+  const anthropic_key = Deno.env.get("ANTHROPIC_API_KEY");
+  if (!anthropic_key) return json({ error: "missing ANTHROPIC_API_KEY" }, 500);
+  const anthropic = new Anthropic({ apiKey: anthropic_key });
+
+  const t0 = Date.now();
+
+  // ─── ETAPA 1: DETECTOR (Haiku) ──────────────────────────────
+  const corpus_for_detector = [
+    pill_response.m2_resposta ?? "",
+    ...(pill_response.m3_respostas ? Object.values(pill_response.m3_respostas) : []),
+    ...(pill_response.m4_resposta && typeof pill_response.m4_resposta === "object"
+      ? Object.values(pill_response.m4_resposta as Record<string, unknown>).filter((v): v is string => typeof v === "string")
+      : []),
+  ].filter(Boolean).join("\n\n");
+
+  const detector = await detectPatternLLM(corpus_for_detector, pill_id, anthropic);
+
+  if (!detector) {
+    // detector falhou → fallback genérico
+    const fallback_text = "tem coisa pedindo atenção aqui.\nfica — vamos olhar juntos.";
+    const cta = await pickContextualCTA(supabase, "silence", ipe_cycle_id);
+    await persistEcoText(ipe_cycle_id, pill_id, fallback_text, "v2.c.2-detector-fail");
+    await persistEcoEvent(supabase, ipe_cycle_id, pill_id, "OP09", true, Date.now() - t0, null, cta, null, "v2.c.2-detector-fail");
+    return json({
+      eco_text: fallback_text,
+      eco_lines: ["tem coisa pedindo atenção aqui.", "fica — vamos olhar juntos."],
+      microtitle: null,
+      operator_hint: "silence",
+      cta_text: cta,
+      cached: false,
       deterministic: false,
     });
   }
 
-  // ─── Caminho determinístico (Fase 2-B) ─────────────────────────
-  try {
-    const eco_inputs = buildEcoInputs(pill_response);
-    const op_context = await buildOperatorContext(
-      supabase,
-      user_id,
-      ipe_cycle_id,
-    );
-    const payload = generateEco(eco_inputs, op_context, { locale: "pt-BR" });
+  // ─── ETAPA 2: NODE selector ─────────────────────────────────
+  const cgg = await fetchCgg(supabase, user_id);
+  const eco_node = await selectEcoNode(supabase, cgg);
 
-    await persistEcoEvent(
-      supabase,
-      user_id,
-      ipe_cycle_id,
-      pill_id,
-      payload.operator_id,
-      payload.variation,
-      payload.is_fallback,
-      payload.latency_ms,
-      payload.fragments,
-      payload.reed_question,
-      (payload.debug ?? {}) as Record<string, unknown>,
-      false, // determinístico nunca usa node
-    );
+  // ─── ETAPA 3: RENDERER (Sonnet com prompt v2.c.2) ───────────
+  const corpus_for_renderer = buildCorpusForRenderer(pill_response, detector, eco_node);
 
-    if (!payload.is_fallback) {
-      const det_version = `eco-det-${payload.operator_id}-${payload.variation}`;
-      await persistEcoText(
-        supabase,
-        ipe_cycle_id,
-        pill_id,
-        payload.full_text,
-        det_version,
-      );
-      await persistAudit(
-        supabase,
-        ipe_cycle_id,
-        component,
-        det_version,
-        0,
-        0,
-        "",
-        payload.full_text,
-        true,
-        0,
-        "deterministic-engine",
-      );
-      const _microtitle = pickMicrotitle(payload.operator_id, payload.variation);
-      const _structured: EcoStructured = {
-        mirror: payload.fragments?.length
-          ? `"${payload.fragments[0]}"${payload.fragments.length > 1 ? ` — ${payload.fragments.length} vezes.` : ""}`
-          : (payload.full_text.split("\n")[0] ?? ""),
-        question: payload.reed_question,
-        microtitle: _microtitle,
-        operator_hint: OPERATOR_TO_HINT[payload.operator_id] ?? "cost",
-      };
-      return json({
-        mirror: _structured.mirror,
-        question: _structured.question,
-        microtitle: _structured.microtitle,
-        operator_hint: _structured.operator_hint,
-        eco_text: payload.full_text,
-        scoring_audit_id: "",
-        cached: false,
-        deterministic: true,
-        operator_id: payload.operator_id,
-        variation: payload.variation,
-        prompt_version_used: `eco-det-${payload.operator_id}-${payload.variation}`,
-      });
-    }
-  } catch (err) {
-    console.error("deterministic engine error:", err);
-  }
-
-  // ─── Caminho LLM ────────────────────────────────────────────────
-  const structural_context = await fetchStructuralContext(supabase, user_id);
-  const eco_node = await selectEcoNode(
-    supabase,
-    structural_context?.cgg ?? null
-  );
-  const longitudinal_data = await fetchLongitudinalData(
-    supabase,
-    user_id,
-    ipe_cycle_id,
-    pill_id
-  );
-
-  const corpus = buildOracularCorpus(
-    pill_id,
-    pill_response,
-    structural_context,
-    eco_node,
-    longitudinal_data
-  );
-
-  let prompt_text = buildOracularPrompt(pill_id);
-  let prompt_version_label = "embedded-v3.0";
-
-  const { data: prompt_version_data } = await supabase
+  let prompt_text = "";
+  let prompt_version_label = "v2.c.2";
+  const { data: prompt_row } = await supabase
     .from("prompt_versions")
     .select("prompt_text, version")
-    .eq("component", component)
-    .eq("active", true)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (prompt_version_data?.prompt_text) {
-    prompt_text = prompt_version_data.prompt_text;
-    prompt_version_label = prompt_version_data.version ?? prompt_version_label;
+    .eq("component", component).eq("active", true)
+    .order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (prompt_row?.prompt_text) {
+    prompt_text = prompt_row.prompt_text;
+    prompt_version_label = prompt_row.version ?? prompt_version_label;
+  } else {
+    return json({ error: `prompt eco_${pill_id} not found in DB` }, 500);
   }
 
-  const anthropic_key = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!anthropic_key) {
-    const fallback = getFallbackEco(
-      pill_id,
-      detectLanguage(
-        (pill_response.m4_resposta?.percepcao as string) ||
-          pill_response.m2_resposta ||
-          ""
-      )
-    );
-    await persistEcoText(
-      supabase,
-      ipe_cycle_id,
-      pill_id,
-      fallback,
-      "fallback-no-key",
-    );
-    await persistAudit(
-      supabase,
-      ipe_cycle_id,
-      component,
-      "fallback-no-key",
-      0,
-      0,
-      "",
-      fallback,
-      true,
-      0,
-      "fallback-no-key"
-    );
-    return json({ eco_text: fallback, scoring_audit_id: "", cached: false });
-  }
-
-  const anthropic = new Anthropic({ apiKey: anthropic_key });
-
-  let eco_text: string | null = null;
+  let eco: EcoStructured | null = null;
   let retry_count = 0;
-  const max_retries = 2;
-  let last_error: string = "";
-  let raw_llm_output: string = "";
-  let llm_t0: number = Date.now();
+  let raw_output = "";
 
-  let structured_payload: EcoStructured | null = null;
-  while (retry_count <= max_retries && !eco_text) {
+  while (retry_count <= 2 && !eco) {
     try {
-      llm_t0 = Date.now();
       const response = await anthropic.messages.create({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 400,
-        temperature: 0.45,
+        max_tokens: 500,
+        temperature: 0.55,
         system: prompt_text,
-        messages: [
-          {
-            role: "user",
-            content: `Contexto da pessoa:\n\n${corpus}\n\nGere o eco JSON conforme as instruções do system prompt. Retorne APENAS o JSON, sem texto antes ou depois, sem cercas markdown.`,
-          },
-        ],
+        messages: [{
+          role: "user",
+          content: `${corpus_for_renderer}\n\nRenderize agora o eco-convite. JSON puro.`,
+        }],
       });
-
-      const content = response.content[0];
-      if (content && "text" in content) {
-        const raw = content.text.trim();
-        raw_llm_output = raw;
-        const parsed = parseEcoJson(raw);
-
-        if (parsed) {
-          eco_text = structuredToLegacyText(parsed);
-          structured_payload = parsed;
-        } else {
-          console.warn("[ipe-eco] LLM JSON inválido. Raw:", raw.slice(0, 200));
-          eco_text = "";
+      const c = response.content[0];
+      if (c && "text" in c) {
+        raw_output = c.text.trim();
+        eco = parseEcoJsonV2c2(raw_output);
+        if (!eco) {
+          console.warn("[renderer] JSON inválido tentativa", retry_count, "raw:", raw_output.slice(0, 300));
         }
-
-        // CORRIGIDO: raw_output = string crua, parsed_output = JSON estruturado
-        await persistAudit(
-          supabase,
-          ipe_cycle_id,
-          component,
-          prompt_version_label,
-          response.usage.input_tokens,
-          response.usage.output_tokens,
-          raw_llm_output,
-          structured_payload ? JSON.stringify(structured_payload) : "",
-          parsed !== null,
-          retry_count,
-          "claude-sonnet-4-20250514"
-        );
       }
     } catch (err: any) {
-      last_error = err.message || String(err);
-      retry_count++;
-
-      if (retry_count <= max_retries) {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      }
+      console.error("[renderer] error:", err.message);
     }
+    if (!eco) retry_count++;
+    if (!eco && retry_count <= 2) await new Promise(r => setTimeout(r, 800));
   }
 
-  // Fallback se LLM falhar
-  if (!eco_text) {
-    const lang = detectLanguage(
-      (pill_response.m4_resposta?.percepcao as string) ||
-        pill_response.m2_resposta ||
-        ""
-    );
-    eco_text = getFallbackEco(pill_id, lang);
-
-    await persistAudit(
-      supabase,
-      ipe_cycle_id,
-      component,
-      "fallback-error",
-      0,
-      0,
-      last_error,
-      eco_text,
-      false,
-      retry_count,
-      "fallback-error"
-    );
-    await persistEcoText(
-      supabase,
-      ipe_cycle_id,
-      pill_id,
-      eco_text,
-      "fallback-error",
-    );
-    return json({ eco_text, scoring_audit_id: "", cached: false });
+  if (!eco) {
+    // fallback final
+    const fb_lines = ["tem mais aqui — não chegou nas palavras ainda.", "fica. a gente continua."];
+    const cta = await pickContextualCTA(supabase, detector.operator_hint, ipe_cycle_id);
+    const fb_text = fb_lines.join("\n");
+    await persistEcoText(ipe_cycle_id, pill_id, fb_text, "v2.c.2-renderer-fail");
+    await persistEcoEvent(supabase, ipe_cycle_id, pill_id,
+      HINT_TO_OPERATOR[detector.operator_hint] ?? "OP01",
+      true, Date.now() - t0, null, cta, detector, "v2.c.2-renderer-fail");
+    return json({
+      eco_text: fb_text,
+      eco_lines: fb_lines,
+      microtitle: null,
+      operator_hint: detector.operator_hint,
+      cta_text: cta,
+      cached: false,
+      deterministic: false,
+    });
   }
 
-  // ─── Persistência LLM bem-sucedido ─────────────────────────────
-  await persistEcoText(
-    supabase,
-    ipe_cycle_id,
-    pill_id,
-    eco_text,
-    prompt_version_label,
-  );
+  // ─── ETAPA 4: CTA contextual ────────────────────────────────
+  const cta_text = await pickContextualCTA(supabase, eco.operator_hint, ipe_cycle_id);
 
-  // NOVO v2.c.1: persiste evento LLM em pill_eco_events com node_resonance_used
-  if (structured_payload) {
-    const llm_latency = Date.now() - llm_t0;
-    const llm_operator = HINT_TO_OPERATOR_LLM[structured_payload.operator_hint] ?? "OP01";
-    const fragments = extractQuotedFragments(structured_payload.mirror);
+  // ─── ETAPA 5: Persistência ──────────────────────────────────
+  const eco_text = ecoLinesToText(eco);
+  const operator_id = HINT_TO_OPERATOR[eco.operator_hint] ?? "OP01";
+  const total_latency = Date.now() - t0;
 
-    await persistEcoEvent(
-      supabase,
-      user_id,
-      ipe_cycle_id,
-      pill_id,
-      llm_operator,
-      "V0" as Variation, // LLM não usa variação fixa
-      false,
-      llm_latency,
-      fragments,
-      structured_payload.question,
-      {
-        microtitle: structured_payload.microtitle,
-        operator_hint: structured_payload.operator_hint,
-        prompt_version: prompt_version_label,
-        node_used: eco_node !== null,
-        retry_count,
-        model: "claude-sonnet-4-20250514",
-      },
-      structured_payload.node_resonance_used ?? false,
-    );
-  }
+  await persistEcoText(ipe_cycle_id, pill_id, eco_text, prompt_version_label);
+  await persistEcoEvent(supabase, ipe_cycle_id, pill_id, operator_id, false, total_latency, eco, cta_text, detector, prompt_version_label);
 
   return json({
     eco_text,
-    mirror: structured_payload?.mirror ?? "",
-    question: structured_payload?.question ?? "",
-    microtitle: structured_payload?.microtitle ?? "",
-    operator_hint: structured_payload?.operator_hint ?? "cost",
-    scoring_audit_id: "",
+    eco_lines: eco.eco_lines,
+    microtitle: eco.microtitle,
+    operator_hint: eco.operator_hint,
+    cta_text,
     cached: false,
     deterministic: false,
     prompt_version_used: prompt_version_label,
