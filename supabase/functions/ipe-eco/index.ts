@@ -339,6 +339,8 @@ const fetchCgg = async (supabase: any, user_id: string): Promise<number | null> 
 // ─── Handler ──────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
+  // Wave 12 — identificador de versão pra confirmar deploy efetivo
+  console.log("[ipe-eco WAVE12-FIX-924829c] invoked, method:", req.method);
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
 
   const auth_header = req.headers.get("Authorization");
@@ -420,7 +422,11 @@ Deno.serve(async (req) => {
     ...(pill_response.m4_resposta ? extractStringsRecursive(pill_response.m4_resposta) : []),
   ].filter(Boolean).join("\n\n");
 
+  // Wave 12 — log pra confirmar que extractStringsRecursive achatou texto real
+  console.log("[ipe-eco] corpus_for_detector length:", corpus_for_detector.length, "preview:", corpus_for_detector.slice(0, 200));
+
   const detector = await detectPatternLLM(corpus_for_detector, pill_id, anthropic);
+  console.log("[ipe-eco] detector result:", detector ? `hint=${detector.operator_hint} confidence=${detector.confidence}` : "NULL (fallback)");
 
   if (!detector) {
     // detector falhou → fallback genérico
