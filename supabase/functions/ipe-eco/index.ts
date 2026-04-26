@@ -309,14 +309,32 @@ Deno.serve(async (req) => {
   const pill_response: PillResponse = pill_response_data;
   const component = `eco_${pill_id}`;
 
-  // Idempotência
+  // Idempotência — busca último hint detectado pra sortear CTA contextual
   if (pill_response.eco_text && !force_regenerate) {
+    let cached_hint = "cost";
+    try {
+      const { data: lastEvt } = await supabase
+        .from("pill_eco_events")
+        .select("raw_payload")
+        .eq("ipe_cycle_id", ipe_cycle_id)
+        .eq("pill_id", pill_id)
+        .order("rendered_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const lastHint = lastEvt?.raw_payload?.detector?.operator_hint;
+      if (typeof lastHint === "string" && VALID_HINTS.includes(lastHint as OperatorHint)) {
+        cached_hint = lastHint;
+      }
+    } catch (err) {
+      console.error("[cached path hint lookup] error:", err);
+    }
+    const cached_cta = await pickContextualCTA(supabase, cached_hint, ipe_cycle_id);
     return json({
       eco_text: pill_response.eco_text,
       eco_lines: pill_response.eco_text.split("\n").filter(Boolean),
       microtitle: null,
-      operator_hint: "cost",
-      cta_text: "conversar com reed →",
+      operator_hint: cached_hint,
+      cta_text: cached_cta,
       cached: true,
     });
   }
@@ -449,4 +467,3 @@ Deno.serve(async (req) => {
     prompt_version_used: prompt_version_label,
   });
 });
-// v2.c.2 redeploy trigger 1777164010

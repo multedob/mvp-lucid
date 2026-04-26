@@ -283,7 +283,7 @@ export default function PillFlow() {
     m3_2_followupC: "", m3_2_followupD: "", m3_3_narrativa: "",
     m3_3_condicao: "", m3_3_transversal: "", m4Input: "",
     ecoText: "", ecoLines: [], ecoMirror: "", ecoQuestion: "",
-    ecoMicrotitle: "", ecoOperatorHint: "cost", ecoCtaText: "conversar com reed →",
+    ecoMicrotitle: "", ecoOperatorHint: "cost", ecoCtaText: "conversar com reed",
     loading: false,
     userId: null,
     audioLocale: "pt-BR",
@@ -498,7 +498,7 @@ export default function PillFlow() {
       let ecoQuestion = "";
       let ecoMicrotitle = "";
       let ecoOperatorHint = "cost";
-      let ecoCtaText = "conversar com reed →";
+      let ecoCtaText = "conversar com reed";
 
       try {
         const userName = localStorage.getItem("rdwth_user_name") || undefined;
@@ -530,7 +530,7 @@ export default function PillFlow() {
         ecoMicrotitle = eco.microtitle || "";
 
         ecoOperatorHint = eco.operator_hint || "cost";
-        ecoCtaText = eco.cta_text || "conversar com reed →";
+        ecoCtaText = (eco.cta_text || "conversar com reed").replace(/\s*→+\s*$/u, "");
 
         // legacy backwards compat (caso eco antigo ainda venha de outro pill)
         ecoMirror = eco.mirror || "";
