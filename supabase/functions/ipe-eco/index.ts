@@ -3,6 +3,8 @@ import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.27.3";
 import { detectPatternLLM, HINT_TO_OPERATOR } from "../_shared/eco/llm-detector.ts";
 import type { DetectorOutput } from "../_shared/eco/llm-detector.ts";
 
+const DEPLOY_FINGERPRINT = "d816b72";
+
 // ============================================================
 // V2.C.2 — ARQUITETURA HIBRIDA
 // 1. Detector LLM (Haiku) identifica operator_hint
@@ -339,6 +341,7 @@ const fetchCgg = async (supabase: any, user_id: string): Promise<number | null> 
 // ─── Handler ──────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
+  console.log("[ipe-eco] deploy_fingerprint:", DEPLOY_FINGERPRINT);
   // Wave 12 — identificador de versão pra confirmar deploy efetivo
   console.log("[ipe-eco WAVE12-FIX-924829c] invoked, method:", req.method);
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
@@ -404,6 +407,7 @@ Deno.serve(async (req) => {
       operator_hint: cached_hint,
       cta_text: cached_cta,
       cached: true,
+      debug_fingerprint: DEPLOY_FINGERPRINT,
     });
   }
 
@@ -442,6 +446,7 @@ Deno.serve(async (req) => {
       cta_text: cta,
       cached: false,
       deterministic: false,
+      debug_fingerprint: DEPLOY_FINGERPRINT,
     });
   }
 
