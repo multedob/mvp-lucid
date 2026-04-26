@@ -756,7 +756,7 @@ export default function PillFlow() {
   if (moment === "M3_1") return (
     <div className="r-screen">
       <Header moment="M3_1" />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "28px 24px 16px" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "28px 24px 16px", maxWidth: 600, width: "100%", marginLeft: "auto", marginRight: "auto" }}>
         <div className="r-question" style={{ marginBottom: 20 }}>{m3_1Content.question}</div>
         <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10, color: "var(--r-dim)", textAlign: "center", marginBottom: 14 }}>{m3_1Content.poleLeft}</div>
         <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
