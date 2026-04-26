@@ -377,20 +377,58 @@ export default function PillFlow() {
 
       let prefillState: Partial<State> = {};
       if (hasResponses && existingResp) {
-        // Pre-populate state com respostas salvas (review OU pendente sem eco)
+        // Wave 12 — pre-fill robusto: cobre formato NOVO (M3_1_regua/M3_2_escolha/M3_3_inventario)
+        // e formato ANTIGO (chaves flat tipo "3_1_situacao_oposta") + todos campos faltantes.
         const m3 = (existingResp.m3_respostas as Record<string, unknown>) ?? {};
         const m4 = (existingResp.m4_resposta as Record<string, unknown>) ?? {};
 
+        const m3_1_obj = (m3["M3_1_regua"] as Record<string, unknown>) ?? {};
+        const m3_2_obj = (m3["M3_2_escolha"] as Record<string, unknown>) ?? {};
+        const m3_3_obj = (m3["M3_3_inventario"] as Record<string, unknown>) ?? {};
+
+        const pickStr = (...vals: unknown[]): string => {
+          for (const v of vals) if (typeof v === "string" && v.trim().length > 0) return v;
+          return "";
+        };
+        const pickPos = (...vals: unknown[]): number | null => {
+          for (const v of vals) {
+            if (typeof v === "number" && Number.isFinite(v)) return v;
+            if (typeof v === "string") {
+              const n = Number(v);
+              if (Number.isFinite(n)) return n;
+            }
+          }
+          return null;
+        };
+
         prefillState = {
           m2Input: existingResp.m2_resposta ?? "",
-          m3_1_situacaoOposta: typeof m3["3_1_situacao_oposta"] === "string" ? m3["3_1_situacao_oposta"] as string : "",
-          m3_1_duasPalavras: typeof m3["duas_palavras"] === "string" ? m3["duas_palavras"] as string : "—",
-          m3_1_posicao: 3,
-          m3_2_opcao: (typeof m3["3_2_opcao"] === "string" ? m3["3_2_opcao"] : "B") as "A"|"B"|"C"|"D",
-          m3_2_abreMao: typeof m3["3_2_abre_mao"] === "string" ? m3["3_2_abre_mao"] as string : "",
-          m3_3_narrativa: typeof m3["3_3_narrativa"] === "string" ? m3["3_3_narrativa"] as string : (typeof m3["narrativa"] === "string" ? m3["narrativa"] as string : ""),
-          m3_3_condicao: typeof m3["3_3_condicao"] === "string" ? m3["3_3_condicao"] as string : (typeof m3["condicao"] === "string" ? m3["condicao"] as string : ""),
-          m4Input: typeof m4["percepcao"] === "string" ? m4["percepcao"] as string : "",
+          // M3.1
+          m3_1_situacaoOposta: pickStr(m3_1_obj["situacao_oposta"], m3["3_1_situacao_oposta"]),
+          m3_1_duasPalavras: pickStr(m3_1_obj["duas_palavras"], m3["duas_palavras"]) || "—",
+          m3_1_posicao: pickPos(m3_1_obj["posicao"], m3["posicao"]) ?? 3,
+          // M3.2
+          m3_2_opcao: (pickStr(m3_2_obj["opcao"], m3["3_2_opcao"]) || "B") as "A"|"B"|"C"|"D",
+          m3_2_abreMao: pickStr(m3_2_obj["abre_mao"], m3["3_2_abre_mao"]),
+          m3_2_followupC: pickStr(m3_2_obj["followup_C"], m3["3_2_followup_C"]),
+          m3_2_followupD: pickStr(m3_2_obj["followup_D"], m3["3_2_followup_D"]),
+          // M3.3
+          m3_3_narrativa: pickStr(m3_3_obj["narrativa"], m3["3_3_narrativa"], m3["narrativa"]),
+          m3_3_condicao: pickStr(m3_3_obj["condicao"], m3["3_3_condicao"], m3["condicao"]),
+          m3_3_transversal: pickStr(
+            m3_3_obj["transversal_l13"],
+            m3_3_obj["cobertura_L1_3"],
+            m3["transversal_l13"],
+            m3["3_3_transversal"]
+          ),
+          // M4 — cobre todas as chaves usadas por PI..PVI (percepcao, narrativa, presenca_*)
+          m4Input: pickStr(
+            m4["percepcao"],
+            m4["narrativa"],
+            m4["presenca_para_outros"],
+            m4["presenca_deslocamento"],
+            m4["conhecimento_em_campo"]
+          ),
         };
 
         // Se ECO TAMBÉM existe → modo review (read-only + vai direto pro M5)
