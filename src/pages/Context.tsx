@@ -194,37 +194,25 @@ export default function Context() {
 
       if (!ipeCycles || ipeCycles.length === 0) { setLoading(false); return; }
 
-      const cycleData: CycleData[] = await Promise.all(
-        ipeCycles.map(async (ipe: any) => {
-          // Wave 14 — preferir deep_reading_text (incremental). Fallback: cycles.llm_response (legado).
-          let text: string = ipe.deep_reading_text ?? "";
-          if (!text) {
-            const { data: hagoCycle } = await (supabase as any)
-              .from("cycles")
-              .select("llm_response")
-              .eq("ipe_cycle_id", ipe.id)
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
-            text = hagoCycle?.llm_response ?? "";
-          }
-
-          const paragraphs = text.split("\n\n").filter(Boolean);
-          const hasPending = !text;
-          const description = hasPending
-            ? "A leitura aparece quando você responde algo — pill ou pergunta do questionário."
-            : paragraphs.slice(0, 2).join("\n\n");
-          const deep = hasPending
-            ? "Esta leitura se constrói conforme você fala. Comece por uma pill ou pelo questionário."
-            : text;
-          return {
-            id: `C${ipe.cycle_number}`,
-            cycleNumber: ipe.cycle_number,
-            description,
-            deep,
-          };
-        })
-      );
+      // Wave 14 — apenas deep_reading_text (incremental). Sem fallback pra cycles.llm_response
+      // (esse legado tinha invenções/diagnósticos). Sem texto = mensagem de pending.
+      const cycleData: CycleData[] = ipeCycles.map((ipe: any) => {
+        const text: string = ipe.deep_reading_text ?? "";
+        const paragraphs = text.split("\n\n").filter(Boolean);
+        const hasPending = !text;
+        const description = hasPending
+          ? "A leitura aparece conforme você responde — pills e questionário alimentam ela."
+          : paragraphs.slice(0, 2).join("\n\n");
+        const deep = hasPending
+          ? "Esta leitura se constrói conforme você fala. Responda uma pill ou um bloco do questionário pra ela aparecer aqui."
+          : text;
+        return {
+          id: `C${ipe.cycle_number}`,
+          cycleNumber: ipe.cycle_number,
+          description,
+          deep,
+        };
+      });
 
       setCycles(cycleData);
     } catch (err) {
