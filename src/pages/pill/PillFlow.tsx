@@ -779,11 +779,17 @@ export default function PillFlow() {
       </div>
 
       <div className="r-scroll-m5">
-        {state.ecoMicrotitle && (
-          <div className={`r-microtitle r-stage-in${m5Stage >= 1 ? " show" : ""}`}>
-            {state.ecoMicrotitle}
-          </div>
-        )}
+        {(() => {
+          // Dedupe: se microtitle == primeira linha do eco_lines, esconde
+          const cleanMicro = (state.ecoMicrotitle || "").toLowerCase().replace(/[.…!?]+\s*$/u, "").trim();
+          const cleanFirst = (linesToRender[0] || "").toLowerCase().replace(/[.…!?]+\s*$/u, "").trim();
+          const showMicrotitle = state.ecoMicrotitle && cleanMicro && cleanMicro !== cleanFirst;
+          return showMicrotitle ? (
+            <div className={`r-microtitle r-stage-in${m5Stage >= 1 ? " show" : ""}`}>
+              {state.ecoMicrotitle}
+            </div>
+          ) : null;
+        })()}
 
         <div className={`r-eco-prose r-stage-in${m5Stage >= 2 ? " show" : ""}`}>
           {linesToRender.map((line, i) =>
@@ -797,6 +803,10 @@ export default function PillFlow() {
 
         <div className={`r-talk r-stage-in${m5Stage >= 4 ? " show" : ""}`}>
           <a onClick={() => navigate("/reed")}>{state.ecoCtaText} →</a>
+        </div>
+
+        <div className={`r-talk-secondary r-stage-in${m5Stage >= 4 ? " show" : ""}`}>
+          <a onClick={() => navigate("/pills")}>fazer outra pill →</a>
         </div>
       </div>
 

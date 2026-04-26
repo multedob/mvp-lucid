@@ -678,3 +678,25 @@ body {
   opacity: 0.5;
   margin: 28px auto 16px;
 }
+
+.r-talk-secondary {
+  margin-top: 14px;
+  text-align: center;
+}
+.r-talk-secondary a {
+  font-family: var(--r-font-sys, 'IBM Plex Mono', monospace);
+  font-size: 11px;
+  font-weight: 300;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+  color: var(--r-muted);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  padding: 4px 0;
+  cursor: pointer;
+  transition: border-bottom-color 0.2s, color 0.2s;
+}
+.r-talk-secondary a:hover {
+  border-bottom-color: var(--r-muted);
+  color: var(--r-text);
+}
