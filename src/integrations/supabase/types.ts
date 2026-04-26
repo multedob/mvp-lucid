@@ -496,6 +496,7 @@ export type Database = {
           is_fallback: boolean
           latency_ms: number | null
           locale: string
+          node_resonance_used: boolean | null
           operator: string
           pill_id: string
           raw_payload: Json | null
@@ -510,6 +511,7 @@ export type Database = {
           is_fallback?: boolean
           latency_ms?: number | null
           locale?: string
+          node_resonance_used?: boolean | null
           operator: string
           pill_id: string
           raw_payload?: Json | null
@@ -524,6 +526,7 @@ export type Database = {
           is_fallback?: boolean
           latency_ms?: number | null
           locale?: string
+          node_resonance_used?: boolean | null
           operator?: string
           pill_id?: string
           raw_payload?: Json | null
@@ -833,6 +836,33 @@ export type Database = {
           stage_max?: number
           stage_min?: number
           teleology_score?: number
+        }
+        Relationships: []
+      }
+      reed_ctas: {
+        Row: {
+          active: boolean
+          created_at: string
+          hint: string
+          id: string
+          operator: string
+          text_pt_br: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          hint: string
+          id?: string
+          operator: string
+          text_pt_br: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          hint?: string
+          id?: string
+          operator?: string
+          text_pt_br?: string
         }
         Relationships: []
       }
