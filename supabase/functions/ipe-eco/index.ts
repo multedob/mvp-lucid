@@ -519,6 +519,7 @@ Deno.serve(async (req) => {
       cta_text: cta,
       cached: false,
       deterministic: false,
+      debug_fingerprint: DEPLOY_FINGERPRINT,
     });
   }
 
@@ -542,5 +543,6 @@ Deno.serve(async (req) => {
     cached: false,
     deterministic: false,
     prompt_version_used: prompt_version_label,
+    debug_fingerprint: DEPLOY_FINGERPRINT,
   });
 });
