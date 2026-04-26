@@ -14,7 +14,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.27.3";
 
-const DEPLOY_FINGERPRINT = "wave14-deep-reading-v3-with-nodes";
+const DEPLOY_FINGERPRINT = "wave14-deep-reading-v3.2-flex-limit";
 
 const NODES_TO_SELECT = 4; // 3-5 conforme decisão DOC
 
@@ -129,9 +129,11 @@ A FONTE serve só para você situar de onde vem o material. NÃO mencione "[Pill
 
 ═══ COMPRIMENTO ═══
 
-Até 500 palavras quando o ciclo está completo. Em ciclos parciais, proporcione: 200-300 palavras se 1-2 pills, até 400 com 3-5 pills.
+ALVO: 380 palavras quando o ciclo está completo. Em ciclos parciais: 150-250 palavras se 1-2 pills, até 320 com 3-5 pills.
 
-Qualidade > quantidade. Se faltar dado para sustentar mais texto, escreva menos.
+LIMITE FLEXÍVEL: pode estender até +20% (≤ 456 palavras) APENAS se for necessário pra fechar uma frase ou imagem com sentido completo — nunca pra adicionar conteúdo novo. Se está perto do limite, fecha. Não comece um novo movimento se não vai conseguir entregar inteiro.
+
+Concisão é parte do tom. Uma boa leitura cabe em pouco. Termine antes de fechar tudo — deixe ressonância, não amarração.
 
 ═══ FECHAMENTO ═══
 
@@ -321,7 +323,7 @@ Deno.serve(async (req) => {
   try {
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-5-20250929",
-      max_tokens: 1200,
+      max_tokens: 1000,
       temperature: 0.5,
       system: SYSTEM_PROMPT,
       messages: [{
