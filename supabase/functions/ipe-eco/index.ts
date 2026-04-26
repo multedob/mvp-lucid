@@ -28,7 +28,8 @@ interface EcoStructured {
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, content-type",
+  // Wave 12 — adicionado 'apikey' (supabase-js cliente envia por padrão; sem isso preflight CORS falha → "Failed to fetch")
+  "Access-Control-Allow-Headers": "authorization, x-client-info, content-type, apikey",
 };
 
 const json = (data: unknown, status = 200) =>
