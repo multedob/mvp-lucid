@@ -57,6 +57,7 @@ interface State {
   ecoMicrotitle: string;
   ecoOperatorHint: string;
   ecoCtaText: string;            // v2.c.2 — CTA contextual sorteado pelo backend
+  reviewMode: boolean;           // Wave 10 — true se Pill já tem eco salvo (revisitar)
   loading: boolean;
   // ─── Audio (M2 & M4) ────────────────────────────────
   userId: string | null;
@@ -246,8 +247,8 @@ const Footer = forwardRef<HTMLDivElement, FooterProps>(({
 Footer.displayName = "Footer";
 
 const InvisibleTextarea = forwardRef<HTMLDivElement, {
-  value: string; onChange: (v: string) => void; placeholder?: string;
-}>(({ value, onChange, placeholder = "escreva aqui" }, fwdRef) => {
+  value: string; onChange: (v: string) => void; placeholder?: string; disabled?: boolean;
+}>(({ value, onChange, placeholder = "escreva aqui", disabled = false }, fwdRef) => {
   const ref = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     if (ref.current) {
@@ -256,13 +257,15 @@ const InvisibleTextarea = forwardRef<HTMLDivElement, {
     }
   }, [value]);
   return (
-    <div ref={fwdRef} className="r-input-wrap">
+    <div ref={fwdRef} className={`r-input-wrap${disabled ? " disabled" : ""}`}>
       <textarea
         ref={ref} className="r-textarea" value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder} rows={1}
+        disabled={disabled}
+        readOnly={disabled}
       />
-      <div className={`r-send-dot${value.trim() ? " active" : ""}`} />
+      {!disabled && <div className={`r-send-dot${value.trim() ? " active" : ""}`} />}
     </div>
   );
 });
@@ -284,6 +287,7 @@ export default function PillFlow() {
     m3_3_condicao: "", m3_3_transversal: "", m4Input: "",
     ecoText: "", ecoLines: [], ecoMirror: "", ecoQuestion: "",
     ecoMicrotitle: "", ecoOperatorHint: "cost", ecoCtaText: "conversar com reed",
+    reviewMode: false,
     loading: false,
     userId: null,
     audioLocale: "pt-BR",
@@ -356,11 +360,76 @@ export default function PillFlow() {
         console.warn("[PillFlow] Variation selector failed, using fallback content:", err);
       }
 
+      // Wave 10 — detecta se Pill já tem eco salvo (modo revisitar)
+      const { data: existingResp } = await supabase
+        .from("pill_responses")
+        .select("m2_resposta, m3_respostas, m4_resposta, eco_text, prompt_version_used")
+        .eq("ipe_cycle_id", cycle.id)
+        .eq("pill_id", pillId)
+        .maybeSingle();
+
+      const isReview = !!(existingResp?.eco_text && existingResp.eco_text.length > 0);
+
+      let reviewState: Partial<State> = {};
+      if (isReview && existingResp) {
+        // Pre-populate state com respostas salvas
+        const m3 = (existingResp.m3_respostas as Record<string, unknown>) ?? {};
+        const m4 = (existingResp.m4_resposta as Record<string, unknown>) ?? {};
+
+        // Pega ecoLines do eco_text (split por \n, remove vazios e rótulos legacy)
+        const ecoLines = existingResp.eco_text!
+          .split("\n")
+          .map(l => l.trim())
+          .filter(l => l && !l.startsWith("—"));
+
+        // Tenta puxar CTA contextual da telemetria mais recente
+        let ctaText = "conversar com reed";
+        let microtitle = "";
+        let opHint = "cost";
+        try {
+          const { data: lastEvt } = await supabase
+            .from("pill_eco_events")
+            .select("raw_payload")
+            .eq("ipe_cycle_id", cycle.id)
+            .eq("pill_id", pillId)
+            .order("rendered_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (lastEvt?.raw_payload) {
+            const rp = lastEvt.raw_payload as Record<string, unknown>;
+            if (typeof rp.cta_text === "string") ctaText = rp.cta_text;
+            if (typeof rp.microtitle === "string") microtitle = rp.microtitle;
+            const det = rp.detector as Record<string, unknown> | undefined;
+            if (det && typeof det.operator_hint === "string") opHint = det.operator_hint;
+          }
+        } catch (e) { console.warn("[PillFlow] failed to fetch CTA from telemetry:", e); }
+
+        reviewState = {
+          m2Input: existingResp.m2_resposta ?? "",
+          m3_1_situacaoOposta: typeof m3["3_1_situacao_oposta"] === "string" ? m3["3_1_situacao_oposta"] as string : "",
+          m3_1_duasPalavras: typeof m3["duas_palavras"] === "string" ? m3["duas_palavras"] as string : "—",
+          m3_1_posicao: 3, // posição central como default no review (não persistimos posição original ainda)
+          m3_2_opcao: (typeof m3["3_2_opcao"] === "string" ? m3["3_2_opcao"] : "B") as "A"|"B"|"C"|"D",
+          m3_2_abreMao: typeof m3["3_2_abre_mao"] === "string" ? m3["3_2_abre_mao"] as string : "",
+          m3_3_narrativa: typeof m3["3_3_narrativa"] === "string" ? m3["3_3_narrativa"] as string : (typeof m3["narrativa"] === "string" ? m3["narrativa"] as string : ""),
+          m3_3_condicao: typeof m3["3_3_condicao"] === "string" ? m3["3_3_condicao"] as string : (typeof m3["condicao"] === "string" ? m3["condicao"] as string : ""),
+          m4Input: typeof m4["percepcao"] === "string" ? m4["percepcao"] as string : "",
+          ecoText: existingResp.eco_text!,
+          ecoLines,
+          ecoMicrotitle: microtitle,
+          ecoOperatorHint: opHint,
+          ecoCtaText: ctaText,
+          reviewMode: true,
+          moment: "M5" as Moment,
+        };
+      }
+
       setState(s => ({
         ...s, ipeCycleId: cycle.id, cycleDisplay: display,
         variationKey, variationContent,
         loading: false, m1TimerStart: Date.now(),
         userId: session.user.id,
+        ...reviewState,
       }));
     } catch (err) {
       console.error("[PillFlow] initCycle error:", err);
@@ -615,8 +684,8 @@ export default function PillFlow() {
       </div>
       <div className="r-line" />
       <div style={{ padding: "12px 24px 10px", flexShrink: 0 }}>
-        <InvisibleTextarea value={state.m2Input} onChange={v => setState(s => ({ ...s, m2Input: v }))} />
-        {state.userId && state.ipeCycleId && (
+        <InvisibleTextarea value={state.m2Input} onChange={v => setState(s => ({ ...s, m2Input: v }))} disabled={state.reviewMode} />
+        {!state.reviewMode && state.userId && state.ipeCycleId && (
           <div style={{ marginTop: 8 }}>
             <AudioRecorder userId={state.userId} cycleId={state.ipeCycleId} pillId={state.pillId} moment="m2" language={state.audioLocale}
               onLiveTranscript={text => setState(s => ({ ...s, m2Input: text, m2TranscriptionLive: text }))}
@@ -626,9 +695,10 @@ export default function PillFlow() {
           </div>
         )}
       </div>
-      <Footer onBack={() => setState(s => ({ ...s, moment: "M1" }))} onContinue={submitM2}
+      <Footer onBack={() => setState(s => ({ ...s, moment: state.reviewMode ? "M5" : "M1" }))}
+        onContinue={state.reviewMode ? () => advance("M3_1") : submitM2}
         continueLabel={state.loading ? "..." : "continuar"}
-        showEthics onEthics={() => handleEthics("M2")} disabled={state.loading} />
+        showEthics={!state.reviewMode} onEthics={() => handleEthics("M2")} disabled={state.loading} />
     </div>
   );
 
@@ -653,14 +723,14 @@ export default function PillFlow() {
         <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10, color: "var(--r-dim)", textAlign: "center", marginTop: 14 }}>{m3_1Content.poleRight}</div>
         {state.m3_1_posicao !== null && (
           <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 12 }}>
-            <InvisibleTextarea value={state.m3_1_duasPalavras} onChange={v => setState(s => ({ ...s, m3_1_duasPalavras: v }))} placeholder="duas palavras para essa posição" />
-            <InvisibleTextarea value={state.m3_1_situacaoOposta} onChange={v => setState(s => ({ ...s, m3_1_situacaoOposta: v }))} placeholder="como seria o oposto?" />
+            <InvisibleTextarea value={state.m3_1_duasPalavras} onChange={v => setState(s => ({ ...s, m3_1_duasPalavras: v }))} placeholder="duas palavras para essa posição" disabled={state.reviewMode} />
+            <InvisibleTextarea value={state.m3_1_situacaoOposta} onChange={v => setState(s => ({ ...s, m3_1_situacaoOposta: v }))} placeholder="como seria o oposto?" disabled={state.reviewMode} />
           </div>
         )}
       </div>
       <Footer onBack={() => setState(s => ({ ...s, moment: "M2" }))}
-        onContinue={() => advance("M3_2")} showEthics onEthics={() => advance("M3_2")}
-        disabled={state.m3_1_posicao === null || !state.m3_1_duasPalavras.trim() || !state.m3_1_situacaoOposta.trim()} />
+        onContinue={() => advance("M3_2")} showEthics={!state.reviewMode} onEthics={() => advance("M3_2")}
+        disabled={state.reviewMode ? false : (state.m3_1_posicao === null || !state.m3_1_duasPalavras.trim() || !state.m3_1_situacaoOposta.trim())} />
     </div>
   );
 
@@ -675,7 +745,8 @@ export default function PillFlow() {
           <div className="r-narrative" style={{ whiteSpace: "pre-line", marginBottom: 24 }}>{scenario}</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 24 }}>
             {options.map(o => (
-              <div key={o.id} className="r-choice" onClick={() => setState(s => ({ ...s, m3_2_opcao: o.id as "A"|"B"|"C"|"D" }))}>
+              <div key={o.id} className="r-choice" style={{ cursor: state.reviewMode ? "default" : "pointer" }}
+                onClick={() => !state.reviewMode && setState(s => ({ ...s, m3_2_opcao: o.id as "A"|"B"|"C"|"D" }))}>
                 <div className={`r-choice-dot${state.m3_2_opcao === o.id ? " selected" : ""}`} style={{ marginTop: 5 }} />
                 <div className={`r-choice-text${state.m3_2_opcao === o.id ? " selected" : ""}`}>{o.text}</div>
               </div>
@@ -685,10 +756,10 @@ export default function PillFlow() {
             <div style={{ marginBottom: 20 }}>
               <div className="r-question" style={{ marginBottom: 12, fontSize: 14 }}>{selectedOption.followup}</div>
               {state.m3_2_opcao === "C" && (
-                <InvisibleTextarea value={state.m3_2_followupC} onChange={v => setState(s => ({ ...s, m3_2_followupC: v }))} />
+                <InvisibleTextarea value={state.m3_2_followupC} onChange={v => setState(s => ({ ...s, m3_2_followupC: v }))} disabled={state.reviewMode} />
               )}
               {state.m3_2_opcao === "D" && (
-                <InvisibleTextarea value={state.m3_2_followupD} onChange={v => setState(s => ({ ...s, m3_2_followupD: v }))} />
+                <InvisibleTextarea value={state.m3_2_followupD} onChange={v => setState(s => ({ ...s, m3_2_followupD: v }))} disabled={state.reviewMode} />
               )}
             </div>
           )}
@@ -697,14 +768,14 @@ export default function PillFlow() {
               <div className="r-question" style={{ marginBottom: 12, fontSize: 14 }}>
                 {selectedOption?.followupType === "cost" ? selectedOption.followup : "O que você abre mão ao escolher isso?"}
               </div>
-              <InvisibleTextarea value={state.m3_2_abreMao} onChange={v => setState(s => ({ ...s, m3_2_abreMao: v }))} />
+              <InvisibleTextarea value={state.m3_2_abreMao} onChange={v => setState(s => ({ ...s, m3_2_abreMao: v }))} disabled={state.reviewMode} />
             </div>
           )}
           <div style={{ height: 16 }} />
         </div>
         <Footer onBack={() => setState(s => ({ ...s, moment: "M3_1" }))}
-          onContinue={() => advance("M3_3")} showEthics onEthics={() => advance("M3_3")}
-          disabled={!state.m3_2_opcao || !state.m3_2_abreMao.trim()} />
+          onContinue={() => advance("M3_3")} showEthics={!state.reviewMode} onEthics={() => advance("M3_3")}
+          disabled={state.reviewMode ? false : (!state.m3_2_opcao || !state.m3_2_abreMao.trim())} />
       </div>
     );
   }
@@ -715,23 +786,24 @@ export default function PillFlow() {
       <Header moment="M3_3" />
       <div className="r-scroll" style={{ padding: "20px 24px 0" }}>
         <div className="r-question" style={{ marginBottom: 14 }}>{m3_3Content.q1}</div>
-        <InvisibleTextarea value={state.m3_3_narrativa} onChange={v => setState(s => ({ ...s, m3_3_narrativa: v }))} />
+        <InvisibleTextarea value={state.m3_3_narrativa} onChange={v => setState(s => ({ ...s, m3_3_narrativa: v }))} disabled={state.reviewMode} />
         <div style={{ height: 32 }} />
         <div className="r-question" style={{ marginBottom: 14 }}>{m3_3Content.q2}</div>
-        <InvisibleTextarea value={state.m3_3_condicao} onChange={v => setState(s => ({ ...s, m3_3_condicao: v }))} />
+        <InvisibleTextarea value={state.m3_3_condicao} onChange={v => setState(s => ({ ...s, m3_3_condicao: v }))} disabled={state.reviewMode} />
         {m3_3Content.qTransversal && (
           <>
             <div style={{ height: 32 }} />
             <div className="r-question" style={{ marginBottom: 14 }}>{m3_3Content.qTransversal}</div>
-            <InvisibleTextarea value={state.m3_3_transversal} onChange={v => setState(s => ({ ...s, m3_3_transversal: v }))} />
+            <InvisibleTextarea value={state.m3_3_transversal} onChange={v => setState(s => ({ ...s, m3_3_transversal: v }))} disabled={state.reviewMode} />
           </>
         )}
         <div style={{ height: 24 }} />
       </div>
-      <Footer onBack={() => setState(s => ({ ...s, moment: "M3_2" }))} onContinue={submitM3}
+      <Footer onBack={() => setState(s => ({ ...s, moment: "M3_2" }))}
+        onContinue={state.reviewMode ? () => advance("M4") : submitM3}
         continueLabel={state.loading ? "..." : "continuar"}
-        showEthics onEthics={() => handleEthics("M3")}
-        disabled={state.loading || !state.m3_3_narrativa.trim() || !state.m3_3_condicao.trim()} />
+        showEthics={!state.reviewMode} onEthics={() => handleEthics("M3")}
+        disabled={state.loading || (!state.reviewMode && (!state.m3_3_narrativa.trim() || !state.m3_3_condicao.trim()))} />
     </div>
   );
 
@@ -743,8 +815,8 @@ export default function PillFlow() {
         <div className="r-question">{m4Content.question}</div>
         <div className="r-sub">{m4Content.instruction}</div>
         <div style={{ marginTop: 10 }}>
-          <InvisibleTextarea value={state.m4Input} onChange={v => setState(s => ({ ...s, m4Input: v }))} />
-          {state.userId && state.ipeCycleId && (
+          <InvisibleTextarea value={state.m4Input} onChange={v => setState(s => ({ ...s, m4Input: v }))} disabled={state.reviewMode} />
+          {!state.reviewMode && state.userId && state.ipeCycleId && (
             <div style={{ marginTop: 8 }}>
               <AudioRecorder userId={state.userId} cycleId={state.ipeCycleId} pillId={state.pillId} moment="m4" language={state.audioLocale}
                 onLiveTranscript={text => setState(s => ({ ...s, m4Input: text, m4TranscriptionLive: text }))}
@@ -755,9 +827,10 @@ export default function PillFlow() {
           )}
         </div>
       </div>
-      <Footer onBack={() => setState(s => ({ ...s, moment: "M3_3" }))} onContinue={submitM4}
-        continueLabel={state.loading ? "..." : "continuar"}
-        showEthics onEthics={() => handleEthics("M4")} disabled={state.loading} />
+      <Footer onBack={() => setState(s => ({ ...s, moment: "M3_3" }))}
+        onContinue={state.reviewMode ? () => setState(s => ({ ...s, moment: "M5" })) : submitM4}
+        continueLabel={state.loading ? "..." : (state.reviewMode ? "voltar ao eco" : "continuar")}
+        showEthics={!state.reviewMode} onEthics={() => handleEthics("M4")} disabled={state.loading} />
     </div>
   );
 
@@ -811,9 +884,11 @@ export default function PillFlow() {
       </div>
 
       <Footer
-        onBack={() => setState(s => ({ ...s, moment: "M4" }))}
-        onContinue={() => navigate("/pills")}
-        continueLabel="continuar"
+        onBack={() => navigate("/pills")}
+        onContinue={state.reviewMode
+          ? () => setState(s => ({ ...s, moment: "M2" }))
+          : () => navigate("/pills")}
+        continueLabel={state.reviewMode ? "ler respostas" : "continuar"}
         showEthics={false}
       />
     </div>

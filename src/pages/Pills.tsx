@@ -1,7 +1,7 @@
 // src/pages/Pills.tsx
-// Lista de pills com estado de ciclo
-// Pills feitas → line-through + opacidade reduzida + não clicáveis
-// Após as 6 feitas → "begin questionnaire" com barra accent → /questionnaire
+// Wave 10: Pills completed agora são clicáveis (modo "revisitar")
+// - Pill done: cor terracota sutil + sufixo "revisitar" (sem line-through)
+// - Click leva pra /pill/{id} — PillFlow detecta eco_text e entra em reviewMode
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -24,7 +24,7 @@ const PILL_TENSAO: Record<PillId, string> = {
 
 export default function Pills() {
   const navigate = useNavigate();
-  const [pillsDone, setPillsDone] = useState<PillId[]>([]);
+  const [pillsDone, setPillsDone] = useState<Set<PillId>>(new Set());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { loadCycle(); }, []);
@@ -35,18 +35,35 @@ export default function Pills() {
       if (!session) { navigate("/auth"); return; }
       const { data: cycle } = await supabase
         .from("ipe_cycles")
-        .select("pills_completed, status")
+        .select("id, pills_completed, status")
         .eq("user_id", session.user.id)
         .in("status", ["pills", "questionnaire", "complete"])
         .order("cycle_number", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (cycle) setPillsDone((cycle.pills_completed as PillId[]) ?? []);
+
+      if (!cycle) { setLoading(false); return; }
+
+      // Wave 10: detecta Pills completed via eco_text != NULL (mais confiável que pills_completed array)
+      const { data: responses } = await supabase
+        .from("pill_responses")
+        .select("pill_id, eco_text")
+        .eq("ipe_cycle_id", cycle.id)
+        .not("eco_text", "is", null);
+
+      const doneSet = new Set<PillId>(
+        (responses ?? [])
+          .filter(r => r.eco_text && r.eco_text.length > 0)
+          .map(r => r.pill_id as PillId)
+      );
+      // Fallback: também considera o array pills_completed (caso eco_text falhou mas Pill foi marcada)
+      ((cycle.pills_completed as PillId[]) ?? []).forEach(p => doneSet.add(p));
+      setPillsDone(doneSet);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
   }
 
-  const allDone = PILL_ORDER.every(p => pillsDone.includes(p));
+  const allDone = PILL_ORDER.every(p => pillsDone.has(p));
 
   return (
     <div className="r-screen">
@@ -63,24 +80,24 @@ export default function Pills() {
         {!loading && (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {PILL_ORDER.map(pill => {
-              const done = pillsDone.includes(pill);
+              const done = pillsDone.has(pill);
               return (
                 <div
                   key={pill}
-                  onClick={() => !done && navigate(`/pill/${pill}`)}
+                  onClick={() => navigate(`/pill/${pill}`)}
                   style={{
                     display: "flex",
                     alignItems: "center",
                     gap: 10,
-                    cursor: done ? "default" : "pointer",
-                    opacity: done ? 0.35 : 1,
+                    cursor: "pointer",
                     transition: "opacity 0.2s",
                   }}
                 >
                   <div style={{
                     width: 1,
                     height: 12,
-                    background: done ? "var(--r-ghost)" : "var(--r-muted)",
+                    background: done ? "var(--r-accent)" : "var(--r-muted)",
+                    opacity: done ? 0.5 : 1,
                     flexShrink: 0,
                   }} />
                   <span style={{
@@ -88,10 +105,18 @@ export default function Pills() {
                     fontWeight: 300,
                     fontSize: 11,
                     letterSpacing: "0.06em",
-                    color: done ? "var(--r-ghost)" : "var(--r-sub)",
-                    textDecoration: done ? "line-through" : "none",
+                    color: done ? "var(--r-accent)" : "var(--r-sub)",
+                    opacity: done ? 0.7 : 1,
                   }}>
                     {PILL_TENSAO[pill]}
+                    {done && (
+                      <span style={{
+                        fontWeight: 300,
+                        fontStyle: "italic",
+                        marginLeft: 6,
+                        opacity: 0.6,
+                      }}>· revisitar</span>
+                    )}
                   </span>
                 </div>
               );

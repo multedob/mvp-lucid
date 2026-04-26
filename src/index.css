@@ -700,3 +700,19 @@ body {
   border-bottom-color: var(--r-muted);
   color: var(--r-text);
 }
+
+/* ============================================================
+   WAVE 10 — Modo Revisitar (read-only nos inputs)
+   ============================================================ */
+
+.r-input-wrap.disabled {
+  border-bottom-color: var(--r-ghost);
+  opacity: 0.85;
+}
+.r-textarea:disabled,
+.r-textarea[readonly] {
+  color: var(--r-text);
+  cursor: default;
+  -webkit-text-fill-color: var(--r-text); /* iOS Safari override */
+  opacity: 1;
+}
