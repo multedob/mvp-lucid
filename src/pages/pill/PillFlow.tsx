@@ -6,6 +6,7 @@ import { callEdgeFunction, getToday } from "@/lib/api";
 import { RevealText } from "@/components/RevealText";
 import { AudioRecorder } from "@/components/AudioRecorder";
 import { EcoLoadingScreen } from "@/components/EcoLoadingScreen";
+import { triggerDeepReadingRefresh } from "@/lib/deepReading";
 
 // ─── Types ────────────────────────────────────────────────────────
 type PillId = "PI" | "PII" | "PIII" | "PIV" | "PV" | "PVI";
@@ -637,6 +638,9 @@ export default function PillFlow() {
         ecoMicrotitle, ecoOperatorHint, ecoCtaText,
         moment: "M5", loading: false, generatingEco: false, ecoFailed: false, ecoErrorMsg: "",
       }));
+
+      // Wave 14 — fire-and-forget: regen do deep reading depois que pill foi completed
+      triggerDeepReadingRefresh(state.ipeCycleId);
     } catch (ecoErr) {
       console.error("[PillFlow] ipe-eco failed:", ecoErr);
       const msg = ecoErr instanceof Error ? ecoErr.message : String(ecoErr);

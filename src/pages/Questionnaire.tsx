@@ -6,6 +6,7 @@ import { useState, useEffect, useRef, forwardRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { callEdgeFunction, getCurrentUserVersion, getToday } from '@/lib/api'
+import { triggerDeepReadingRefresh } from '@/lib/deepReading'
 import { QUESTIONS, getQuestionText, type BlockId } from '@/data/questions'
 
 // ─────────────────────────────────────────
@@ -87,7 +88,7 @@ const Footer = forwardRef<HTMLDivElement, QFooterProps>(({
         )}
         {onEthics && (
           <span className="r-footer-ethics" onClick={onEthics}>
-            prefiro não responder
+            i'd rather not
           </span>
         )}
       </div>
@@ -312,6 +313,12 @@ export default function Questionnaire() {
         'ipe-questionnaire-engine/next-block',
         body
       )
+
+      // Wave 14 — fire-and-forget: regen do deep reading após bloco completado.
+      // Só dispara se houve blockResponse (i.e. um bloco foi efetivamente submitido).
+      if (blockResponse) {
+        triggerDeepReadingRefresh(cid)
+      }
 
       if (res.done) {
         setPhase('done')

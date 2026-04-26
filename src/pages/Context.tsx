@@ -183,39 +183,40 @@ export default function Context() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { navigate("/auth"); return; }
 
-      // Buscar ciclos IPE completos
-      const { data: ipeCycles } = await supabase
+      // Wave 14 — agora também puxamos deep_reading_text de ipe_cycles (incremental).
+      // Fallback para cycles.llm_response (gerado pelo lucid-engine ao final do questionário).
+      const { data: ipeCycles } = await (supabase as any)
         .from("ipe_cycles")
-        .select("id, cycle_number, status")
+        .select("id, cycle_number, status, deep_reading_text")
         .eq("user_id", session.user.id)
         .in("status", ["pills", "complete", "questionnaire"])
         .order("cycle_number", { ascending: true });
 
       if (!ipeCycles || ipeCycles.length === 0) { setLoading(false); return; }
 
-      // Para cada ciclo, buscar o llm_response do ciclo HAGO correspondente
       const cycleData: CycleData[] = await Promise.all(
-        ipeCycles.map(async (ipe) => {
-          const { data: hagoCycle } = await (supabase as any)
-            .from("cycles")
-            .select("llm_response")
-            .eq("ipe_cycle_id", ipe.id)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
+        ipeCycles.map(async (ipe: any) => {
+          // Wave 14 — preferir deep_reading_text (incremental). Fallback: cycles.llm_response (legado).
+          let text: string = ipe.deep_reading_text ?? "";
+          if (!text) {
+            const { data: hagoCycle } = await (supabase as any)
+              .from("cycles")
+              .select("llm_response")
+              .eq("ipe_cycle_id", ipe.id)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            text = hagoCycle?.llm_response ?? "";
+          }
 
-          const text = hagoCycle?.llm_response ?? "";
-          // Dividir em leitura curta (primeiros 2 parágrafos) e deep (resto)
           const paragraphs = text.split("\n\n").filter(Boolean);
           const hasPending = !text;
-const description = hasPending
-  ? "Leitura disponível após o questionário."
-  : paragraphs.slice(0, 2).join("\n\n");
-const deep = hasPending
-  ? "Complete o questionário para ver a leitura profunda."
-  : paragraphs.length > 2
-    ? paragraphs.slice(2).join("\n\n")
-    : paragraphs.join("\n\n");
+          const description = hasPending
+            ? "A leitura aparece quando você responde algo — pill ou pergunta do questionário."
+            : paragraphs.slice(0, 2).join("\n\n");
+          const deep = hasPending
+            ? "Esta leitura se constrói conforme você fala. Comece por uma pill ou pelo questionário."
+            : text;
           return {
             id: `C${ipe.cycle_number}`,
             cycleNumber: ipe.cycle_number,
