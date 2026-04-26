@@ -51,14 +51,16 @@ interface State {
   m3_3_transversal: string;
   m4Input: string;
   ecoText: string;
-  ecoMirror: string;
-  ecoQuestion: string;
+  ecoLines: string[];           // v2.c.2 — array de linhas Reed (prosa contínua)
+  ecoMirror: string;             // legacy (v2.c.1 backward compat)
+  ecoQuestion: string;           // legacy (v2.c.1 backward compat)
   ecoMicrotitle: string;
   ecoOperatorHint: string;
+  ecoCtaText: string;            // v2.c.2 — CTA contextual sorteado pelo backend
   loading: boolean;
   // ─── Audio (M2 & M4) ────────────────────────────────
-  userId: string | null;               // filled in initCycle, used for storage path
-  audioLocale: string;                 // BCP-47, e.g. 'en-US', 'pt-BR'
+  userId: string | null;
+  audioLocale: string;
   m2AudioPath: string | null;
   m2AudioDurationMs: number | null;
   m2TranscriptionLive: string;
@@ -279,11 +281,11 @@ export default function PillFlow() {
     m2Input: "", m3_1_posicao: null, m3_1_duasPalavras: "",
     m3_1_situacaoOposta: "", m3_2_opcao: null, m3_2_abreMao: "",
     m3_2_followupC: "", m3_2_followupD: "", m3_3_narrativa: "",
-    m3_3_condicao: "", m3_3_transversal: "", m4Input: "", ecoText: "", ecoMirror: "", ecoQuestion: "", ecoMicrotitle: "", ecoOperatorHint: "cost", loading: false,
+    m3_3_condicao: "", m3_3_transversal: "", m4Input: "",
+    ecoText: "", ecoLines: [], ecoMirror: "", ecoQuestion: "",
+    ecoMicrotitle: "", ecoOperatorHint: "cost", ecoCtaText: "conversar com reed →",
+    loading: false,
     userId: null,
-    // Prefer browser's language; fall back to en-US. User can effectively
-    // override by typing in any language — Web Speech adapts loosely and
-    // Whisper auto-detects anyway (locale here is just a hint).
     audioLocale: "pt-BR",
     m2AudioPath: null, m2AudioDurationMs: null, m2TranscriptionLive: "", m2TranscriptionFinal: null,
     m4AudioPath: null, m4AudioDurationMs: null, m4TranscriptionLive: "", m4TranscriptionFinal: null,
@@ -335,7 +337,6 @@ export default function PillFlow() {
       const code = String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0");
       const display = String(cycle.cycle_number).padStart(2, "0") + " · " + code;
 
-      // Load variation content from ipe-variation-selector
       let variationKey: string | null = null;
       let variationContent: PillVariationContent | null = null;
       try {
@@ -353,7 +354,6 @@ export default function PillFlow() {
         variationContent = vr.content;
       } catch (err) {
         console.warn("[PillFlow] Variation selector failed, using fallback content:", err);
-        // Fallback: use hardcoded V1 content (null variationContent triggers fallbacks)
       }
 
       setState(s => ({
@@ -386,7 +386,6 @@ export default function PillFlow() {
       });
     } catch (err) {
       console.error("[PillFlow] handleEthics failed:", err);
-      // proteção ética não-bloqueante: log + segue (não exibe alert pra preservar UX)
     }
     advance();
   };
@@ -399,7 +398,7 @@ export default function PillFlow() {
       const r = await callEdgeFunction<{ pill_response_id: string }>("ipe-pill-session", {
         ipe_cycle_id: state.ipeCycleId, pill_id: state.pillId, moment: "M1",
         payload: { tempo_segundos: secs },
-        variation_key: state.variationKey, // persisted in pill_responses
+        variation_key: state.variationKey,
       });
       setState(s => ({ ...s, pillResponseId: r.pill_response_id, moment: "M2", loading: false }));
     } catch (err) {
@@ -420,7 +419,6 @@ export default function PillFlow() {
         payload: {
           resposta: state.m2Input,
           cal_signals: { localizacao: null, custo: null, foco: null, horizonte: null },
-          // Audio metadata — nullable. Server-side fields also nullable.
           audio_url:            state.m2AudioPath,
           audio_duration_ms:    state.m2AudioDurationMs,
           transcription_live:   state.m2TranscriptionLive || null,
@@ -450,7 +448,7 @@ export default function PillFlow() {
             const base: Record<string, unknown> = {
               narrativa: state.m3_3_narrativa,
               condicao: state.m3_3_condicao,
-              transversal_l13: state.m3_3_transversal || null, // new: L1.3 coverage
+              transversal_l13: state.m3_3_transversal || null,
             };
             const pid = state.pillId;
             if (pid === "PI")   return { ...base, cobertura_L1_3: state.m3_3_transversal || state.m3_3_narrativa };
@@ -468,7 +466,7 @@ export default function PillFlow() {
       const msg = err instanceof Error ? err.message : String(err);
       alert("Erro ao salvar M3: " + msg + "\n\nVer console (F12) para detalhes.");
       setState(s => ({ ...s, loading: false }));
-      return;  // NÃO avançar para M4 se M3 falhou
+      return;
     }
     setState(s => ({ ...s, moment: "M4", loading: false }));
   };
@@ -486,7 +484,6 @@ export default function PillFlow() {
             if (state.pillId === "PV")  return { percepcao: p, conhecimento_em_campo: p, presenca_para_outros: p };
             return { percepcao: p, presenca_para_outros: p };
           })(),
-          // Audio metadata — nullable.
           audio_url:            state.m4AudioPath,
           audio_duration_ms:    state.m4AudioDurationMs,
           transcription_live:   state.m4TranscriptionLive || null,
@@ -494,39 +491,67 @@ export default function PillFlow() {
         },
       });
 
+      // ─── v2.c.2 — captura novo schema (eco_lines + cta_text) com fallback legacy ───
       let ecoText = "";
+      let ecoLines: string[] = [];
       let ecoMirror = "";
       let ecoQuestion = "";
-      let ecoMicrotitle = "olha o que reparei";
+      let ecoMicrotitle = "";
       let ecoOperatorHint = "cost";
+      let ecoCtaText = "conversar com reed →";
+
       try {
         const userName = localStorage.getItem("rdwth_user_name") || undefined;
         const eco = await callEdgeFunction<{
           eco_text: string;
+          eco_lines?: string[];
           mirror?: string;
           question?: string;
-          microtitle?: string;
+          microtitle?: string | null;
           operator_hint?: string;
+          cta_text?: string;
         }>("ipe-eco", {
-          ipe_cycle_id: state.ipeCycleId, pill_id: state.pillId, ...(userName && { user_name: userName }),
+          ipe_cycle_id: state.ipeCycleId,
+          pill_id: state.pillId,
+          ...(userName && { user_name: userName }),
         });
+
         ecoText = eco.eco_text || "";
-        ecoMirror = eco.mirror || ecoText.split("\n").find(l => l.trim() && !l.startsWith("—")) || ecoText;
-        ecoQuestion = eco.question || "";
-        ecoMicrotitle = eco.microtitle || "olha o que reparei";
+
+        // v2.c.2 path: eco_lines vem como array do backend novo
+        if (Array.isArray(eco.eco_lines) && eco.eco_lines.length > 0) {
+          ecoLines = eco.eco_lines;
+        } else if (ecoText) {
+          // fallback: deriva de eco_text quebrando em linhas (cached path do backend)
+          ecoLines = ecoText.split("\n").map(l => l.trim()).filter(l => l && !l.startsWith("—"));
+        }
+
+        // microtitle pode ser null (eco abre direto, sem fragmento isolado)
+        ecoMicrotitle = eco.microtitle || "";
+
         ecoOperatorHint = eco.operator_hint || "cost";
+        ecoCtaText = eco.cta_text || "conversar com reed →";
+
+        // legacy backwards compat (caso eco antigo ainda venha de outro pill)
+        ecoMirror = eco.mirror || "";
+        ecoQuestion = eco.question || "";
       } catch (ecoErr) {
         console.error("[PillFlow] ipe-eco failed:", ecoErr);
       }
 
-      setState(s => ({ ...s, ecoText, ecoMirror, ecoQuestion, ecoMicrotitle, ecoOperatorHint, moment: "M5", loading: false }));
+      setState(s => ({
+        ...s,
+        ecoText, ecoLines, ecoMirror, ecoQuestion,
+        ecoMicrotitle, ecoOperatorHint, ecoCtaText,
+        moment: "M5", loading: false,
+      }));
     } catch (err) {
       console.error("[PillFlow] submitM4 failed:", err);
       setState(s => ({ ...s, loading: false }));
     }
   };
 
-  // ─── M5 reveal ritual ──────────────────────────────────────
+  // ─── M5 reveal ritual (v2.c.2 — 4 stages: microtitle, prosa, divisor, cta) ──
   const [m5Stage, setM5Stage] = useState(0);
   const [m5Arrived, setM5Arrived] = useState(false);
 
@@ -537,7 +562,8 @@ export default function PillFlow() {
       return;
     }
     const arrivalTimer = setTimeout(() => setM5Arrived(true), 800);
-    const stageDelays = [900, 1400, 1900, 2500, 2900, 3400, 4000];
+    // 4 stages: microtitle (1.0s) → prosa (1.6s) → divisor (2.6s) → cta (3.2s)
+    const stageDelays = [1000, 1600, 2600, 3200];
     const timers = stageDelays.map((delay, i) =>
       setTimeout(() => setM5Stage(s => Math.max(s, i + 1)), delay)
     );
@@ -563,26 +589,11 @@ export default function PillFlow() {
       <Header moment="M1" />
       <div style={{ padding: "32px 24px 0", flexShrink: 0 }}>
         {state.loading ? (
-          // Hold the space blank while the variation loads, so the user never
-          // sees the fallback phrase get replaced by the variation phrase.
           <div style={{ minHeight: 120 }} />
         ) : (
           <>
-            <RevealText
-              as="div"
-              text={m1Content.frase}
-              duration={1800}
-              charFadeMs={340}
-              className="r-impact"
-            />
-            <RevealText
-              as="div"
-              text={m1Content.tensao}
-              duration={1200}
-              charFadeMs={280}
-              className="r-tension"
-              style={{ marginTop: 14 }}
-            />
+            <RevealText as="div" text={m1Content.frase} duration={1800} charFadeMs={340} className="r-impact" />
+            <RevealText as="div" text={m1Content.tensao} duration={1200} charFadeMs={280} className="r-tension" style={{ marginTop: 14 }} />
           </>
         )}
       </div>
@@ -607,17 +618,11 @@ export default function PillFlow() {
         <InvisibleTextarea value={state.m2Input} onChange={v => setState(s => ({ ...s, m2Input: v }))} />
         {state.userId && state.ipeCycleId && (
           <div style={{ marginTop: 8 }}>
-            <AudioRecorder
-              userId={state.userId}
-              cycleId={state.ipeCycleId}
-              pillId={state.pillId}
-              moment="m2"
-              language={state.audioLocale}
+            <AudioRecorder userId={state.userId} cycleId={state.ipeCycleId} pillId={state.pillId} moment="m2" language={state.audioLocale}
               onLiveTranscript={text => setState(s => ({ ...s, m2Input: text, m2TranscriptionLive: text }))}
               onFinalTranscript={text => setState(s => ({ ...s, m2Input: text, m2TranscriptionFinal: text }))}
               onAudioStored={info => setState(s => ({ ...s, m2AudioPath: info.path, m2AudioDurationMs: info.durationMs }))}
-              disabled={state.loading}
-            />
+              disabled={state.loading} />
           </div>
         )}
       </div>
@@ -632,9 +637,7 @@ export default function PillFlow() {
     <div className="r-screen">
       <Header moment="M3_1" />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 24px 16px" }}>
-        <div className="r-question" style={{ marginBottom: 20 }}>
-          {m3_1Content.question}
-        </div>
+        <div className="r-question" style={{ marginBottom: 20 }}>{m3_1Content.question}</div>
         <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10, color: "var(--r-dim)", textAlign: "center", marginBottom: 14 }}>{m3_1Content.poleLeft}</div>
         <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", position: "relative", width: 16 }}>
@@ -678,7 +681,6 @@ export default function PillFlow() {
               </div>
             ))}
           </div>
-          {/* Dynamic follow-up based on selected option */}
           {selectedOption && selectedOption.followupType === "question" && (
             <div style={{ marginBottom: 20 }}>
               <div className="r-question" style={{ marginBottom: 12, fontSize: 14 }}>{selectedOption.followup}</div>
@@ -744,17 +746,11 @@ export default function PillFlow() {
           <InvisibleTextarea value={state.m4Input} onChange={v => setState(s => ({ ...s, m4Input: v }))} />
           {state.userId && state.ipeCycleId && (
             <div style={{ marginTop: 8 }}>
-              <AudioRecorder
-                userId={state.userId}
-                cycleId={state.ipeCycleId}
-                pillId={state.pillId}
-                moment="m4"
-                language={state.audioLocale}
+              <AudioRecorder userId={state.userId} cycleId={state.ipeCycleId} pillId={state.pillId} moment="m4" language={state.audioLocale}
                 onLiveTranscript={text => setState(s => ({ ...s, m4Input: text, m4TranscriptionLive: text }))}
                 onFinalTranscript={text => setState(s => ({ ...s, m4Input: text, m4TranscriptionFinal: text }))}
                 onAudioStored={info => setState(s => ({ ...s, m4AudioPath: info.path, m4AudioDurationMs: info.durationMs }))}
-                disabled={state.loading}
-              />
+                disabled={state.loading} />
             </div>
           )}
         </div>
@@ -765,7 +761,14 @@ export default function PillFlow() {
     </div>
   );
 
-  // ─── M5: Echo (Fase 3 — protótipo v1.3) ───────────────────────
+  // ─── M5: Echo (v2.c.2 — eco em prosa contínua + CTA contextual) ──────
+  // Fallback chain: ecoLines (v2.c.2) → ecoText.split (cached path) → array vazio
+  const linesToRender: string[] = state.ecoLines.length > 0
+    ? state.ecoLines
+    : state.ecoText
+        ? state.ecoText.split("\n").map(l => l.trim()).filter(l => l && !l.startsWith("—"))
+        : [];
+
   return (
     <div className="r-screen" style={{ position: "relative" }}>
       <Header moment="M5" />
@@ -776,30 +779,24 @@ export default function PillFlow() {
       </div>
 
       <div className="r-scroll-m5">
-        <div className={`r-microtitle r-stage-in${m5Stage >= 1 ? " show" : ""}`}>
-          {state.ecoMicrotitle || "olha o que reparei"}
+        {state.ecoMicrotitle && (
+          <div className={`r-microtitle r-stage-in${m5Stage >= 1 ? " show" : ""}`}>
+            {state.ecoMicrotitle}
+          </div>
+        )}
+
+        <div className={`r-eco-prose r-stage-in${m5Stage >= 2 ? " show" : ""}`}>
+          {linesToRender.map((line, i) =>
+            line === ""
+              ? <div key={i} className="r-eco-pause" />
+              : <div key={i} className="r-eco-line">{line}</div>
+          )}
         </div>
 
-        <div className={`r-label r-stage-in${m5Stage >= 2 ? " show" : ""}`}>
-          você disse
-        </div>
+        <div className={`r-eco-divider r-stage-in${m5Stage >= 3 ? " show" : ""}`} />
 
-        <div className={`r-mirror r-stage-in${m5Stage >= 3 ? " show" : ""}`}>
-          {state.ecoMirror || ""}
-        </div>
-
-        <div className={`r-gap r-stage-in${m5Stage >= 4 ? " show" : ""}`} />
-
-        <div className={`r-label r-stage-in${m5Stage >= 5 ? " show" : ""}`}>
-          reed
-        </div>
-
-        <div className={`r-question r-stage-in${m5Stage >= 6 ? " show" : ""}`}>
-          {state.ecoQuestion || ""}
-        </div>
-
-        <div className={`r-talk r-stage-in${m5Stage >= 7 ? " show" : ""}`}>
-          <a onClick={() => navigate("/reed")}>conversar com reed →</a>
+        <div className={`r-talk r-stage-in${m5Stage >= 4 ? " show" : ""}`}>
+          <a onClick={() => navigate("/reed")}>{state.ecoCtaText} →</a>
         </div>
       </div>
 

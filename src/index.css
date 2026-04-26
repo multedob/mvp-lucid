@@ -64,16 +64,11 @@
 /* ─── _rdwth design system — prefixo --r- para não colidir com shadcn ── */
 
 :root {
-  /* backgrounds */
   --r-bg:       #FAFAF9;
   --r-bg-dark:  #121214;
-
-  /* accent */
   --r-accent:    #C04A30;
-  --r-accent-dk: #1A9FAA;  /* dark-mode accent → teal (T0.1 v1.1) */
+  --r-accent-dk: #1A9FAA;
   --r-teal:      #1A9FAA;
-
-  /* text hierarchy */
   --r-text:     #1A1410;
   --r-text-dk:  #FAFAF9;
   --r-muted:    #B8B0A8;
@@ -81,16 +76,9 @@
   --r-ghost:    #C8C0B8;
   --r-ghost-dk: #2A2A32;
   --r-dim:      #8A8078;
-
-  /* fonts */
   --r-font-sys:  'IBM Plex Mono', monospace;
   --r-font-ed:   'Urbanist', sans-serif;
   --r-font-mark: 'VT323', monospace;
-
-  /* ─── semantic voice tokens (T0.1 — Eco v1.1) ──────────────────── */
-  /* mapeia cada voz do sistema a uma cor semântica; consumido pelas
-     classes .voice-* e por componentes do M5 Eco. nunca usar hex
-     literal em contexto semântico. */
   --r-voice-founders:    var(--r-accent);
   --r-voice-reed-accent: var(--r-accent);
   --r-voice-user:        var(--r-text);
@@ -98,8 +86,6 @@
 }
 
 .dark {
-  /* ─── dark-mode overrides dos tokens --r-* (Eco v1.1) ──────────── */
-  /* só tokens semânticos são re-mapeados; tokens base permanecem. */
   --r-voice-founders:    var(--r-teal);
   --r-voice-reed-accent: var(--r-teal);
   --r-voice-user:        var(--r-text-dk);
@@ -124,7 +110,6 @@ body {
 }
 
 /* ─── screen shell ──────────────────────────────────────────────── */
-/* overflow não é hidden — permite teclado mobile */
 
 .r-screen {
   width: 100%;
@@ -480,9 +465,6 @@ body {
 }
 
 /* ─── voice classes (T0.2 — Eco v1.1) ──────────────────────────── */
-/* 4 vozes do M5 Eco mapeadas a fonte + peso + cor semântica.
-   usar estas classes em qualquer componente que renderize uma voz;
-   nunca hardcode de cor ou font-family em contexto semântico. */
 
 .voice-sys {
   font-family: var(--r-font-sys);
@@ -515,7 +497,7 @@ body {
 }
 
 /* ============================================================
-   FASE 3 - M5 visual (protótipo v1.3)
+   FASE 3 - M5 visual (protótipo v1.3) — mantido para compat
    ============================================================ */
 
 :root {
@@ -610,7 +592,7 @@ body {
   font-family: var(--r-font-sys, 'IBM Plex Mono', monospace);
   font-size: 12px;
   font-weight: 300;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: lowercase;
   color: var(--r-voice-founders);
   text-decoration: none;
@@ -618,6 +600,9 @@ body {
   padding: 4px 0;
   cursor: pointer;
   transition: border-bottom-color 0.2s;
+  display: inline-block;
+  max-width: 320px;
+  line-height: 1.55;
 }
 .r-talk a:hover { border-bottom-color: var(--r-voice-founders); }
 
@@ -654,4 +639,42 @@ body {
 .r-stage-in.show {
   opacity: 1;
   transform: none;
+}
+
+/* ============================================================
+   FASE 4 - M5 v2.c.2 — eco em prosa contínua + CTA contextual
+   ============================================================ */
+
+.r-eco-prose {
+  font-family: var(--r-font-ed);
+  font-weight: 400;
+  font-size: 22px;
+  line-height: 1.55;
+  color: var(--r-voice-reed);
+  text-align: center;
+  padding: 0 12px;
+  letter-spacing: 0.005em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.r-eco-line {
+  margin: 0;
+  display: block;
+  max-width: 480px;
+}
+
+.r-eco-pause {
+  height: 18px;
+  display: block;
+}
+
+.r-eco-divider {
+  width: 60px;
+  height: 0.5px;
+  background: var(--r-ghost);
+  opacity: 0.5;
+  margin: 28px auto 16px;
 }
