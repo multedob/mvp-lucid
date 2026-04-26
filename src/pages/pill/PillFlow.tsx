@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunction, getToday } from "@/lib/api";
 import { RevealText } from "@/components/RevealText";
 import { AudioRecorder } from "@/components/AudioRecorder";
+import { EcoLoadingScreen } from "@/components/EcoLoadingScreen";
 
 // ─── Types ────────────────────────────────────────────────────────
 type PillId = "PI" | "PII" | "PIII" | "PIV" | "PV" | "PVI";
@@ -61,6 +62,7 @@ interface State {
   m4Saved: boolean;              // Wave 12 — true se ipe-pill-session/M4 já gravou (retry só do eco)
   ecoFailed: boolean;            // Wave 12 — true se ipe-eco falhou (mostra retry inline em M4)
   ecoErrorMsg: string;           // Wave 12 — mensagem do erro pra debug
+  generatingEco: boolean;        // Wave 12.b — true durante chamada do ipe-eco (mostra EcoLoadingScreen)
   loading: boolean;
   // ─── Audio (M2 & M4) ────────────────────────────────
   userId: string | null;
@@ -292,6 +294,7 @@ export default function PillFlow() {
     ecoMicrotitle: "", ecoOperatorHint: "cost", ecoCtaText: "conversar com reed",
     reviewMode: false,
     m4Saved: false, ecoFailed: false, ecoErrorMsg: "",
+    generatingEco: false,
     loading: false,
     userId: null,
     audioLocale: "pt-BR",
@@ -592,7 +595,8 @@ export default function PillFlow() {
 
   // Wave 12 — geração de eco isolada para retry barato (não re-salva M4)
   const generateEcoAndAdvance = async () => {
-    setState(s => ({ ...s, loading: true, ecoFailed: false, ecoErrorMsg: "" }));
+    // Wave 12.b — mostra EcoLoadingScreen durante geração
+    setState(s => ({ ...s, loading: true, generatingEco: true, ecoFailed: false, ecoErrorMsg: "" }));
     try {
       const userName = localStorage.getItem("rdwth_user_name") || undefined;
       const eco = await callEdgeFunction<{
@@ -631,12 +635,12 @@ export default function PillFlow() {
         ...s,
         ecoText, ecoLines, ecoMirror, ecoQuestion,
         ecoMicrotitle, ecoOperatorHint, ecoCtaText,
-        moment: "M5", loading: false, ecoFailed: false, ecoErrorMsg: "",
+        moment: "M5", loading: false, generatingEco: false, ecoFailed: false, ecoErrorMsg: "",
       }));
     } catch (ecoErr) {
       console.error("[PillFlow] ipe-eco failed:", ecoErr);
       const msg = ecoErr instanceof Error ? ecoErr.message : String(ecoErr);
-      setState(s => ({ ...s, loading: false, ecoFailed: true, ecoErrorMsg: msg }));
+      setState(s => ({ ...s, loading: false, generatingEco: false, ecoFailed: true, ecoErrorMsg: msg }));
     }
   };
 
@@ -716,8 +720,9 @@ export default function PillFlow() {
           <div style={{ minHeight: 120 }} />
         ) : (
           <>
-            <RevealText as="div" text={m1Content.frase} duration={1800} charFadeMs={340} className="r-impact" />
-            <RevealText as="div" text={m1Content.tensao} duration={1200} charFadeMs={280} className="r-tension" style={{ marginTop: 14 }} />
+            {/* Wave 12.b — word-by-word reveal (~1s frase, ~0.6s tensão) */}
+            <RevealText as="div" mode="word" text={m1Content.frase} duration={1000} fadeMs={220} className="r-impact" />
+            <RevealText as="div" mode="word" text={m1Content.tensao} duration={600} fadeMs={180} className="r-tension" style={{ marginTop: 14 }} />
           </>
         )}
       </div>
@@ -861,6 +866,8 @@ export default function PillFlow() {
   if (moment === "M4") return (
     <div className="r-screen">
       <Header moment="M4" />
+      {/* Wave 12.b — overlay full-screen com morph + pulse + frase rotativa enquanto ipe-eco gera */}
+      {state.generatingEco && <EcoLoadingScreen />}
       <div className="r-scroll" style={{ padding: "28px 24px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
         <div className="r-question">{m4Content.question}</div>
         <div className="r-sub">{m4Content.instruction}</div>
