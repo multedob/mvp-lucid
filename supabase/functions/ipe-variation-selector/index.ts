@@ -93,7 +93,7 @@ async function getPillVariationHistory(
     .eq("ipe_cycles.user_id", user_id)
     .eq("pill_id", pill_id)
     .not("variation_key", "is", null)
-    .order("ipe_cycles.cycle_number", { ascending: false });
+    .order("cycle_number", { ascending: false, foreignTable: "ipe_cycles" });
 
   if (error) {
     console.error("Error fetching pill variation history:", error);
@@ -116,7 +116,7 @@ async function getBlockVariationHistory(
     .eq("ipe_cycles.user_id", user_id)
     .eq("block_id", block_id)
     .not("rotation_variation_key", "is", null)
-    .order("ipe_cycles.cycle_number", { ascending: false });
+    .order("cycle_number", { ascending: false, foreignTable: "ipe_cycles" });
 
   if (error) {
     console.error("Error fetching block variation history:", error);

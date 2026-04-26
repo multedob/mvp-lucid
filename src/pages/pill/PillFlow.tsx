@@ -58,6 +58,9 @@ interface State {
   ecoOperatorHint: string;
   ecoCtaText: string;            // v2.c.2 — CTA contextual sorteado pelo backend
   reviewMode: boolean;           // Wave 10 — true se Pill já tem eco salvo (revisitar)
+  m4Saved: boolean;              // Wave 12 — true se ipe-pill-session/M4 já gravou (retry só do eco)
+  ecoFailed: boolean;            // Wave 12 — true se ipe-eco falhou (mostra retry inline em M4)
+  ecoErrorMsg: string;           // Wave 12 — mensagem do erro pra debug
   loading: boolean;
   // ─── Audio (M2 & M4) ────────────────────────────────
   userId: string | null;
@@ -288,6 +291,7 @@ export default function PillFlow() {
     ecoText: "", ecoLines: [], ecoMirror: "", ecoQuestion: "",
     ecoMicrotitle: "", ecoOperatorHint: "cost", ecoCtaText: "conversar com reed",
     reviewMode: false,
+    m4Saved: false, ecoFailed: false, ecoErrorMsg: "",
     loading: false,
     userId: null,
     audioLocale: "pt-BR",
@@ -548,9 +552,64 @@ export default function PillFlow() {
     setState(s => ({ ...s, moment: "M4", loading: false }));
   };
 
+  // Wave 12 — geração de eco isolada para retry barato (não re-salva M4)
+  const generateEcoAndAdvance = async () => {
+    setState(s => ({ ...s, loading: true, ecoFailed: false, ecoErrorMsg: "" }));
+    try {
+      const userName = localStorage.getItem("rdwth_user_name") || undefined;
+      const eco = await callEdgeFunction<{
+        eco_text: string;
+        eco_lines?: string[];
+        mirror?: string;
+        question?: string;
+        microtitle?: string | null;
+        operator_hint?: string;
+        cta_text?: string;
+      }>("ipe-eco", {
+        ipe_cycle_id: state.ipeCycleId,
+        pill_id: state.pillId,
+        ...(userName && { user_name: userName }),
+      });
+
+      const ecoText = eco.eco_text || "";
+      let ecoLines: string[] = [];
+      if (Array.isArray(eco.eco_lines) && eco.eco_lines.length > 0) {
+        ecoLines = eco.eco_lines;
+      } else if (ecoText) {
+        ecoLines = ecoText.split("\n").map(l => l.trim()).filter(l => l && !l.startsWith("—"));
+      }
+      const ecoMicrotitle = eco.microtitle || "";
+      const ecoOperatorHint = eco.operator_hint || "cost";
+      const ecoCtaText = (eco.cta_text || "conversar com reed").replace(/\s*→+\s*$/u, "");
+      const ecoMirror = eco.mirror || "";
+      const ecoQuestion = eco.question || "";
+
+      // Wave 12 — só avança se eco veio de fato (evita M5 vazia)
+      if (!ecoText && ecoLines.length === 0) {
+        throw new Error("eco vazio (texto e linhas ausentes)");
+      }
+
+      setState(s => ({
+        ...s,
+        ecoText, ecoLines, ecoMirror, ecoQuestion,
+        ecoMicrotitle, ecoOperatorHint, ecoCtaText,
+        moment: "M5", loading: false, ecoFailed: false, ecoErrorMsg: "",
+      }));
+    } catch (ecoErr) {
+      console.error("[PillFlow] ipe-eco failed:", ecoErr);
+      const msg = ecoErr instanceof Error ? ecoErr.message : String(ecoErr);
+      setState(s => ({ ...s, loading: false, ecoFailed: true, ecoErrorMsg: msg }));
+    }
+  };
+
   const submitM4 = async () => {
     if (state.loading) return;
-    setState(s => ({ ...s, loading: true }));
+    // Wave 12 — se M4 já foi salvo (retry após falha do eco), pula direto pro eco
+    if (state.m4Saved) {
+      await generateEcoAndAdvance();
+      return;
+    }
+    setState(s => ({ ...s, loading: true, ecoFailed: false, ecoErrorMsg: "" }));
     try {
       await callEdgeFunction("ipe-pill-session", {
         ipe_cycle_id: state.ipeCycleId, pill_id: state.pillId, moment: "M4",
@@ -567,65 +626,15 @@ export default function PillFlow() {
           transcription_final:  state.m4TranscriptionFinal,
         },
       });
-
-      // ─── v2.c.2 — captura novo schema (eco_lines + cta_text) com fallback legacy ───
-      let ecoText = "";
-      let ecoLines: string[] = [];
-      let ecoMirror = "";
-      let ecoQuestion = "";
-      let ecoMicrotitle = "";
-      let ecoOperatorHint = "cost";
-      let ecoCtaText = "conversar com reed";
-
-      try {
-        const userName = localStorage.getItem("rdwth_user_name") || undefined;
-        const eco = await callEdgeFunction<{
-          eco_text: string;
-          eco_lines?: string[];
-          mirror?: string;
-          question?: string;
-          microtitle?: string | null;
-          operator_hint?: string;
-          cta_text?: string;
-        }>("ipe-eco", {
-          ipe_cycle_id: state.ipeCycleId,
-          pill_id: state.pillId,
-          ...(userName && { user_name: userName }),
-        });
-
-        ecoText = eco.eco_text || "";
-
-        // v2.c.2 path: eco_lines vem como array do backend novo
-        if (Array.isArray(eco.eco_lines) && eco.eco_lines.length > 0) {
-          ecoLines = eco.eco_lines;
-        } else if (ecoText) {
-          // fallback: deriva de eco_text quebrando em linhas (cached path do backend)
-          ecoLines = ecoText.split("\n").map(l => l.trim()).filter(l => l && !l.startsWith("—"));
-        }
-
-        // microtitle pode ser null (eco abre direto, sem fragmento isolado)
-        ecoMicrotitle = eco.microtitle || "";
-
-        ecoOperatorHint = eco.operator_hint || "cost";
-        ecoCtaText = (eco.cta_text || "conversar com reed").replace(/\s*→+\s*$/u, "");
-
-        // legacy backwards compat (caso eco antigo ainda venha de outro pill)
-        ecoMirror = eco.mirror || "";
-        ecoQuestion = eco.question || "";
-      } catch (ecoErr) {
-        console.error("[PillFlow] ipe-eco failed:", ecoErr);
-      }
-
-      setState(s => ({
-        ...s,
-        ecoText, ecoLines, ecoMirror, ecoQuestion,
-        ecoMicrotitle, ecoOperatorHint, ecoCtaText,
-        moment: "M5", loading: false,
-      }));
+      setState(s => ({ ...s, m4Saved: true }));
     } catch (err) {
-      console.error("[PillFlow] submitM4 failed:", err);
+      console.error("[PillFlow] submitM4 (save) failed:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      alert("Erro ao salvar M4: " + msg + "\n\nVer console (F12) para detalhes.");
       setState(s => ({ ...s, loading: false }));
+      return;
     }
+    await generateEcoAndAdvance();
   };
 
   // ─── M5 reveal ritual (v2.c.2 — 4 stages: microtitle, prosa, divisor, cta) ──
@@ -829,10 +838,35 @@ export default function PillFlow() {
             </div>
           )}
         </div>
+        {/* Wave 12 — erro inline do eco com retry barato */}
+        {state.ecoFailed && !state.loading && (
+          <div style={{
+            padding: "12px 16px", marginTop: 12,
+            background: "rgba(184,90,62,0.08)", border: "1px solid rgba(184,90,62,0.25)",
+            borderRadius: 8, fontSize: 13, lineHeight: 1.5,
+          }}>
+            <div style={{ color: "var(--terracota, #b85a3e)", marginBottom: 4 }}>
+              suas respostas foram salvas, mas o eco não veio.
+            </div>
+            <div style={{ opacity: 0.7, fontSize: 11 }}>
+              clique em <strong>tentar de novo</strong> abaixo. nada se perde.
+            </div>
+            {state.ecoErrorMsg && (
+              <div style={{ opacity: 0.5, fontSize: 10, marginTop: 6, fontFamily: "monospace" }}>
+                {state.ecoErrorMsg.slice(0, 200)}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       <Footer onBack={() => setState(s => ({ ...s, moment: "M3_3" }))}
         onContinue={state.reviewMode ? () => setState(s => ({ ...s, moment: "M5" })) : submitM4}
-        continueLabel={state.loading ? "..." : (state.reviewMode ? "voltar ao eco" : "continuar")}
+        continueLabel={
+          state.loading ? "..."
+          : state.reviewMode ? "voltar ao eco"
+          : state.ecoFailed ? "tentar de novo"
+          : "continuar"
+        }
         showEthics={!state.reviewMode} onEthics={() => handleEthics("M4")} disabled={state.loading} />
     </div>
   );
