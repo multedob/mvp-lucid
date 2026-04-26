@@ -392,6 +392,8 @@ export type Database = {
         Row: {
           completed_at: string | null
           cycle_number: number
+          deep_reading_text: string | null
+          deep_reading_updated_at: string | null
           id: string
           pills_completed: string[]
           prompt_version: string | null
@@ -402,6 +404,8 @@ export type Database = {
         Insert: {
           completed_at?: string | null
           cycle_number?: number
+          deep_reading_text?: string | null
+          deep_reading_updated_at?: string | null
           id?: string
           pills_completed?: string[]
           prompt_version?: string | null
@@ -412,6 +416,8 @@ export type Database = {
         Update: {
           completed_at?: string | null
           cycle_number?: number
+          deep_reading_text?: string | null
+          deep_reading_updated_at?: string | null
           id?: string
           pills_completed?: string[]
           prompt_version?: string | null
