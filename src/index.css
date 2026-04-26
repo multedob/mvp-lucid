@@ -707,12 +707,24 @@ body {
 
 .r-input-wrap.disabled {
   border-bottom-color: var(--r-ghost);
-  opacity: 0.85;
+  border-bottom-style: dashed;
+  opacity: 0.6;
 }
 .r-textarea:disabled,
 .r-textarea[readonly] {
-  color: var(--r-text);
+  color: var(--r-dim);
   cursor: default;
-  -webkit-text-fill-color: var(--r-text); /* iOS Safari override */
+  -webkit-text-fill-color: var(--r-dim); /* iOS Safari override */
   opacity: 1;
+  font-style: italic;
+}
+.r-choice-text:not(.selected):has(~ *) {
+  /* mantém estilo normal das choices não selecionadas */
+}
+.r-screen .r-choice[style*="cursor: default"] .r-choice-text {
+  opacity: 0.5;
+}
+.r-screen .r-choice[style*="cursor: default"] .r-choice-text.selected {
+  opacity: 1;
+  color: var(--r-dim);
 }

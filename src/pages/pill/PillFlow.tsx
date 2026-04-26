@@ -656,7 +656,7 @@ export default function PillFlow() {
   if (moment === "M1") return (
     <div className="r-screen">
       <Header moment="M1" />
-      <div style={{ padding: "32px 24px 0", flexShrink: 0 }}>
+      <div className="r-scroll" style={{ padding: "28px 24px 16px" }}>
         {state.loading ? (
           <div style={{ minHeight: 120 }} />
         ) : (
@@ -666,7 +666,6 @@ export default function PillFlow() {
           </>
         )}
       </div>
-      <div style={{ flex: 1 }} />
       <Footer onBack={() => navigate("/home")} onContinue={submitM1}
         continueLabel={state.loading ? "..." : "começar"}
         showEthics onEthics={() => handleEthics("M1")}
@@ -678,12 +677,8 @@ export default function PillFlow() {
   if (moment === "M2") return (
     <div className="r-screen">
       <Header moment="M2" />
-      <div className="r-scroll" style={{ padding: "24px 24px 0" }}>
-        <div className="r-narrative" style={{ whiteSpace: "pre-line" }}>{m2Text}</div>
-        <div style={{ height: 24 }} />
-      </div>
-      <div className="r-line" />
-      <div style={{ padding: "12px 24px 10px", flexShrink: 0 }}>
+      <div className="r-scroll" style={{ padding: "28px 24px 16px" }}>
+        <div className="r-narrative" style={{ whiteSpace: "pre-line", marginBottom: 24 }}>{m2Text}</div>
         <InvisibleTextarea value={state.m2Input} onChange={v => setState(s => ({ ...s, m2Input: v }))} disabled={state.reviewMode} />
         {!state.reviewMode && state.userId && state.ipeCycleId && (
           <div style={{ marginTop: 8 }}>
@@ -706,7 +701,7 @@ export default function PillFlow() {
   if (moment === "M3_1") return (
     <div className="r-screen">
       <Header moment="M3_1" />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 24px 16px" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "28px 24px 16px" }}>
         <div className="r-question" style={{ marginBottom: 20 }}>{m3_1Content.question}</div>
         <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10, color: "var(--r-dim)", textAlign: "center", marginBottom: 14 }}>{m3_1Content.poleLeft}</div>
         <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
@@ -741,7 +736,7 @@ export default function PillFlow() {
     return (
       <div className="r-screen">
         <Header moment="M3_2" />
-        <div className="r-scroll" style={{ padding: "20px 24px 0" }}>
+        <div className="r-scroll" style={{ padding: "28px 24px 16px" }}>
           <div className="r-narrative" style={{ whiteSpace: "pre-line", marginBottom: 24 }}>{scenario}</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 24 }}>
             {options.map(o => (
@@ -784,7 +779,7 @@ export default function PillFlow() {
   if (moment === "M3_3") return (
     <div className="r-screen">
       <Header moment="M3_3" />
-      <div className="r-scroll" style={{ padding: "20px 24px 0" }}>
+      <div className="r-scroll" style={{ padding: "28px 24px 16px" }}>
         <div className="r-question" style={{ marginBottom: 14 }}>{m3_3Content.q1}</div>
         <InvisibleTextarea value={state.m3_3_narrativa} onChange={v => setState(s => ({ ...s, m3_3_narrativa: v }))} disabled={state.reviewMode} />
         <div style={{ height: 32 }} />
@@ -811,7 +806,7 @@ export default function PillFlow() {
   if (moment === "M4") return (
     <div className="r-screen">
       <Header moment="M4" />
-      <div style={{ flex: 1, padding: "28px 24px 0", display: "flex", flexDirection: "column", gap: 10 }}>
+      <div className="r-scroll" style={{ padding: "28px 24px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
         <div className="r-question">{m4Content.question}</div>
         <div className="r-sub">{m4Content.instruction}</div>
         <div style={{ marginTop: 10 }}>
