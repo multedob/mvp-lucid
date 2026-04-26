@@ -360,7 +360,7 @@ export default function PillFlow() {
         console.warn("[PillFlow] Variation selector failed, using fallback content:", err);
       }
 
-      // Wave 10 — detecta se Pill já tem eco salvo (modo revisitar)
+      // Wave 10 — detecta pill_response existente (mesmo sem eco)
       const { data: existingResp } = await supabase
         .from("pill_responses")
         .select("m2_resposta, m3_respostas, m4_resposta, eco_text, prompt_version_used")
@@ -368,60 +368,68 @@ export default function PillFlow() {
         .eq("pill_id", pillId)
         .maybeSingle();
 
+      const hasResponses = !!(existingResp?.m2_resposta || existingResp?.m3_respostas || existingResp?.m4_resposta);
       const isReview = !!(existingResp?.eco_text && existingResp.eco_text.length > 0);
 
-      let reviewState: Partial<State> = {};
-      if (isReview && existingResp) {
-        // Pre-populate state com respostas salvas
+      let prefillState: Partial<State> = {};
+      if (hasResponses && existingResp) {
+        // Pre-populate state com respostas salvas (review OU pendente sem eco)
         const m3 = (existingResp.m3_respostas as Record<string, unknown>) ?? {};
         const m4 = (existingResp.m4_resposta as Record<string, unknown>) ?? {};
 
-        // Pega ecoLines do eco_text (split por \n, remove vazios e rótulos legacy)
-        const ecoLines = existingResp.eco_text!
-          .split("\n")
-          .map(l => l.trim())
-          .filter(l => l && !l.startsWith("—"));
-
-        // Tenta puxar CTA contextual da telemetria mais recente
-        let ctaText = "conversar com reed";
-        let microtitle = "";
-        let opHint = "cost";
-        try {
-          const { data: lastEvt } = await supabase
-            .from("pill_eco_events")
-            .select("raw_payload")
-            .eq("ipe_cycle_id", cycle.id)
-            .eq("pill_id", pillId)
-            .order("rendered_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          if (lastEvt?.raw_payload) {
-            const rp = lastEvt.raw_payload as Record<string, unknown>;
-            if (typeof rp.cta_text === "string") ctaText = rp.cta_text;
-            if (typeof rp.microtitle === "string") microtitle = rp.microtitle;
-            const det = rp.detector as Record<string, unknown> | undefined;
-            if (det && typeof det.operator_hint === "string") opHint = det.operator_hint;
-          }
-        } catch (e) { console.warn("[PillFlow] failed to fetch CTA from telemetry:", e); }
-
-        reviewState = {
+        prefillState = {
           m2Input: existingResp.m2_resposta ?? "",
           m3_1_situacaoOposta: typeof m3["3_1_situacao_oposta"] === "string" ? m3["3_1_situacao_oposta"] as string : "",
           m3_1_duasPalavras: typeof m3["duas_palavras"] === "string" ? m3["duas_palavras"] as string : "—",
-          m3_1_posicao: 3, // posição central como default no review (não persistimos posição original ainda)
+          m3_1_posicao: 3,
           m3_2_opcao: (typeof m3["3_2_opcao"] === "string" ? m3["3_2_opcao"] : "B") as "A"|"B"|"C"|"D",
           m3_2_abreMao: typeof m3["3_2_abre_mao"] === "string" ? m3["3_2_abre_mao"] as string : "",
           m3_3_narrativa: typeof m3["3_3_narrativa"] === "string" ? m3["3_3_narrativa"] as string : (typeof m3["narrativa"] === "string" ? m3["narrativa"] as string : ""),
           m3_3_condicao: typeof m3["3_3_condicao"] === "string" ? m3["3_3_condicao"] as string : (typeof m3["condicao"] === "string" ? m3["condicao"] as string : ""),
           m4Input: typeof m4["percepcao"] === "string" ? m4["percepcao"] as string : "",
-          ecoText: existingResp.eco_text!,
-          ecoLines,
-          ecoMicrotitle: microtitle,
-          ecoOperatorHint: opHint,
-          ecoCtaText: ctaText,
-          reviewMode: true,
-          moment: "M5" as Moment,
         };
+
+        // Se ECO TAMBÉM existe → modo review (read-only + vai direto pro M5)
+        if (isReview) {
+          const ecoLines = existingResp.eco_text!
+            .split("\n")
+            .map(l => l.trim())
+            .filter(l => l && !l.startsWith("—"));
+
+          let ctaText = "conversar com reed";
+          let microtitle = "";
+          let opHint = "cost";
+          try {
+            const { data: lastEvt } = await supabase
+              .from("pill_eco_events")
+              .select("raw_payload")
+              .eq("ipe_cycle_id", cycle.id)
+              .eq("pill_id", pillId)
+              .order("rendered_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (lastEvt?.raw_payload) {
+              const rp = lastEvt.raw_payload as Record<string, unknown>;
+              if (typeof rp.cta_text === "string") ctaText = rp.cta_text;
+              if (typeof rp.microtitle === "string") microtitle = rp.microtitle;
+              const det = rp.detector as Record<string, unknown> | undefined;
+              if (det && typeof det.operator_hint === "string") opHint = det.operator_hint;
+            }
+          } catch (e) { console.warn("[PillFlow] failed to fetch CTA from telemetry:", e); }
+
+          prefillState = {
+            ...prefillState,
+            ecoText: existingResp.eco_text!,
+            ecoLines,
+            ecoMicrotitle: microtitle,
+            ecoOperatorHint: opHint,
+            ecoCtaText: ctaText,
+            reviewMode: true,
+            moment: "M5" as Moment,
+          };
+        }
+        // Se respostas existem mas eco NÃO → continua flow normal (M1) com state pré-preenchido.
+        // Usuário clica continuar a partir do M1, vê seus textos, e o submit M4 final dispara ipe-eco.
       }
 
       setState(s => ({
@@ -429,7 +437,7 @@ export default function PillFlow() {
         variationKey, variationContent,
         loading: false, m1TimerStart: Date.now(),
         userId: session.user.id,
-        ...reviewState,
+        ...prefillState,
       }));
     } catch (err) {
       console.error("[PillFlow] initCycle error:", err);

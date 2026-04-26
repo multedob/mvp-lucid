@@ -51,13 +51,13 @@ export default function Pills() {
         .eq("ipe_cycle_id", cycle.id)
         .not("eco_text", "is", null);
 
+      // Single source of truth: Pill done = eco_text presente.
+      // Não usa pills_completed array (pode estar desatualizado se ipe-eco falhou).
       const doneSet = new Set<PillId>(
         (responses ?? [])
           .filter(r => r.eco_text && r.eco_text.length > 0)
           .map(r => r.pill_id as PillId)
       );
-      // Fallback: também considera o array pills_completed (caso eco_text falhou mas Pill foi marcada)
-      ((cycle.pills_completed as PillId[]) ?? []).forEach(p => doneSet.add(p));
       setPillsDone(doneSet);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
