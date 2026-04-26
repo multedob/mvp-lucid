@@ -222,6 +222,36 @@ async function persistEcoText(
   if (error) console.error("[persistEcoText] error:", JSON.stringify(error));
 }
 
+// Wave 12 — extrai recursivamente strings não-vazias de qualquer estrutura aninhada
+// Bug fix: m3_respostas no formato novo é objeto aninhado (M3_1_regua, M3_2_escolha, M3_3_inventario).
+// Object.values() retornava esses objetos; .join() virava "[object Object]" e detector recebia lixo.
+function extractStringsRecursive(obj: unknown, acc: string[] = []): string[] {
+  if (typeof obj === "string") {
+    const trimmed = obj.trim();
+    if (trimmed.length > 0) acc.push(trimmed);
+  } else if (Array.isArray(obj)) {
+    obj.forEach(v => extractStringsRecursive(v, acc));
+  } else if (obj && typeof obj === "object") {
+    Object.values(obj).forEach(v => extractStringsRecursive(v, acc));
+  }
+  return acc;
+}
+
+// Wave 12 — extrai strings com path (pra renderer ver "M3.M3_1_regua.duas_palavras: ...")
+function flattenStringsWithPath(obj: unknown, prefix: string, acc: string[] = []): string[] {
+  if (typeof obj === "string") {
+    const trimmed = obj.trim();
+    if (trimmed.length > 0) acc.push(`${prefix}: ${trimmed}`);
+  } else if (Array.isArray(obj)) {
+    obj.forEach((v, i) => flattenStringsWithPath(v, `${prefix}[${i}]`, acc));
+  } else if (obj && typeof obj === "object") {
+    for (const [k, v] of Object.entries(obj)) {
+      flattenStringsWithPath(v, prefix ? `${prefix}.${k}` : k, acc);
+    }
+  }
+  return acc;
+}
+
 // ─── Corpus pro Sonnet com detector_output injetado ──────────────
 
 function buildCorpusForRenderer(
@@ -240,14 +270,16 @@ function buildCorpusForRenderer(
 
   corpus += "=== O QUE A PESSOA DISSE ===\n";
   if (pill_response.m2_resposta) corpus += `M2: ${pill_response.m2_resposta}\n`;
-  if (pill_response.m3_respostas && typeof pill_response.m3_respostas === "object") {
-    for (const [k, v] of Object.entries(pill_response.m3_respostas)) {
-      if (v) corpus += `M3.${k}: ${v}\n`;
+  // Wave 12 — flatten recursivo: cobre formato NOVO (M3_1_regua/M3_2_escolha/M3_3_inventario aninhado)
+  // e formato ANTIGO (chaves flat). Sem isso, objetos viravam "[object Object]".
+  if (pill_response.m3_respostas) {
+    for (const line of flattenStringsWithPath(pill_response.m3_respostas, "M3")) {
+      corpus += `${line}\n`;
     }
   }
-  if (pill_response.m4_resposta && typeof pill_response.m4_resposta === "object") {
-    for (const [k, v] of Object.entries(pill_response.m4_resposta as Record<string, unknown>)) {
-      if (typeof v === "string" && v.trim()) corpus += `M4.${k}: ${v}\n`;
+  if (pill_response.m4_resposta) {
+    for (const line of flattenStringsWithPath(pill_response.m4_resposta, "M4")) {
+      corpus += `${line}\n`;
     }
   }
 
@@ -380,12 +412,12 @@ Deno.serve(async (req) => {
   const t0 = Date.now();
 
   // ─── ETAPA 1: DETECTOR (Haiku) ──────────────────────────────
+  // Wave 12 — flatten recursivo: m3_respostas/m4_resposta aninhados (formato novo)
+  // tinham Object.values() retornando objetos, virando "[object Object]" no .join()
   const corpus_for_detector = [
     pill_response.m2_resposta ?? "",
-    ...(pill_response.m3_respostas ? Object.values(pill_response.m3_respostas) : []),
-    ...(pill_response.m4_resposta && typeof pill_response.m4_resposta === "object"
-      ? Object.values(pill_response.m4_resposta as Record<string, unknown>).filter((v): v is string => typeof v === "string")
-      : []),
+    ...(pill_response.m3_respostas ? extractStringsRecursive(pill_response.m3_respostas) : []),
+    ...(pill_response.m4_resposta ? extractStringsRecursive(pill_response.m4_resposta) : []),
   ].filter(Boolean).join("\n\n");
 
   const detector = await detectPatternLLM(corpus_for_detector, pill_id, anthropic);
