@@ -11,6 +11,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import type { PillId, LineId, ILValue } from "../_shared/ipe_types.ts";
 
+const DEPLOY_FINGERPRINT = "d816b72";
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -276,6 +278,7 @@ async function handleSelectQuestionnaireVariations(
 // ─────────────────────────────────────────
 
 async function handler(req: Request): Promise<Response> {
+  console.log("[ipe-variation-selector] deploy_fingerprint:", DEPLOY_FINGERPRINT);
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
