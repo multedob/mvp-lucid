@@ -57,6 +57,11 @@ interface PillResponse {
 
 // ─── Parse JSON do Sonnet ─────────────────────────────────────────
 
+// Wave 12 — normaliza string pra comparação semântica (lower + trim + sem pontuação final)
+function normalizeForCompare(s: string): string {
+  return s.toLowerCase().replace(/[.…!?]+\s*$/u, "").trim();
+}
+
 function parseEcoJsonV2c2(raw: string): EcoStructured | null {
   if (!raw) return null;
   let candidate = raw.trim();
@@ -74,11 +79,39 @@ function parseEcoJsonV2c2(raw: string): EcoStructured | null {
   if (parsed.eco_lines.length > 6) return null;
   if (!VALID_HINTS.includes(parsed.operator_hint)) return null;
 
-  return {
-    eco_lines: parsed.eco_lines.map((l: string) => l.trim()),
-    microtitle: typeof parsed.microtitle === "string" && parsed.microtitle.trim()
+  // Wave 12 — pós-processamento anti-repetição (LLM não respeita prompt sozinho)
+  let eco_lines: string[] = parsed.eco_lines.map((l: string) => l.trim());
+  let microtitle: string | null =
+    typeof parsed.microtitle === "string" && parsed.microtitle.trim()
       ? parsed.microtitle.trim().toLowerCase()
-      : null,
+      : null;
+
+  // 1. Remove eco_lines duplicadas consecutivas (ex: ["recusa.", "recusa.", ...])
+  const dedup_lines: string[] = [];
+  for (const line of eco_lines) {
+    const prev = dedup_lines[dedup_lines.length - 1];
+    if (prev === undefined || normalizeForCompare(prev) !== normalizeForCompare(line)) {
+      dedup_lines.push(line);
+    } else {
+      console.warn("[eco] removed consecutive duplicate line:", line);
+    }
+  }
+  eco_lines = dedup_lines;
+
+  // 2. Se microtitle == primeira linha (após normalização), zera microtitle
+  // (sistema renderiza microtitle ANTES de eco_lines — repetir gera "X / X / ...")
+  if (microtitle && eco_lines.length > 0
+      && normalizeForCompare(microtitle) === normalizeForCompare(eco_lines[0])) {
+    console.warn("[eco] microtitle == first line, dropping microtitle:", microtitle);
+    microtitle = null;
+  }
+
+  // 3. Sanidade: precisa sobrar pelo menos 1 linha após dedupe
+  if (eco_lines.length === 0) return null;
+
+  return {
+    eco_lines,
+    microtitle,
     operator_hint: parsed.operator_hint,
     node_resonance_used: parsed.node_resonance_used === true,
   };
