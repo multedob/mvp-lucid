@@ -1,8 +1,9 @@
 // src/pages/Context.tsx
 // Subviews inline (sem rotas separadas):
-//   → ContextCycle  — leitura salva de ciclo individual
-//   → ContextDeep   — deep reading do ciclo
-//   → ContextSystem — "How _rdwth works"
+//   → ContextCycle       — leitura salva de ciclo individual
+//   → ContextDeep        — leitura profunda do ciclo
+//   → ContextSystem      — "Como o rdwth funciona"
+//   → ContextThirdParty  — convites pra terceiros (W20.4)
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -11,54 +12,58 @@ import { getToday } from "@/lib/api";
 import { useUserName } from "@/hooks/useUserName";
 import NavBottom from "@/components/NavBottom";
 
-// ─── ContextSystem — "How _rdwth works" ──────────────────────────
+const SUPABASE_URL = "https://tomtximafvrhmuchjyqt.supabase.co";
+const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRvbXR4aW1hZnZyaG11Y2hqeXF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MjE4MzYsImV4cCI6MjA4NzI5NzgzNn0.4e7TbCSrL8fecsgKCHDBEerXO8ePd5-5QeaC6czEkzo";
+
+// ─── ContextSystem — "Como o rdwth funciona" ──────────────────────
 function ContextSystem({ onBack }: { onBack: () => void }) {
   const navigate = useNavigate();
   const ITEMS = [
     {
-      label: "What this is",
-      text: ["_rdwth maps structural patterns in how you organize experience. Not who you are — how you currently organize."],
+      label: "O que é isso",
+      text: ["O rdwth mapeia padrões estruturais de como você organiza experiência. Não quem você é — como você organiza no momento."],
     },
     {
-      label: "Reading",
-      text: ["Each cycle produces a structural reading based on your responses. The reading describes predominant patterns — not identity, not diagnosis, not direction."],
+      label: "Leitura",
+      text: ["Cada ciclo produz uma leitura estrutural baseada nas suas respostas. A leitura descreve padrões predominantes — não identidade, não diagnóstico, não direção."],
     },
     {
-      label: "Cycles",
-      text: ["A cycle is a complete set of responses. Each cycle is independent. Over time, recurring patterns become visible. Recurrence is observed, not prescribed."],
+      label: "Ciclos",
+      text: ["Um ciclo é um conjunto completo de respostas. Cada ciclo é independente. Com o tempo, padrões recorrentes ficam visíveis. A recorrência é observada, não prescrita."],
     },
     {
-      label: "Provisional nature",
-      text: ["A single reading is a hypothesis, not a conclusion. It becomes more legible over time."],
+      label: "Natureza provisória",
+      text: ["Uma única leitura é hipótese, não conclusão. Vai ficando mais legível ao longo do tempo."],
     },
     {
-      label: "Why language, not numbers",
-      text: ["Numbers don't add clarity here — they add noise. The interface shows language because structural patterns read better as words than as scores."],
+      label: "Por que linguagem, não números",
+      text: ["Números não trazem clareza aqui — trazem ruído. A interface mostra linguagem porque padrões estruturais se leem melhor em palavras do que em pontuação."],
     },
     {
       label: "Reed",
       text: [
-        "Reed translates structural output into language. He does not improvise — responses are derived from the structural reading of your cycle, not from your raw responses.",
-        "He draws on a curated library of works in psychology, philosophy, and organizational theory. He does not access the internet. He does not generate opinion.",
+        "Reed traduz a saída estrutural em linguagem. Ele não improvisa — as respostas vêm da leitura estrutural do seu ciclo, não das suas respostas brutas.",
+        "Ele usa uma biblioteca curada de obras de psicologia, filosofia e teoria organizacional. Ele não acessa a internet. Ele não gera opinião.",
       ],
     },
     {
-      label: "No direction",
-      text: ["The system does not suggest what to do with what it shows. The reading belongs to you. The interpretation belongs to you."],
+      label: "Sem direção",
+      text: ["O sistema não sugere o que você deve fazer com o que mostra. A leitura é sua. A interpretação é sua.",
+      ],
     },
   ];
 
   return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · system</span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · sistema</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
 
       <div className="r-scroll" style={{ padding: "28px 24px 24px", display: "flex", flexDirection: "column", gap: 24 }}>
         <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 9, color: "var(--r-accent)", letterSpacing: "0.12em" }}>
-          How this works
+          Como o rdwth funciona
         </div>
 
         {ITEMS.map(item => (
@@ -79,7 +84,7 @@ function ContextSystem({ onBack }: { onBack: () => void }) {
       <div style={{ height: 52, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, flexShrink: 0 }}>
         <span onClick={onBack} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
         <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-ghost)" }}>|</span>
-        <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-ghost)", letterSpacing: "0.08em" }}>Context</span>
+        <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-ghost)", letterSpacing: "0.08em" }}>Contexto</span>
       </div>
     </div>
   );
@@ -91,14 +96,14 @@ function ContextCycle({ cycle, onBack, userName }: { cycle: CycleData; onBack: (
   return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · context · {cycle.id}</span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · contexto · {cycle.id}</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
 
       <div className="r-scroll" style={{ padding: "28px 24px 16px", display: "flex", flexDirection: "column", gap: 24 }}>
         <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 9, color: "var(--r-accent)", letterSpacing: "0.12em" }}>
-          {cycle.id} — saved reading
+          {cycle.id} — leitura salva
         </div>
         <div style={{ fontFamily: "var(--r-font-ed)", fontWeight: 800, fontSize: 16, lineHeight: 1.7, color: "var(--r-text)" }}>
           {cycle.description}
@@ -115,7 +120,7 @@ function ContextCycle({ cycle, onBack, userName }: { cycle: CycleData; onBack: (
       <div style={{ height: 52, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, flexShrink: 0 }}>
         <span onClick={onBack} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
         <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-ghost)" }}>|</span>
-        <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-ghost)", letterSpacing: "0.08em" }}>Context</span>
+        <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-ghost)", letterSpacing: "0.08em" }}>Contexto</span>
       </div>
     </div>
   );
@@ -127,14 +132,14 @@ function ContextDeep({ cycle, onBack, userName }: { cycle: CycleData; onBack: ()
   return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · context · {cycle.id}</span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · contexto · {cycle.id}</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
 
       <div className="r-scroll" style={{ padding: "28px 24px 16px", display: "flex", flexDirection: "column", gap: 24 }}>
         <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 9, color: "var(--r-accent)", letterSpacing: "0.12em" }}>
-          {cycle.id} — deep reading
+          {cycle.id} — leitura profunda
         </div>
         <div style={{ fontFamily: "var(--r-font-ed)", fontWeight: 800, fontSize: 16, lineHeight: 1.7, color: "var(--r-text)" }}>
           {cycle.deep}
@@ -151,7 +156,7 @@ function ContextDeep({ cycle, onBack, userName }: { cycle: CycleData; onBack: ()
       <div style={{ height: 52, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, flexShrink: 0 }}>
         <span onClick={onBack} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
         <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-ghost)" }}>|</span>
-        <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-ghost)", letterSpacing: "0.08em" }}>Context</span>
+        <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-ghost)", letterSpacing: "0.08em" }}>Contexto</span>
       </div>
     </div>
   );
@@ -159,10 +164,333 @@ function ContextDeep({ cycle, onBack, userName }: { cycle: CycleData; onBack: ()
 
 // ─── Types ────────────────────────────────────────────────────────
 interface CycleData {
-  id: string;
+  id: string;          // display "C1", "C2", etc
+  ipeCycleId: string;  // uuid real do ipe_cycles
   cycleNumber: number;
   description: string;
   deep: string;
+}
+
+interface ThirdPartyInvite {
+  id: string;
+  ipe_cycle_id: string;
+  token: string;
+  status: "pending" | "submitted" | "revoked" | "expired";
+  responder_email: string | null;
+  responder_name: string | null;
+  reveal_identity: boolean | null;
+  user_pronoun: string | null;
+  question_set: string | null;
+  created_at: string;
+  submitted_at: string | null;
+}
+
+interface ThirdPartyResponse {
+  invite_id: string;
+  question_id: string;
+  scale_value: number | null;
+  open_text: string | null;
+  episode_text: string | null;
+}
+
+interface ThirdPartyMiniInsight {
+  invite_id: string;
+  insight_text: string;
+}
+
+// ─── ContextThirdParty — convites pra terceiros (W20.4) ──────────
+function ContextThirdParty({ ipeCycleId, onBack, userName }: {
+  ipeCycleId: string;
+  onBack: () => void;
+  userName: string | null;
+}) {
+  const navigate = useNavigate();
+  const [invites, setInvites] = useState<ThirdPartyInvite[]>([]);
+  const [responses, setResponses] = useState<Record<string, ThirdPartyResponse[]>>({});
+  const [insights, setInsights] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [selectedPronoun, setSelectedPronoun] = useState<"ela" | "ele" | "elu">("ela");
+  const [createdUrl, setCreatedUrl] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(null); // invite_id expandido
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const loadAll = async () => {
+    setLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const headers = { Authorization: `Bearer ${session.access_token}`, apikey: ANON_KEY };
+
+      const invR = await fetch(
+        `${SUPABASE_URL}/rest/v1/third_party_invites?ipe_cycle_id=eq.${ipeCycleId}&order=created_at.desc`,
+        { headers }
+      );
+      const invs: ThirdPartyInvite[] = await invR.json();
+      setInvites(invs);
+
+      // Carrega responses + insights de invites com status submitted
+      const submittedIds = invs.filter(i => i.status === "submitted").map(i => i.id);
+      if (submittedIds.length > 0) {
+        const idsCsv = submittedIds.map(id => `"${id}"`).join(",");
+        const respR = await fetch(
+          `${SUPABASE_URL}/rest/v1/third_party_responses?invite_id=in.(${idsCsv})`,
+          { headers }
+        );
+        const resps: ThirdPartyResponse[] = await respR.json();
+        const grouped: Record<string, ThirdPartyResponse[]> = {};
+        for (const r of resps) {
+          if (!grouped[r.invite_id]) grouped[r.invite_id] = [];
+          grouped[r.invite_id].push(r);
+        }
+        setResponses(grouped);
+
+        const insR = await fetch(
+          `${SUPABASE_URL}/rest/v1/third_party_mini_insights?invite_id=in.(${idsCsv})`,
+          { headers }
+        );
+        const ins: ThirdPartyMiniInsight[] = await insR.json();
+        const insMap: Record<string, string> = {};
+        for (const i of ins) insMap[i.invite_id] = i.insight_text;
+        setInsights(insMap);
+      }
+    } catch (err) {
+      console.error("[ContextThirdParty] load error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadAll(); }, [ipeCycleId]);
+
+  const createInvite = async () => {
+    setErrorMsg("");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const r = await fetch(`${SUPABASE_URL}/functions/v1/third-party-create-invite`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: ANON_KEY,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ipe_cycle_id: ipeCycleId, user_pronoun: selectedPronoun }),
+      });
+      const d = await r.json();
+      if (!r.ok) { setErrorMsg(d.error ?? "erro"); return; }
+      setCreatedUrl(d.url);
+      // Copia automaticamente
+      try { await navigator.clipboard.writeText(d.url); } catch {}
+      await loadAll();
+    } catch (err: any) {
+      setErrorMsg(err?.message ?? "erro");
+    }
+  };
+
+  const revokeInvite = async (inviteId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      await fetch(
+        `${SUPABASE_URL}/rest/v1/third_party_invites?id=eq.${inviteId}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            apikey: ANON_KEY,
+            "Content-Type": "application/json",
+            Prefer: "return=minimal",
+          },
+          body: JSON.stringify({ status: "revoked", revoked_at: new Date().toISOString() }),
+        }
+      );
+      await loadAll();
+    } catch (err) {
+      console.error("[ContextThirdParty] revoke error:", err);
+    }
+  };
+
+  const copyUrl = async (token: string) => {
+    const url = `https://mvp-lucid.lovable.app/third-party/${token}`;
+    try { await navigator.clipboard.writeText(url); } catch {}
+  };
+
+  const statusLabel = (s: string) =>
+    s === "pending" ? "aguardando" :
+    s === "submitted" ? "respondido" :
+    s === "revoked" ? "cancelado" :
+    s === "expired" ? "expirado" : s;
+
+  const activeCount = invites.filter(i => i.status === "pending" || i.status === "submitted").length;
+  const submittedCount = invites.filter(i => i.status === "submitted").length;
+
+  return (
+    <div className="r-screen">
+      <div className="r-header">
+        <span className="r-header-label">
+          <span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · contexto · terceiros
+        </span>
+        <span className="r-header-date">{getToday()}</span>
+      </div>
+      <div className="r-line" />
+
+      <div className="r-scroll" style={{ padding: "28px 24px 16px", display: "flex", flexDirection: "column", gap: 20 }}>
+        <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10, color: "var(--r-muted)", letterSpacing: "0.04em", lineHeight: 1.7 }}>
+          {userName
+            ? `${userName}, convide até 8 pessoas próximas que conhecem você. As respostas delas alimentam suas leituras com perspectiva externa.`
+            : "Convide até 8 pessoas próximas. As respostas delas alimentam suas leituras com perspectiva externa."}
+        </div>
+
+        <div style={{ height: 1, background: "var(--r-ghost)", opacity: 0.4 }} />
+
+        {/* Painel criar */}
+        {!creating && activeCount < 8 && (
+          <div onClick={() => { setCreating(true); setCreatedUrl(null); }}
+            style={{
+              fontFamily: "var(--r-font-sys)", fontSize: 13, padding: "12px 16px",
+              background: "var(--r-text)", color: "var(--r-bg)",
+              cursor: "pointer", textAlign: "center", letterSpacing: "0.04em",
+              maxWidth: 400, marginLeft: "auto", marginRight: "auto", width: "100%",
+            }}>
+            + novo convite
+          </div>
+        )}
+
+        {creating && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "12px 16px", border: "1px solid var(--r-ghost)", maxWidth: 480, marginLeft: "auto", marginRight: "auto", width: "100%" }}>
+            {!createdUrl && (
+              <>
+                <div className="r-sub">como você quer ser referida pelos terceiros?</div>
+                <div style={{ display: "flex", gap: 16, justifyContent: "center" }}>
+                  {(["ela", "ele", "elu"] as const).map(p => (
+                    <span key={p} onClick={() => setSelectedPronoun(p)}
+                      style={{
+                        fontFamily: "var(--r-font-sys)", fontSize: 13,
+                        padding: "6px 14px", borderRadius: 4, cursor: "pointer",
+                        border: selectedPronoun === p ? "1px solid var(--r-text)" : "1px solid var(--r-ghost)",
+                        color: selectedPronoun === p ? "var(--r-text)" : "var(--r-muted)",
+                      }}>
+                      {p}
+                    </span>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", marginTop: 8 }}>
+                  <span onClick={() => setCreating(false)} style={{ fontFamily: "var(--r-font-sys)", fontSize: 12, color: "var(--r-muted)", cursor: "pointer" }}>cancelar</span>
+                  <span onClick={createInvite} style={{ fontFamily: "var(--r-font-sys)", fontSize: 12, color: "var(--r-text)", cursor: "pointer", letterSpacing: "0.04em" }}>gerar link →</span>
+                </div>
+                {errorMsg && <div style={{ color: "var(--terracota, #b85a3e)", fontSize: 12 }}>{errorMsg}</div>}
+              </>
+            )}
+            {createdUrl && (
+              <>
+                <div className="r-sub">link gerado e copiado pra área de transferência:</div>
+                <div style={{ fontFamily: "monospace", fontSize: 11, padding: 8, background: "var(--r-bg)", border: "1px dashed var(--r-ghost)", wordBreak: "break-all" }}>
+                  {createdUrl}
+                </div>
+                <div className="r-sub" style={{ fontStyle: "italic" }}>
+                  envie esse link pra quem você quer que responda. Se enviar pessoalmente (whatsapp, dm, etc), o terceiro fica sabendo que veio de você.
+                </div>
+                <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+                  <span onClick={() => { setCreating(false); setCreatedUrl(null); }} style={{ fontFamily: "var(--r-font-sys)", fontSize: 12, color: "var(--r-text)", cursor: "pointer" }}>fechar</span>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {activeCount >= 8 && !creating && (
+          <div className="r-sub" style={{ textAlign: "center", fontStyle: "italic" }}>
+            limite de 8 convites por ciclo atingido.
+          </div>
+        )}
+
+        {/* Lista de invites */}
+        {loading && <div className="r-sub" style={{ textAlign: "center" }}>carregando...</div>}
+
+        {!loading && invites.length === 0 && (
+          <div className="r-sub" style={{ textAlign: "center", padding: "20px 0" }}>
+            nenhum convite ainda. clique em "novo convite" pra começar.
+          </div>
+        )}
+
+        {!loading && invites.length > 0 && (
+          <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 9, color: "var(--r-ghost)", letterSpacing: "0.12em", marginTop: 8 }}>
+            {submittedCount} respondidos · {activeCount} ativos · {invites.length} no total
+          </div>
+        )}
+
+        {!loading && invites.map(inv => {
+          const respCount = (responses[inv.id] ?? []).length;
+          const expectedTotal = 6; // calibration + 5 perguntas
+          const showDetails = expanded === inv.id;
+          const canShowResponses = inv.status === "submitted" && inv.reveal_identity === true;
+
+          return (
+            <div key={inv.id} style={{ borderTop: "1px solid var(--r-ghost)", paddingTop: 14, paddingBottom: 4 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 12, color: "var(--r-text)", letterSpacing: "0.04em" }}>
+                    {inv.responder_name && inv.reveal_identity === true ? inv.responder_name : "anônimo"}
+                  </div>
+                  <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 10, color: "var(--r-muted)", marginTop: 2 }}>
+                    {statusLabel(inv.status)}
+                    {inv.status === "submitted" && respCount > 0 && ` · ${respCount}/${expectedTotal} respostas`}
+                    {inv.question_set && ` · grupo ${inv.question_set === "alpha" ? "α" : "β"}`}
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  {inv.status === "pending" && (
+                    <>
+                      <span onClick={() => copyUrl(inv.token)} style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--r-muted)", cursor: "pointer" }} title="copiar link">copiar link</span>
+                      <span onClick={() => revokeInvite(inv.id)} style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--terracota, #b85a3e)", cursor: "pointer" }}>revogar</span>
+                    </>
+                  )}
+                  {canShowResponses && (
+                    <span onClick={() => setExpanded(showDetails ? null : inv.id)} style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--r-text)", cursor: "pointer", letterSpacing: "0.04em" }}>
+                      {showDetails ? "fechar" : "ver respostas"}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {showDetails && canShowResponses && (
+                <div style={{ marginTop: 12, padding: "12px 14px", background: "rgba(0,0,0,0.02)", borderLeft: "1px solid var(--r-ghost)" }}>
+                  {(responses[inv.id] ?? []).map(r => (
+                    <div key={r.question_id} style={{ marginBottom: 12, fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--r-text)" }}>
+                      <div style={{ color: "var(--r-muted)", letterSpacing: "0.06em", marginBottom: 4 }}>
+                        {r.question_id}
+                        {r.scale_value !== null && ` · escala: ${r.scale_value}/5`}
+                      </div>
+                      {r.episode_text && <div style={{ marginBottom: 4, lineHeight: 1.5 }}>{r.episode_text}</div>}
+                      {r.open_text && <div style={{ fontStyle: "italic", color: "var(--r-muted)" }}>{r.open_text}</div>}
+                    </div>
+                  ))}
+                  {insights[inv.id] && (
+                    <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid var(--r-ghost)" }}>
+                      <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 9, color: "var(--r-muted)", letterSpacing: "0.12em", marginBottom: 6 }}>
+                        mini-eco devolvido a essa pessoa
+                      </div>
+                      <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 13, lineHeight: 1.6, color: "var(--r-text)" }}>
+                        {insights[inv.id]}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="r-line" />
+      <div style={{ height: 52, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, flexShrink: 0 }}>
+        <span onClick={onBack} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
+        <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-ghost)" }}>|</span>
+        <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-ghost)", letterSpacing: "0.08em" }}>Contexto</span>
+      </div>
+    </div>
+  );
 }
 
 // ─── Context principal ────────────────────────────────────────────
@@ -174,6 +502,7 @@ export default function Context() {
   const [showDeep, setShowDeep] = useState(false);
   const [showSystem, setShowSystem] = useState(false);
   const [showCycle, setShowCycle] = useState(false);
+  const [showThirdParty, setShowThirdParty] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { loadCycles(); }, []);
@@ -208,6 +537,7 @@ export default function Context() {
           : text;
         return {
           id: `C${ipe.cycle_number}`,
+          ipeCycleId: ipe.id,
           cycleNumber: ipe.cycle_number,
           description,
           deep,
@@ -226,18 +556,27 @@ export default function Context() {
   if (showSystem) return <ContextSystem onBack={() => setShowSystem(false)} />;
   if (showDeep && cycles[selectedIdx]) return <ContextDeep cycle={cycles[selectedIdx]} onBack={() => setShowDeep(false)} userName={userName} />;
   if (showCycle && cycles[selectedIdx]) return <ContextCycle cycle={cycles[selectedIdx]} onBack={() => setShowCycle(false)} userName={userName} />;
+  if (showThirdParty && cycles[selectedIdx]) {
+    // Pega ipe_cycle_id real (CycleData.id é tipo "C1"; precisa do uuid).
+    // ipeCyclesRef guardado em closure: vamos buscar de novo.
+    return <ContextThirdParty
+      ipeCycleId={cycles[selectedIdx].ipeCycleId}
+      onBack={() => setShowThirdParty(false)}
+      userName={userName}
+    />;
+  }
 
   // Empty state
   if (!loading && cycles.length === 0) return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · context</span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · contexto</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 24px 40px" }}>
         <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-ghost)", letterSpacing: "0.06em", lineHeight: 1.8 }}>
-          No readings yet.<br />Complete a questionnaire to begin.
+          Nenhuma leitura ainda.<br />Complete um questionário pra começar.
         </div>
       </div>
       <NavBottom active="context" />
@@ -251,7 +590,7 @@ export default function Context() {
 
       {/* Header */}
       <div className="r-header">
-        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · context</span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · contexto</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -283,7 +622,7 @@ export default function Context() {
             >
               <div style={{ width: 1, height: 12, background: "var(--r-accent)", flexShrink: 0 }} />
               <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-sub)", letterSpacing: "0.06em" }}>
-                Deep reading
+                leitura profunda
               </span>
             </div>
           </div>
@@ -299,7 +638,7 @@ export default function Context() {
           {/* Cycles */}
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 9, color: "var(--r-ghost)", letterSpacing: "0.12em", marginBottom: 10 }}>
-              Cycles
+              Ciclos
             </div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ display: "flex", gap: 20 }}>
@@ -324,14 +663,14 @@ export default function Context() {
                 ))}
               </div>
 
-              {/* Questionnaire */}
+              {/* Terceiros */}
               <div
-                onClick={() => navigate("/questionnaire")}
+                onClick={() => setShowThirdParty(true)}
                 style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
               >
                 <div style={{ width: 1, height: 12, background: "var(--r-ghost)", flexShrink: 0 }} />
                 <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-muted)", letterSpacing: "0.06em" }}>
-                  questionnaire
+                  terceiros
                 </span>
               </div>
             </div>
@@ -339,14 +678,14 @@ export default function Context() {
 
           <div style={{ height: 1, background: "var(--r-ghost)", opacity: 0.4, marginBottom: 16 }} />
 
-          {/* How _rdwth works */}
+          {/* Como o rdwth funciona */}
           <div
             onClick={() => setShowSystem(true)}
             style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
           >
             <div style={{ width: 1, height: 12, background: "var(--r-ghost)", flexShrink: 0 }} />
             <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-muted)", letterSpacing: "0.06em" }}>
-              How _rdwth works
+              como o rdwth funciona
             </span>
           </div>
         </div>

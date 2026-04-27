@@ -14,7 +14,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.27.3";
 
-const DEPLOY_FINGERPRINT = "wave14-deep-reading-v3.2-flex-limit";
+const DEPLOY_FINGERPRINT = "wave14-deep-reading-v4-with-third-party";
 
 const NODES_TO_SELECT = 4; // 3-5 conforme decisão DOC
 
@@ -120,12 +120,15 @@ Exemplo de tom ERRADO (apontador, mecânico, factual):
 
 ═══ INPUT QUE VOCÊ RECEBE ═══
 
-Você recebe respostas estruturadas em formato:
+Você recebe três blocos possíveis (alguns podem estar ausentes em ciclos parciais):
 
-[FONTE]
-trecho
+1. O QUE A PESSOA DISSE NAS PILLS — fragmentos das respostas dela em pills (M2/M3/M4)
+2. O QUE A PESSOA DISSE NO QUESTIONÁRIO — respostas dos blocos do questionário
+3. O QUE PESSOAS PRÓXIMAS DESCREVERAM — perspectivas de terceiros (familiares, amigos, colegas) que receberam um questionário separado sobre como veem a pessoa
 
-A FONTE serve só para você situar de onde vem o material. NÃO mencione "[Pill PII - M3]" no texto final. Quando precisar referir, use linguagem natural ("no que você falou sobre...").
+Ao integrar terceiros: TRATE como observação externa, não como verdade. Use linguagem como "alguém próximo descreveu...", "outras pessoas viram...", "do lado de fora foi observado que...". NUNCA atribua diagnóstico aos terceiros nem cite o nome deles. Triangule observação externa com o que a pessoa disse — se há convergência, nomeie. Se há contraste, mostre sem julgar quem está "certo".
+
+A FONTE serve pra situar de onde vem o material. NÃO mencione tags tipo "[Pill PII - M3]" no texto final. Quando precisar referir, use linguagem natural ("no que você falou sobre...", "alguém próximo apontou...").
 
 ═══ COMPRIMENTO ═══
 
@@ -292,10 +295,52 @@ Deno.serve(async (req) => {
     console.warn("[lucid-deep-reading] questionnaire_responses fetch failed (table may not exist yet):", err);
   }
 
+  // Wave 14 v4 — busca respostas de terceiros (W20.4)
+  let thirdPartyCorpus = "";
+  try {
+    // Busca invites submitted desse cycle
+    const { data: tpInvites } = await admin
+      .from("third_party_invites")
+      .select("id, question_set, reveal_identity, responder_name")
+      .eq("ipe_cycle_id", ipe_cycle_id)
+      .eq("status", "submitted");
+    if (tpInvites && tpInvites.length > 0) {
+      const inviteIds = tpInvites.map((i: any) => i.id);
+      const { data: tpResponses } = await admin
+        .from("third_party_responses")
+        .select("invite_id, question_id, scale_value, open_text, episode_text")
+        .in("invite_id", inviteIds);
+      if (tpResponses && tpResponses.length > 0) {
+        const sections: string[] = [];
+        for (const inv of tpInvites) {
+          const myResp = (tpResponses as any[]).filter(r => r.invite_id === inv.id);
+          if (myResp.length === 0) continue;
+          const label = inv.reveal_identity && inv.responder_name
+            ? `Pessoa próxima (${inv.responder_name})`
+            : `Pessoa próxima (anônimo)`;
+          const parts: string[] = [];
+          for (const r of myResp) {
+            const bits: string[] = [];
+            if (r.episode_text) bits.push(r.episode_text);
+            if (r.scale_value !== null && r.scale_value !== undefined) bits.push(`(escala ${r.scale_value}/5)`);
+            if (r.open_text) bits.push(r.open_text);
+            if (bits.length) parts.push(bits.join(" "));
+          }
+          if (parts.length) {
+            sections.push(`[${label}]\n${parts.join(" | ")}`);
+          }
+        }
+        thirdPartyCorpus = sections.join("\n\n");
+      }
+    }
+  } catch (err) {
+    console.warn("[lucid-deep-reading] third party fetch failed:", err);
+  }
+
   const pillsCorpus = buildCorpusFromPills((pills ?? []) as PillResponseRow[]);
   const qCorpus = buildCorpusFromQuestionnaire(questionnaire);
 
-  if (!pillsCorpus && !qCorpus) {
+  if (!pillsCorpus && !qCorpus && !thirdPartyCorpus) {
     return json({
       ok: true,
       skipped: "no data yet",
@@ -303,8 +348,13 @@ Deno.serve(async (req) => {
     });
   }
 
-  const corpus = [pillsCorpus, qCorpus].filter(Boolean).join("\n\n");
-  console.log(`[lucid-deep-reading] corpus length: ${corpus.length}`);
+  // Monta corpus combinado, separando seções pra Sonnet entender origem
+  const sections: string[] = [];
+  if (pillsCorpus) sections.push(`=== O QUE A PESSOA DISSE NAS PILLS ===\n${pillsCorpus}`);
+  if (qCorpus) sections.push(`=== O QUE A PESSOA DISSE NO QUESTIONÁRIO ===\n${qCorpus}`);
+  if (thirdPartyCorpus) sections.push(`=== O QUE PESSOAS PRÓXIMAS DESCREVERAM (perspectiva externa) ===\n${thirdPartyCorpus}`);
+  const corpus = sections.join("\n\n");
+  console.log(`[lucid-deep-reading] corpus length: ${corpus.length} (third_party: ${thirdPartyCorpus.length} chars)`);
 
   // Wave 14 v3 — seleção silenciosa de nodes do RAG (3-5 nodes filosóficos)
   const cgg = await fetchCgg(supabase, user_id);
