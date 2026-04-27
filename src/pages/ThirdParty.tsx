@@ -247,11 +247,11 @@ export default function ThirdParty() {
 
   // ─── RENDER ────────────────────────────────────────────────
 
-  // Wordmark estático _rdwth (reusa estilo do app)
+  // Wordmark estático rdwth (reusa estilo do app, sem underscore)
   const Wordmark = () => (
     <div style={{ display: "flex", alignItems: "center", gap: 0, lineHeight: 1 }}>
       <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: 700, fontSize: 24, color: "var(--r-text)", letterSpacing: "-0.02em" }}>
-        _rdwth
+        rdwth
       </span>
     </div>
   );
@@ -298,7 +298,7 @@ export default function ThirdParty() {
   const Header = ({ subtitle }: { subtitle?: string }) => (
     <>
       <div className="r-header">
-        <span className="r-header-label">_rdwth{subtitle ? ` · ${subtitle}` : ""}</span>
+        <span className="r-header-label">rdwth{subtitle ? ` · ${subtitle}` : ""}</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -346,7 +346,7 @@ export default function ThirdParty() {
         <Header />
         <div className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 24 }}>
           <div className="r-question" style={{ fontSize: 18 }}>
-            {data?.user_name} te pediu pra responder algumas perguntas sobre como você o/a vê.
+            {data?.user_name} te pediu pra responder algumas perguntas sobre como você vê {data?.user_name}.
           </div>
           <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 14, lineHeight: 1.75, color: "var(--r-text)", maxWidth: 600, marginLeft: "auto", marginRight: "auto" }}>
             O <strong>rdwth</strong> é uma ferramenta de auto-conhecimento estrutural. Ajuda a pessoa a observar padrões de como ela organiza experiência — não é diagnóstico, não é coach, não prescreve nada. É uma leitura.
@@ -575,7 +575,7 @@ export default function ThirdParty() {
                 textDecoration: "none",
               }}
             >
-              conhecer o _rdwth →
+              conhecer o rdwth →
             </a>
           </div>
         </div>
