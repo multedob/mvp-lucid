@@ -13,14 +13,15 @@ interface NavBottomProps {
 export default function NavBottom({ active = 'none' }: NavBottomProps) {
   const navigate = useNavigate()
 
+  // labels visíveis em PT-BR; "slug" = identificador interno (mesmo do prop "active") pra preservar API.
   const leftItems = [
-    { label: 'reed',          path: '/reed' },
-    { label: 'pills',         path: '/pills' },
-    { label: 'questionnaire', path: '/questionnaire' },
+    { label: 'reed',          slug: 'reed',          path: '/reed' },
+    { label: 'pills',         slug: 'pills',         path: '/pills' },
+    { label: 'questionário',  slug: 'questionnaire', path: '/questionnaire' },
   ]
 
   const rightItems = [
-    { label: 'context', path: '/context' },
+    { label: 'contexto', slug: 'context', path: '/context' },
   ]
 
   return (
@@ -33,17 +34,17 @@ export default function NavBottom({ active = 'none' }: NavBottomProps) {
         padding: '0 24px',
         flexShrink: 0,
       }}>
-        {/* Left group: reed · pills · questionnaire */}
+        {/* Left group: reed · pills · questionário */}
         <div style={{ display: 'flex', gap: 28 }}>
-          {leftItems.map(({ label, path }) => (
+          {leftItems.map(({ label, slug, path }) => (
             <span
-              key={label}
+              key={slug}
               onClick={() => navigate(path)}
               style={{
                 fontFamily: 'var(--r-font-sys)',
-                fontWeight: label === active ? 400 : 300,
+                fontWeight: slug === active ? 400 : 300,
                 fontSize: 11,
-                color: label === active ? 'var(--r-accent)' : 'var(--r-muted)',
+                color: slug === active ? 'var(--r-accent)' : 'var(--r-muted)',
                 letterSpacing: '0.08em',
                 cursor: 'pointer',
               }}
@@ -53,17 +54,17 @@ export default function NavBottom({ active = 'none' }: NavBottomProps) {
           ))}
         </div>
 
-        {/* Right group: context + settings dot */}
+        {/* Right group: contexto + settings dot */}
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 28 }}>
-          {rightItems.map(({ label, path }) => (
+          {rightItems.map(({ label, slug, path }) => (
             <span
-              key={label}
+              key={slug}
               onClick={() => navigate(path)}
               style={{
                 fontFamily: 'var(--r-font-sys)',
-                fontWeight: label === active ? 400 : 300,
+                fontWeight: slug === active ? 400 : 300,
                 fontSize: 11,
-                color: label === active ? 'var(--r-accent)' : 'var(--r-muted)',
+                color: slug === active ? 'var(--r-accent)' : 'var(--r-muted)',
                 letterSpacing: '0.08em',
                 cursor: 'pointer',
               }}
