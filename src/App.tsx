@@ -7,7 +7,6 @@ import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Splash from "./pages/Splash";
 import Auth from "./pages/Auth";
-import ResetPassword from "./pages/ResetPassword";
 import Home from "./pages/Home";
 import OnboardingLetter from "./pages/OnboardingLetter";
 import AgeCheck from "./pages/AgeCheck";
@@ -21,6 +20,7 @@ import Settings from "./pages/Settings";
 import Questionnaire from "./pages/Questionnaire";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
+import ThirdParty from "./pages/ThirdParty";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -140,7 +140,6 @@ const App = () => (
         <Routes>
           <Route path="/" element={<RootRedirect />} />
           <Route path="/auth" element={<Auth />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/age" element={<AgeCheck />} />
           <Route path="/consent" element={<Consent />} />
           <Route path="/letter" element={<OnboardingLetter />} />
@@ -154,6 +153,8 @@ const App = () => (
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
+          {/* W20.2 — Third-party questionnaire (público, sem auth do app) */}
+          <Route path="/third-party/:token" element={<ThirdParty />} />
           <Route path="/test" element={<Navigate to="/home" replace />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
