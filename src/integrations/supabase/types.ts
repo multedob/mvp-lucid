@@ -1001,6 +1001,7 @@ export type Database = {
           created_at: string
           id: string
           ipe_cycle_id: string
+          question_set: string | null
           responder_email: string | null
           responder_name: string | null
           reveal_identity: boolean | null
@@ -1009,11 +1010,13 @@ export type Database = {
           submitted_at: string | null
           token: string
           user_id: string
+          user_pronoun: string | null
         }
         Insert: {
           created_at?: string
           id?: string
           ipe_cycle_id: string
+          question_set?: string | null
           responder_email?: string | null
           responder_name?: string | null
           reveal_identity?: boolean | null
@@ -1022,11 +1025,13 @@ export type Database = {
           submitted_at?: string | null
           token: string
           user_id: string
+          user_pronoun?: string | null
         }
         Update: {
           created_at?: string
           id?: string
           ipe_cycle_id?: string
+          question_set?: string | null
           responder_email?: string | null
           responder_name?: string | null
           reveal_identity?: boolean | null
@@ -1035,6 +1040,7 @@ export type Database = {
           submitted_at?: string | null
           token?: string
           user_id?: string
+          user_pronoun?: string | null
         }
         Relationships: [
           {
