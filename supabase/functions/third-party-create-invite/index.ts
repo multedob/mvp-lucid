@@ -6,9 +6,10 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const DEPLOY_FINGERPRINT = "w20.1-create-invite-v1";
-const MAX_INVITES_PER_CYCLE = 5;
+const DEPLOY_FINGERPRINT = "w20.2-create-invite-v2-pronoun-alphabeta";
+const MAX_INVITES_PER_CYCLE = 8;
 const APP_BASE_URL = "https://mvp-lucid.lovable.app";
+const VALID_PRONOUNS = ["ela", "ele", "elu"] as const;
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -48,8 +49,11 @@ Deno.serve(async (req) => {
   const user_id = auth_data.user.id;
 
   const body = await req.json().catch(() => ({}));
-  const { ipe_cycle_id } = body;
+  const { ipe_cycle_id, user_pronoun } = body;
   if (!ipe_cycle_id) return json({ error: "Missing ipe_cycle_id" }, 400);
+  const pronoun: string = (typeof user_pronoun === "string" && VALID_PRONOUNS.includes(user_pronoun as any))
+    ? user_pronoun
+    : "ela"; // default neutro pro feminino se não vier
 
   // Confirma cycle pertence ao user
   const { data: cycle, error: cErr } = await supabase
@@ -61,7 +65,7 @@ Deno.serve(async (req) => {
     return json({ error: "Cycle not found or unauthorized" }, 404);
   }
 
-  // Limita convites ativos por cycle
+  // Limita convites ativos por cycle (max 8)
   const { count, error: cntErr } = await supabase
     .from("third_party_invites")
     .select("id", { count: "exact", head: true })
@@ -72,6 +76,10 @@ Deno.serve(async (req) => {
     return json({ error: `Max ${MAX_INVITES_PER_CYCLE} active invites per cycle reached` }, 403);
   }
 
+  // Decide question_set rotativo (alpha/beta) baseado em quantos invites já existem.
+  // Garante cobertura de 16 linhas com 2 respondentes (1 alpha + 1 beta).
+  const question_set = ((count ?? 0) % 2 === 0) ? "alpha" : "beta";
+
   // Gera token e insere
   const newToken = crypto.randomUUID();
   const { data: insertedRows, error: insErr } = await admin
@@ -81,8 +89,10 @@ Deno.serve(async (req) => {
       user_id,
       token: newToken,
       status: "pending",
+      user_pronoun: pronoun,
+      question_set,
     }])
-    .select("id, token, created_at")
+    .select("id, token, created_at, question_set")
     .single();
   if (insErr || !insertedRows) {
     return json({ error: "Insert failed", detail: insErr?.message }, 500);
@@ -93,6 +103,8 @@ Deno.serve(async (req) => {
     token: insertedRows.token,
     url: `${APP_BASE_URL}/third-party/${insertedRows.token}`,
     created_at: insertedRows.created_at,
+    question_set: insertedRows.question_set,
+    user_pronoun: pronoun,
     debug_fingerprint: DEPLOY_FINGERPRINT,
   });
 });

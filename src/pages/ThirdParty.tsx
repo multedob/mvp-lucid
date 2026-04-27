@@ -64,6 +64,8 @@ interface ValidateResponse {
   valid: boolean;
   invite_id: string;
   user_name: string;
+  user_pronoun?: "ela" | "ele" | "elu";
+  question_set?: "alpha" | "beta";
   questions: Question[];
   existing_responses: ExistingResponse[];
   responder?: { email: string | null; name: string | null };
@@ -346,7 +348,11 @@ export default function ThirdParty() {
         <Header />
         <div className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 24 }}>
           <div className="r-question" style={{ fontSize: 18 }}>
-            {data?.user_name} te pediu pra responder algumas perguntas sobre como você vê {data?.user_name}.
+            {(() => {
+              const p = data?.user_pronoun ?? "ela";
+              const direct = p === "ela" ? "a vê" : p === "ele" ? "o vê" : `vê ${data?.user_name}`;
+              return `${data?.user_name} te pediu pra responder algumas perguntas sobre como você ${direct}.`;
+            })()}
           </div>
           <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 14, lineHeight: 1.75, color: "var(--r-text)", maxWidth: 600, marginLeft: "auto", marginRight: "auto" }}>
             O <strong>rdwth</strong> é uma ferramenta de auto-conhecimento estrutural. Ajuda a pessoa a observar padrões de como ela organiza experiência — não é diagnóstico, não é coach, não prescreve nada. É uma leitura.
@@ -358,10 +364,10 @@ export default function ThirdParty() {
             <strong>Sobre anonimato:</strong> ao final, antes de enviar suas respostas, você escolhe se {data?.user_name} pode saber que foi você quem respondeu, ou se prefere ficar anônimo/a.
           </div>
           <div className="r-sub">
-            <strong>Tempo:</strong> ~10 minutos. 6 perguntas curtas. Não tem resposta certa.
+            <strong>Tempo:</strong> ~10 minutos. 5 perguntas curtas. Não tem resposta certa.
           </div>
           <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 13, fontStyle: "italic", lineHeight: 1.7, color: "var(--r-muted)", maxWidth: 600, marginLeft: "auto", marginRight: "auto", marginTop: 16, paddingTop: 16, borderTop: "0.5px solid var(--r-ghost)" }}>
-            Sugestão: procure um lugar com calma pra responder. Sua atenção pelos próximos minutos é parte do que {data?.user_name} vai receber.
+            Sugestão: procure um lugar com calma pra responder. Sua atenção pelos próximos minutos é parte do presente que você vai dar para {data?.user_name}.
           </div>
         </div>
         <Footer onContinue={handleStartOnboarding} continueLabel="começar" />
@@ -440,10 +446,15 @@ export default function ThirdParty() {
   // ─── QUESTION (q1..q6) ────────────────────────────────────
   if (phase === "question" && currentQ) {
     const qid = currentQ.id;
-    const replaceName = (s: string) => s.replace(/\[Nome\]/g, data?.user_name ?? "ela");
+    const pronoun = data?.user_pronoun ?? "ela";
+    const adjEnd = pronoun === "ela" ? "a" : pronoun === "ele" ? "o" : "e";
+    const replaceName = (s: string) => s
+      .replace(/\[Nome\]/g, data?.user_name ?? "")
+      .replace(/\[pronome\]/g, pronoun)
+      .replace(/@/g, adjEnd);
     return (
       <div className="r-screen">
-        <Header subtitle={`pergunta ${currentQIdx + 1} de 6`} />
+        <Header subtitle={`pergunta ${currentQIdx + 1} de ${coreQuestions.length}`} />
         <div className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
           <div className="r-sub" style={{ fontStyle: "italic" }}>{replaceName(currentQ.stem)}</div>
           <div className="r-question">{replaceName(currentQ.episode_prompt)}</div>
@@ -456,9 +467,8 @@ export default function ThirdParty() {
           />
 
           <div className="r-sub" style={{ marginTop: 16 }}>{replaceName(currentQ.scale_label)}</div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 8px", maxWidth: 600, marginLeft: "auto", marginRight: "auto", width: "100%" }}>
-            <span className="r-sub" style={{ fontSize: 11 }}>{replaceName(currentQ.scale_min_label)}</span>
-            <div style={{ display: "flex", gap: 12 }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "8px 0", maxWidth: 600, marginLeft: "auto", marginRight: "auto", width: "100%" }}>
+            <div style={{ display: "flex", gap: 16, padding: "8px 0" }}>
               {[1, 2, 3, 4, 5].map((n) => (
                 <span
                   key={n}
@@ -468,7 +478,10 @@ export default function ThirdParty() {
                 />
               ))}
             </div>
-            <span className="r-sub" style={{ fontSize: 11 }}>{replaceName(currentQ.scale_max_label)}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", width: "100%", padding: "0 4px", gap: 24 }}>
+              <span className="r-sub" style={{ fontSize: 11, flex: 1, textAlign: "left" }}>{replaceName(currentQ.scale_min_label)}</span>
+              <span className="r-sub" style={{ fontSize: 11, flex: 1, textAlign: "right" }}>{replaceName(currentQ.scale_max_label)}</span>
+            </div>
           </div>
 
           <div className="r-sub" style={{ marginTop: 16 }}>{replaceName(currentQ.open_prompt)}</div>
@@ -544,8 +557,8 @@ export default function ThirdParty() {
       <div className="r-screen">
         <div className="r-scroll" style={{ padding: "40px 24px 24px", display: "flex", flexDirection: "column", gap: 28 }}>
 
-          {/* Wordmark animado no topo (movimento) */}
-          <div style={{ marginTop: 16, marginBottom: 8 }}>
+          {/* Wordmark animado no topo. Altura fixa pra texto abaixo não saltitar com mudança de fonte. */}
+          <div style={{ marginTop: 16, marginBottom: 8, height: "clamp(48px, 9vw, 88px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <AnimatedWordmark fontSize="clamp(32px, 7vw, 64px)" />
           </div>
 

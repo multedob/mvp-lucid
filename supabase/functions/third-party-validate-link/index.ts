@@ -11,7 +11,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const DEPLOY_FINGERPRINT = "w20.1-validate-link-v1";
+const DEPLOY_FINGERPRINT = "w20.2-validate-link-v2-alphabeta";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -25,91 +25,141 @@ const json = (data: unknown, status = 200) =>
     headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
   });
 
-// Perguntas v2 — hardcoded pra MVP. Pode migrar pra tabela depois.
-const QUESTIONS = [
-  {
-    id: "calibration",
-    type: "calibration",
-    title: "Como você conhece [Nome]?",
-    relationship_options: [
-      "Família próxima (pai/mãe/irmã/parceiro)",
-      "Amigo/a próximo/a (anos de convivência)",
-      "Colega de trabalho (atual ou recente)",
-      "Mentor/a, gestor/a, ou orientador/a",
-      "Cliente, sócio/a, ou parceiro de projeto",
-      "Outra",
-    ],
-    duration_options: [
-      "Menos de 1 ano",
-      "1 a 5 anos",
-      "Mais de 5 anos",
-    ],
-  },
+// Calibration aparece em ambos os sets
+const CALIBRATION = {
+  id: "calibration",
+  type: "calibration",
+  title: "Como você conhece [Nome]?",
+  relationship_options: [
+    "Família próxima (pai/mãe/irmã/parceiro)",
+    "Amigo/a próximo/a (anos de convivência)",
+    "Colega de trabalho (atual ou recente)",
+    "Mentor/a, gestor/a, ou orientador/a",
+    "Cliente, sócio/a, ou parceiro de projeto",
+    "Outra",
+  ],
+  duration_options: [
+    "Menos de 1 ano",
+    "1 a 5 anos",
+    "Mais de 5 anos",
+  ],
+};
+
+// ALPHA — 5 perguntas, cobre L1.1, L1.2, L2.1, L2.4, L3.1, L3.4, L4.1, L4.3
+const ALPHA_QUESTIONS = [
   {
     id: "q1",
     type: "core",
     lines: ["L1.1", "L1.2"],
     stem: "Pensando em [Nome] em momentos onde algo importante estava em jogo —",
-    episode_prompt: "Lembre uma situação em que você viu [Nome] sob pressão real — quando algo precisava ser feito mesmo sem condições ideais. O que ela fez? E o que parecia estar organizando a ação dela ali?",
-    scale_label: "No que você viu, [Nome] tem clareza sobre o que a orienta sob pressão.",
+    episode_prompt: "Lembre uma situação em que você viu [Nome] sob pressão real — quando algo precisava ser feito mesmo sem condições ideais. O que [Nome] fez? E o que parecia estar organizando a ação ali?",
+    scale_label: "No que você viu, [Nome] tem clareza sobre o que [pronome] orienta sob pressão.",
     scale_min_label: "Parece reagir ao que vem",
-    scale_max_label: "Sabe muito claramente o que prioriza",
+    scale_max_label: "Sabe claramente o que prioriza",
     open_prompt: "O que te faz dizer isso?",
   },
   {
     id: "q2",
     type: "core",
-    lines: ["L2.1", "L4.4"],
-    stem: "Pensando em [Nome] quando emoções intensas aparecem (dela ou de quem está perto) —",
-    episode_prompt: "Conta uma situação em que você presenciou [Nome] em um momento emocionalmente carregado — alegria forte, frustração, perda, conflito. Como ela esteve ali?",
-    scale_label: "A presença de [Nome] em momentos emocionalmente intensos —",
-    scale_min_label: "Tende a se desorganizar ou desaparecer",
-    scale_max_label: "Estabiliza o ambiente ao redor",
-    open_prompt: "Descreva em poucas palavras como você sentiu a presença dela ali.",
+    lines: ["L2.1", "L2.4"],
+    stem: "Pensando em [Nome] em momentos de intensidade emocional, ou em situações que parecem ter mexido com quem [pronome] é —",
+    episode_prompt: "Conta uma cena em que você presenciou [Nome] num momento emocional forte (alegria, frustração, perda), ou em que algo aconteceu que parecia estar mudando a forma como [Nome] se via. Como [Nome] esteve ali?",
+    scale_label: "Em momentos intensos, [Nome] —",
+    scale_min_label: "Se desorganiza ou se afasta",
+    scale_max_label: "Permanece em si, atravessa sem se perder",
+    open_prompt: "O que você notou ali?",
   },
   {
     id: "q3",
     type: "core",
     lines: ["L3.1", "L3.4"],
-    stem: "Pensando em [Nome] em ações conjuntas (trabalho, projeto, decisão em grupo, organização de algo coletivo) —",
-    episode_prompt: "Lembre uma situação em que você fez algo junto com [Nome] — ou viu ela fazendo com outros. O que ela trouxe pra essa ação coletiva? E como ela lidou se algo deu errado por causa dela ou de alguém?",
-    scale_label: "Quando algo coletivo dá errado, [Nome] —",
-    scale_min_label: "Tende a culpar contexto ou outros",
-    scale_max_label: "Reconhece e integra o que veio dela",
-    open_prompt: "Conta uma cena que te fez ver isso.",
+    stem: "Pensando em [Nome] em ações coletivas — quando [pronome] faz algo junto com outras pessoas —",
+    episode_prompt: "Lembre uma situação em que você viu [Nome] em ação conjunta (trabalho, projeto, decisão em grupo). O que [Nome] trouxe pra essa ação? E como [pronome] lidou com efeitos que [Nome] teve em outras pessoas — bons ou ruins?",
+    scale_label: "Em ações coletivas, [Nome] —",
+    scale_min_label: "Atua sem perceber muito o efeito em outros",
+    scale_max_label: "Reconhece e integra o impacto que tem em outros",
+    open_prompt: "Conta uma cena que ilustre isso.",
   },
   {
     id: "q4",
     type: "core",
-    lines: ["L3.3"],
-    stem: "Pensando em momentos de tensão entre [Nome] e alguém —",
-    episode_prompt: "Lembre uma situação em que viu [Nome] em desacordo ou conflito com alguém — não precisa ter sido com você. Como ela esteve nessa tensão? Ficou com o desconforto, fugiu dele, ou tentou resolver rápido demais?",
-    scale_label: "No conflito, [Nome] —",
-    scale_min_label: "Foge ou cala",
-    scale_max_label: "Fica na tensão até ela ser real",
-    open_prompt: "O que você observou sobre como ela ficou (ou não) na tensão?",
+    lines: ["L4.1"],
+    stem: "Pensando em [Nome] em situações onde várias coisas se influenciam — relações, sistemas, contextos amplos —",
+    episode_prompt: "Lembre uma situação em que [Nome] estava lidando com algo onde o que [pronome] fazia dependia de como várias coisas se conectavam. O que [Nome] percebeu sobre essas conexões?",
+    scale_label: "A capacidade de [Nome] ver conexões num sistema —",
+    scale_min_label: "Foca no que está mais próximo",
+    scale_max_label: "Vê elementos distantes se influenciando",
+    open_prompt: "O que ilustra essa percepção?",
   },
   {
     id: "q5",
     type: "core",
-    lines: ["L4.1", "L4.2"],
-    stem: "Pensando em decisões que [Nome] tomou e que mexeram com outras pessoas, com um time, com a família, ou com algum projeto maior —",
-    episode_prompt: "Lembre uma decisão de [Nome] que você acompanhou — uma escolha que teve efeito além de [Nome]. Como [Nome] pesou o que estava em jogo? O que [Nome] levou em conta sobre o que vinha depois?",
-    scale_label: "Em decisões com impacto em outras pessoas ou contextos, [Nome] —",
-    scale_min_label: "Decide focando no imediato",
-    scale_max_label: "Pesa efeitos em cadeia, prazos longos, contextos amplos",
-    open_prompt: "O que te chamou atenção nessa decisão?",
+    lines: ["L4.3"],
+    stem: "Pensando em [Nome] em situações onde [pronome] tinha algo a oferecer mas o ambiente não estava pedindo —",
+    episode_prompt: "Conta uma situação em que [Nome] tinha um conhecimento, uma perspectiva ou uma visão que poderia ter contribuído, mas o contexto não estava receptivo. O que [Nome] fez com isso?",
+    scale_label: "Quando o ambiente não pede o que [Nome] sabe, [pronome] —",
+    scale_min_label: "Guarda pra si, espera ser convidad@",
+    scale_max_label: "Encontra forma de oferecer sem forçar",
+    open_prompt: "Como você viu isso aparecer?",
+  },
+];
+
+// BETA — 5 perguntas, cobre L1.3, L1.4, L2.2, L2.3, L3.2, L3.3, L4.2, L4.4
+const BETA_QUESTIONS = [
+  {
+    id: "q1",
+    type: "core",
+    lines: ["L1.3", "L1.4"],
+    stem: "Pensando em [Nome] em algo que [pronome] entregou ou criou — onde o resultado importava —",
+    episode_prompt: "Lembre algo que [Nome] entregou ou produziu — um projeto, uma criação, uma decisão concretizada. O que parece definir 'bom o suficiente' pra [Nome]? E como [pronome] usou o que aprendeu ao fazer?",
+    scale_label: "O critério de qualidade de [Nome] —",
+    scale_min_label: "Vem do que outros vão achar",
+    scale_max_label: "Vem de critério próprio que [pronome] revisa ao longo do tempo",
+    open_prompt: "O que ilustra isso?",
   },
   {
-    id: "q6",
+    id: "q2",
     type: "core",
-    lines: ["L1.4", "L2.2"],
-    stem: "Pensando em [Nome] em momentos de interesse genuíno — não algo que tinha que fazer, mas algo que ela quis explorar ou criar —",
-    episode_prompt: "Lembre uma situação em que viu [Nome] envolvida com algo que a interessou de verdade — pode ter sido um projeto, um livro, uma pessoa, uma ideia, uma habilidade. O que ela fazia ali? E o que parecia te dizer que aquilo era genuíno pra ela, e não obrigação?",
-    scale_label: "O movimento de [Nome] quando algo a interessa —",
-    scale_min_label: "Pega leve, abandona logo, fica na superfície",
-    scale_max_label: "Mergulha, volta, deixa o interesse trabalhar nela ao longo do tempo",
-    open_prompt: "Como você viu o que ela aprendeu (ou virou) por causa desse envolvimento?",
+    lines: ["L2.2", "L2.3"],
+    stem: "Pensando em [Nome] em momentos de interesse genuíno e em momentos de muita coisa ao mesmo tempo —",
+    episode_prompt: "Lembre algo que [Nome] foi atrás por curiosidade — não obrigação. E também: uma situação em que [pronome] estava com várias demandas simultâneas. Como [Nome] se moveu nas duas?",
+    scale_label: "Quando algo interessa [Nome] e quando [pronome] está sob muitas demandas —",
+    scale_min_label: "Pega leve no interesse, se dispersa quando lotad@",
+    scale_max_label: "Mergulha quando interessa, sustenta foco em pressão",
+    open_prompt: "Como você viu isso?",
+  },
+  {
+    id: "q3",
+    type: "core",
+    lines: ["L3.2", "L3.3"],
+    stem: "Pensando em [Nome] em grupos onde [pronome] sentia diferente do coletivo, ou em conflitos —",
+    episode_prompt: "Lembre uma situação em que [Nome] estava num grupo (trabalho, família, amigos) e percebeu que pensava ou sentia diferente do que estava ali. Ou: uma tensão entre [Nome] e alguém. Como [pronome] se posicionou?",
+    scale_label: "Em situações onde [Nome] discorda ou diverge —",
+    scale_min_label: "Cala ou se adapta pra evitar atrito",
+    scale_max_label: "Sustenta posição mesmo quando o grupo pressiona",
+    open_prompt: "Como [Nome] esteve ali?",
+  },
+  {
+    id: "q4",
+    type: "core",
+    lines: ["L4.2"],
+    stem: "Pensando em decisões de [Nome] que olharam pra frente —",
+    episode_prompt: "Lembre uma decisão que [Nome] tomou pensando no que ia acontecer depois — pequena ou grande. O que [Nome] levou em conta sobre o futuro? Quanto tempo à frente?",
+    scale_label: "O alcance temporal nas decisões de [Nome] —",
+    scale_min_label: "Foca no curto prazo",
+    scale_max_label: "Pesa efeitos em meses ou anos à frente",
+    open_prompt: "O que te chamou atenção?",
+  },
+  {
+    id: "q5",
+    type: "core",
+    lines: ["L4.4"],
+    stem: "Pensando em [Nome] em ambientes coletivos — como a presença de [Nome] afeta o que está ao redor —",
+    episode_prompt: "Lembre uma situação em que [Nome] estava num espaço com várias pessoas. Como você sentiu a presença de [Nome] no campo? Mudou algo no ambiente?",
+    scale_label: "A presença de [Nome] em ambientes coletivos —",
+    scale_min_label: "Quase neutra, não mexe muito",
+    scale_max_label: "Organiza ou ancora o coletivo",
+    open_prompt: "Conta o que você sentiu.",
   },
 ];
 
@@ -128,10 +178,10 @@ Deno.serve(async (req) => {
 
   const admin = createClient(supabase_url, service_role);
 
-  // Busca invite + dados do user
+  // Busca invite + dados do user (incluindo question_set + user_pronoun)
   const { data: invite, error: invErr } = await admin
     .from("third_party_invites")
-    .select("id, ipe_cycle_id, user_id, status, responder_email, responder_name, created_at")
+    .select("id, ipe_cycle_id, user_id, status, responder_email, responder_name, created_at, question_set, user_pronoun")
     .eq("token", token)
     .single();
   if (invErr || !invite) return json({ error: "Invalid or expired link" }, 404);
@@ -152,11 +202,17 @@ Deno.serve(async (req) => {
     .select("question_id, scale_value, open_text, episode_text")
     .eq("invite_id", invite.id);
 
+  // Seleciona conjunto de perguntas baseado no question_set do invite
+  const set = invite.question_set === "beta" ? BETA_QUESTIONS : ALPHA_QUESTIONS;
+  const questions = [CALIBRATION, ...set];
+
   return json({
     valid: true,
     invite_id: invite.id,
     user_name,
-    questions: QUESTIONS,
+    user_pronoun: invite.user_pronoun ?? "ela",
+    question_set: invite.question_set ?? "alpha",
+    questions,
     existing_responses: existing ?? [],
     responder: {
       email: invite.responder_email,
