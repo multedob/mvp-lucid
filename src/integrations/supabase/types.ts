@@ -996,6 +996,126 @@ export type Database = {
           },
         ]
       }
+      third_party_invites: {
+        Row: {
+          created_at: string
+          id: string
+          ipe_cycle_id: string
+          responder_email: string | null
+          responder_name: string | null
+          reveal_identity: boolean | null
+          revoked_at: string | null
+          status: string
+          submitted_at: string | null
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ipe_cycle_id: string
+          responder_email?: string | null
+          responder_name?: string | null
+          reveal_identity?: boolean | null
+          revoked_at?: string | null
+          status?: string
+          submitted_at?: string | null
+          token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ipe_cycle_id?: string
+          responder_email?: string | null
+          responder_name?: string | null
+          reveal_identity?: boolean | null
+          revoked_at?: string | null
+          status?: string
+          submitted_at?: string | null
+          token?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "third_party_invites_ipe_cycle_id_fkey"
+            columns: ["ipe_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "ipe_cycles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      third_party_mini_insights: {
+        Row: {
+          generated_at: string
+          id: string
+          insight_text: string
+          invite_id: string
+        }
+        Insert: {
+          generated_at?: string
+          id?: string
+          insight_text: string
+          invite_id: string
+        }
+        Update: {
+          generated_at?: string
+          id?: string
+          insight_text?: string
+          invite_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "third_party_mini_insights_invite_id_fkey"
+            columns: ["invite_id"]
+            isOneToOne: true
+            referencedRelation: "third_party_invites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      third_party_responses: {
+        Row: {
+          created_at: string
+          episode_text: string | null
+          id: string
+          invite_id: string
+          open_text: string | null
+          question_id: string
+          scale_value: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          episode_text?: string | null
+          id?: string
+          invite_id: string
+          open_text?: string | null
+          question_id: string
+          scale_value?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          episode_text?: string | null
+          id?: string
+          invite_id?: string
+          open_text?: string | null
+          question_id?: string
+          scale_value?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "third_party_responses_invite_id_fkey"
+            columns: ["invite_id"]
+            isOneToOne: false
+            referencedRelation: "third_party_invites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           created_at: string
