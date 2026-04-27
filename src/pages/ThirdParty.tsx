@@ -13,6 +13,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getToday } from "@/lib/api";
+import { AnimatedWordmark } from "@/components/AnimatedWordmark";
+
+// LP do rdwth — atualizar quando estiver pronta
+const RDWTH_LP_URL = "/";
 
 type Phase =
   | "loading"
@@ -356,6 +360,9 @@ export default function ThirdParty() {
           <div className="r-sub">
             <strong>Tempo:</strong> ~10 minutos. 6 perguntas curtas. Não tem resposta certa.
           </div>
+          <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 13, fontStyle: "italic", lineHeight: 1.7, color: "var(--r-muted)", maxWidth: 600, marginLeft: "auto", marginRight: "auto", marginTop: 16, paddingTop: 16, borderTop: "0.5px solid var(--r-ghost)" }}>
+            Sugestão: procure um lugar com calma pra responder. Sua atenção pelos próximos minutos é parte do que {data?.user_name} vai receber.
+          </div>
         </div>
         <Footer onContinue={handleStartOnboarding} continueLabel="começar" />
       </div>
@@ -405,19 +412,19 @@ export default function ThirdParty() {
       <div className="r-screen">
         <Header subtitle={`sobre ${data?.user_name}`} />
         <div className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
-          <div className="r-question">{calib.title.replace("[Nome]", data?.user_name ?? "")}</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 600, marginLeft: "auto", marginRight: "auto", width: "100%" }}>
+          <div className="r-question" style={{ textAlign: "center" }}>{calib.title.replace("[Nome]", data?.user_name ?? "")}</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 420, marginLeft: "auto", marginRight: "auto", width: "100%", alignItems: "flex-start" }}>
             {calib.relationship_options.map((opt) => (
-              <div key={opt} className="r-choice" style={{ cursor: "pointer" }} onClick={() => setCalibRelationship(opt)}>
+              <div key={opt} className="r-choice" style={{ cursor: "pointer", alignSelf: "stretch", justifyContent: "flex-start" }} onClick={() => setCalibRelationship(opt)}>
                 <span className={`r-choice-dot${calibRelationship === opt ? " selected" : ""}`} />
                 <span className={`r-choice-text${calibRelationship === opt ? " selected" : ""}`}>{opt}</span>
               </div>
             ))}
           </div>
-          <div className="r-question" style={{ marginTop: 20 }}>há quanto tempo conhece?</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 600, marginLeft: "auto", marginRight: "auto", width: "100%" }}>
+          <div className="r-question" style={{ marginTop: 20, textAlign: "center" }}>há quanto tempo conhece?</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 420, marginLeft: "auto", marginRight: "auto", width: "100%", alignItems: "flex-start" }}>
             {calib.duration_options.map((opt) => (
-              <div key={opt} className="r-choice" style={{ cursor: "pointer" }} onClick={() => setCalibDuration(opt)}>
+              <div key={opt} className="r-choice" style={{ cursor: "pointer", alignSelf: "stretch", justifyContent: "flex-start" }} onClick={() => setCalibDuration(opt)}>
                 <span className={`r-choice-dot${calibDuration === opt ? " selected" : ""}`} />
                 <span className={`r-choice-text${calibDuration === opt ? " selected" : ""}`}>{opt}</span>
               </div>
@@ -535,38 +542,41 @@ export default function ThirdParty() {
   if (phase === "done") {
     return (
       <div className="r-screen">
-        <div className="r-header" style={{ paddingTop: 32 }}>
-          <Wordmark />
-          <span className="r-header-date">{getToday()}</span>
-        </div>
-        <div className="r-line" />
         <div className="r-scroll" style={{ padding: "40px 24px 24px", display: "flex", flexDirection: "column", gap: 28 }}>
-          <div className="r-sub" style={{ letterSpacing: "0.12em" }}>um pequeno espelho pra você</div>
+
+          {/* Wordmark animado no topo (movimento) */}
+          <div style={{ marginTop: 16, marginBottom: 8 }}>
+            <AnimatedWordmark fontSize="clamp(32px, 7vw, 64px)" />
+          </div>
+
+          <div className="r-sub" style={{ letterSpacing: "0.12em", textAlign: "center", marginTop: 8 }}>um pequeno espelho pra você</div>
+
           <div style={{ fontFamily: "var(--r-font-ed)", fontWeight: 800, fontSize: 16, lineHeight: 1.75, color: "var(--r-text)", maxWidth: 600, marginLeft: "auto", marginRight: "auto", whiteSpace: "pre-line" }}>
             {miniInsight}
           </div>
 
           <div style={{ height: 1, background: "var(--r-ghost)", opacity: 0.4, marginTop: 24, marginBottom: 8, maxWidth: 600, marginLeft: "auto", marginRight: "auto", width: "100%" }} />
 
-          <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 14, lineHeight: 1.75, color: "var(--r-text)", maxWidth: 600, marginLeft: "auto", marginRight: "auto" }}>
-            Obrigado pelo tempo. O que você trouxe vai ajudar {data?.user_name}.
+          <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 14, lineHeight: 1.75, color: "var(--r-text)", maxWidth: 600, marginLeft: "auto", marginRight: "auto", textAlign: "center" }}>
+            Obrigado pelo seu tempo. O que você trouxe vai ajudar {data?.user_name}.
           </div>
-          <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 14, lineHeight: 1.75, color: "var(--r-text)", maxWidth: 600, marginLeft: "auto", marginRight: "auto" }}>
+          <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 14, lineHeight: 1.75, color: "var(--r-text)", maxWidth: 600, marginLeft: "auto", marginRight: "auto", textAlign: "center" }}>
             Se quiser olhar isso de outro lado — sobre você dessa vez — o rdwth está aqui.
           </div>
 
           <div style={{ marginTop: 24, display: "flex", justifyContent: "center" }}>
-            <button
-              onClick={() => navigate("/")}
+            <a
+              href={RDWTH_LP_URL}
               style={{
                 fontFamily: "var(--r-font-sys)", fontSize: 13,
                 padding: "12px 24px",
                 background: "var(--r-text)", color: "var(--r-bg)",
                 border: "none", cursor: "pointer", letterSpacing: "0.06em",
+                textDecoration: "none",
               }}
             >
               conhecer o _rdwth →
-            </button>
+            </a>
           </div>
         </div>
       </div>
