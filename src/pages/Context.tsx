@@ -15,6 +15,12 @@ import NavBottom from "@/components/NavBottom";
 const SUPABASE_URL = "https://tomtximafvrhmuchjyqt.supabase.co";
 const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRvbXR4aW1hZnZyaG11Y2hqeXF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MjE4MzYsImV4cCI6MjA4NzI5NzgzNn0.4e7TbCSrL8fecsgKCHDBEerXO8ePd5-5QeaC6czEkzo";
 
+// Capitaliza primeira letra de cada palavra (ex: "bruno" → "Bruno", "maria-clara" → "Maria-clara")
+function capitalizeName(s: string | null | undefined): string {
+  if (!s) return "";
+  return s.replace(/\b\w/g, c => c.toUpperCase());
+}
+
 // ─── ContextSystem — "Como o rdwth funciona" ──────────────────────
 function ContextSystem({ onBack }: { onBack: () => void }) {
   const navigate = useNavigate();
@@ -338,7 +344,7 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
       <div className="r-scroll" style={{ padding: "28px 24px 16px", display: "flex", flexDirection: "column", gap: 20 }}>
         <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10, color: "var(--r-muted)", letterSpacing: "0.04em", lineHeight: 1.7 }}>
           {userName
-            ? `${userName}, convide até 8 pessoas próximas que conhecem você. As respostas delas alimentam suas leituras com perspectiva externa.`
+            ? `${capitalizeName(userName)}, convide até 8 pessoas próximas que conhecem você. As respostas delas alimentam suas leituras com perspectiva externa.`
             : "Convide até 8 pessoas próximas. As respostas delas alimentam suas leituras com perspectiva externa."}
         </div>
 
@@ -389,7 +395,7 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
                   {createdUrl}
                 </div>
                 <div className="r-sub" style={{ fontStyle: "italic" }}>
-                  envie esse link pra quem você quer que responda. Se enviar pessoalmente (whatsapp, dm, etc), o terceiro fica sabendo que veio de você.
+                  envie esse link pra quem você quer que responda.
                 </div>
                 <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
                   <span onClick={() => { setCreating(false); setCreatedUrl(null); }} style={{ fontFamily: "var(--r-font-sys)", fontSize: 12, color: "var(--r-text)", cursor: "pointer" }}>fechar</span>
@@ -421,17 +427,33 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
         )}
 
         {!loading && invites.map(inv => {
-          const respCount = (responses[inv.id] ?? []).length;
+          // Filtra registros técnicos (__contact__) da contagem
+          const respList = (responses[inv.id] ?? []).filter(r => r.question_id !== "__contact__");
+          const respCount = respList.length;
           const expectedTotal = 6; // calibration + 5 perguntas
           const showDetails = expanded === inv.id;
           const canShowResponses = inv.status === "submitted" && inv.reveal_identity === true;
+
+          // Display do nome:
+          // - submitted + reveal=true → nome capitalizado
+          // - submitted + reveal=false → "respondeu sem se identificar"
+          // - pending → "aguardando resposta"
+          // - revoked → "—"
+          const displayName =
+            inv.status === "submitted"
+              ? (inv.reveal_identity === true && inv.responder_name
+                  ? capitalizeName(inv.responder_name)
+                  : "respondeu sem se identificar")
+              : inv.status === "pending"
+                ? "convite aguardando"
+                : "—";
 
           return (
             <div key={inv.id} style={{ borderTop: "1px solid var(--r-ghost)", paddingTop: 14, paddingBottom: 4 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 12, color: "var(--r-text)", letterSpacing: "0.04em" }}>
-                    {inv.responder_name && inv.reveal_identity === true ? inv.responder_name : "anônimo"}
+                    {displayName}
                   </div>
                   <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 10, color: "var(--r-muted)", marginTop: 2 }}>
                     {statusLabel(inv.status)}
@@ -456,7 +478,7 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
 
               {showDetails && canShowResponses && (
                 <div style={{ marginTop: 12, padding: "12px 14px", background: "rgba(0,0,0,0.02)", borderLeft: "1px solid var(--r-ghost)" }}>
-                  {(responses[inv.id] ?? []).map(r => (
+                  {respList.map(r => (
                     <div key={r.question_id} style={{ marginBottom: 12, fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--r-text)" }}>
                       <div style={{ color: "var(--r-muted)", letterSpacing: "0.06em", marginBottom: 4 }}>
                         {r.question_id}

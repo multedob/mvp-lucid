@@ -18,6 +18,12 @@ import { AnimatedWordmark } from "@/components/AnimatedWordmark";
 // LP do rdwth — atualizar quando estiver pronta
 const RDWTH_LP_URL = "/";
 
+// Capitaliza primeira letra de cada palavra (ex: "bruno" → "Bruno")
+function capitalizeName(s: string | null | undefined): string {
+  if (!s) return "";
+  return s.replace(/\b\w/g, c => c.toUpperCase());
+}
+
 type Phase =
   | "loading"
   | "error"
@@ -281,7 +287,7 @@ export default function ThirdParty() {
       <div className="r-screen" style={{ padding: "60px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
         <Wordmark />
         <div className="r-question">este link foi cancelado.</div>
-        <div className="r-sub">peça pra {data?.user_name ?? "quem te enviou"} gerar um novo.</div>
+        <div className="r-sub">peça pra {capitalizeName(data?.user_name) ?? "quem te enviou"} gerar um novo.</div>
       </div>
     );
   }
@@ -350,8 +356,8 @@ export default function ThirdParty() {
           <div className="r-question" style={{ fontSize: 18 }}>
             {(() => {
               const p = data?.user_pronoun ?? "ela";
-              const direct = p === "ela" ? "a vê" : p === "ele" ? "o vê" : `vê ${data?.user_name}`;
-              return `${data?.user_name} te pediu pra responder algumas perguntas sobre como você ${direct}.`;
+              const direct = p === "ela" ? "a vê" : p === "ele" ? "o vê" : `vê ${capitalizeName(data?.user_name)}`;
+              return `${capitalizeName(data?.user_name)} te pediu pra responder algumas perguntas sobre como você ${direct}.`;
             })()}
           </div>
           <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 14, lineHeight: 1.75, color: "var(--r-text)", maxWidth: 600, marginLeft: "auto", marginRight: "auto" }}>
@@ -361,13 +367,13 @@ export default function ThirdParty() {
             Pessoas próximas veem coisas que a própria pessoa não consegue ver. Sua perspectiva externa é parte importante dessa leitura.
           </div>
           <div className="r-sub" style={{ marginTop: 8 }}>
-            <strong>Sobre anonimato:</strong> ao final, antes de enviar suas respostas, você escolhe se {data?.user_name} pode saber que foi você quem respondeu, ou se prefere ficar anônimo/a.
+            <strong>Sobre anonimato:</strong> ao final, antes de enviar suas respostas, você escolhe se {capitalizeName(data?.user_name)} pode saber que foi você quem respondeu, ou se prefere ficar anônimo/a.
           </div>
           <div className="r-sub">
             <strong>Tempo:</strong> ~10 minutos. 5 perguntas curtas. Não tem resposta certa.
           </div>
           <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 13, fontStyle: "italic", lineHeight: 1.7, color: "var(--r-muted)", maxWidth: 600, marginLeft: "auto", marginRight: "auto", marginTop: 16, paddingTop: 16, borderTop: "0.5px solid var(--r-ghost)" }}>
-            Sugestão: procure um lugar com calma pra responder. Sua atenção pelos próximos minutos é parte do presente que você vai dar para {data?.user_name}.
+            Sugestão: procure um lugar com calma pra responder. Sua atenção pelos próximos minutos é parte do presente que você vai dar para {capitalizeName(data?.user_name)}.
           </div>
         </div>
         <Footer onContinue={handleStartOnboarding} continueLabel="começar" />
@@ -402,7 +408,7 @@ export default function ThirdParty() {
               placeholder="email@exemplo.com"
             />
           </div>
-          <div className="r-sub">usado pra confirmar sua resposta. {data?.user_name} só verá se você decidir revelar no final.</div>
+          <div className="r-sub">usado pra confirmar sua resposta. {capitalizeName(data?.user_name)} só verá se você decidir revelar no final.</div>
           {errorMsg && <div style={{ color: "var(--terracota, #b85a3e)", fontSize: 13 }}>{errorMsg}</div>}
         </div>
         <Footer onContinue={handleSubmitEmail} onBack={handleBack} disabled={!isValidEmail(email) || !name.trim()} />
@@ -416,9 +422,9 @@ export default function ThirdParty() {
     if (!calib) return null;
     return (
       <div className="r-screen">
-        <Header subtitle={`sobre ${data?.user_name}`} />
+        <Header subtitle={`sobre ${capitalizeName(data?.user_name)}`} />
         <div className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
-          <div className="r-question" style={{ textAlign: "center" }}>{calib.title.replace("[Nome]", data?.user_name ?? "")}</div>
+          <div className="r-question" style={{ textAlign: "center" }}>{calib.title.replace("[Nome]", capitalizeName(data?.user_name) ?? "")}</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 420, marginLeft: "auto", marginRight: "auto", width: "100%", alignItems: "flex-start" }}>
             {calib.relationship_options.map((opt) => (
               <div key={opt} className="r-choice" style={{ cursor: "pointer", alignSelf: "stretch", justifyContent: "flex-start" }} onClick={() => setCalibRelationship(opt)}>
@@ -449,7 +455,7 @@ export default function ThirdParty() {
     const pronoun = data?.user_pronoun ?? "ela";
     const adjEnd = pronoun === "ela" ? "a" : pronoun === "ele" ? "o" : "e";
     const replaceName = (s: string) => s
-      .replace(/\[Nome\]/g, data?.user_name ?? "")
+      .replace(/\[Nome\]/g, capitalizeName(data?.user_name) ?? "")
       .replace(/\[pronome\]/g, pronoun)
       .replace(/@/g, adjEnd);
     return (
@@ -513,10 +519,10 @@ export default function ThirdParty() {
         <Header subtitle="último passo" />
         <div className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
           <div className="r-question">
-            suas respostas vão ajudar {data?.user_name} a se ver com mais clareza.
+            suas respostas vão ajudar {capitalizeName(data?.user_name)} a se ver com mais clareza.
           </div>
           <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 14, lineHeight: 1.75, color: "var(--r-text)", maxWidth: 600, marginLeft: "auto", marginRight: "auto" }}>
-            Você prefere que {data?.user_name} saiba que foi você quem respondeu, ou que sua resposta apareça anônima?
+            Você prefere que {capitalizeName(data?.user_name)} saiba que foi você quem respondeu, ou que sua resposta apareça anônima?
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 600, marginLeft: "auto", marginRight: "auto", width: "100%", marginTop: 8 }}>
@@ -571,7 +577,7 @@ export default function ThirdParty() {
           <div style={{ height: 1, background: "var(--r-ghost)", opacity: 0.4, marginTop: 24, marginBottom: 8, maxWidth: 600, marginLeft: "auto", marginRight: "auto", width: "100%" }} />
 
           <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 14, lineHeight: 1.75, color: "var(--r-text)", maxWidth: 600, marginLeft: "auto", marginRight: "auto", textAlign: "center" }}>
-            Obrigado pelo seu tempo. O que você trouxe vai ajudar {data?.user_name}.
+            Obrigado pelo seu tempo. O que você trouxe vai ajudar {capitalizeName(data?.user_name)}.
           </div>
           <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 14, lineHeight: 1.75, color: "var(--r-text)", maxWidth: 600, marginLeft: "auto", marginRight: "auto", textAlign: "center" }}>
             Se quiser olhar isso de outro lado — sobre você dessa vez — o rdwth está aqui.
