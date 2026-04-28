@@ -23,7 +23,6 @@ async function must<T>(label: string, p: PromiseLike<{ data: T; error: any }>) {
   return data;
 }
 
-await must('insert public users', supabase.from('users').insert({ id: userId, version: 0 } as any));
 await must('insert cycle', supabase.from('ipe_cycles').insert({ id: cycleId, user_id: userId, cycle_number: 1, status: 'questionnaire' } as any));
 await must('insert invites', supabase.from('third_party_invites').insert([
   { id: scoringInviteId, ipe_cycle_id: cycleId, user_id: userId, token: `verify-scoring-${Date.now()}`, status: 'submitted', responder_email: 'verify-scoring@example.com', responder_name: 'Verificação Scoring', reveal_identity: true, question_set: 'alpha', user_pronoun: 'ela' },
