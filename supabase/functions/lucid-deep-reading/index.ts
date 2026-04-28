@@ -14,7 +14,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.27.3";
 
-const DEPLOY_FINGERPRINT = "wave14-deep-reading-v4.1-debug-tp";
+const DEPLOY_FINGERPRINT = "wave14-deep-reading-v4.2-fix-admin-scope";
 
 const NODES_TO_SELECT = 4; // 3-5 conforme decisão DOC
 
@@ -296,20 +296,23 @@ Deno.serve(async (req) => {
   }
 
   // Wave 14 v4 — busca respostas de terceiros (W20.4)
+  // BUG FIX v4.2: usa `supabase` (auth do user) em vez de `admin` que ainda nao foi declarado
   let thirdPartyCorpus = "";
   try {
     // Busca invites submitted desse cycle
-    const { data: tpInvites } = await admin
+    const { data: tpInvites, error: invErr } = await supabase
       .from("third_party_invites")
       .select("id, question_set, reveal_identity, responder_name")
       .eq("ipe_cycle_id", ipe_cycle_id)
       .eq("status", "submitted");
+    if (invErr) console.warn("[lucid-deep-reading] tpInvites err:", invErr);
     if (tpInvites && tpInvites.length > 0) {
       const inviteIds = tpInvites.map((i: any) => i.id);
-      const { data: tpResponses } = await admin
+      const { data: tpResponses, error: respErr } = await supabase
         .from("third_party_responses")
         .select("invite_id, question_id, scale_value, open_text, episode_text")
         .in("invite_id", inviteIds);
+      if (respErr) console.warn("[lucid-deep-reading] tpResponses err:", respErr);
       if (tpResponses && tpResponses.length > 0) {
         const sections: string[] = [];
         for (const inv of tpInvites) {
