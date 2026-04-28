@@ -14,7 +14,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.27.3";
 
-const DEPLOY_FINGERPRINT = "wave14-deep-reading-v4-with-third-party";
+const DEPLOY_FINGERPRINT = "wave14-deep-reading-v4.1-debug-tp";
 
 const NODES_TO_SELECT = 4; // 3-5 conforme decisão DOC
 
@@ -410,5 +410,9 @@ Deno.serve(async (req) => {
     ok: true,
     deep_reading_length: deep_reading.length,
     debug_fingerprint: DEPLOY_FINGERPRINT,
+    debug_third_party_chars: thirdPartyCorpus.length,
+    debug_pills_chars: pillsCorpus.length,
+    debug_questionnaire_chars: qCorpus.length,
+    debug_total_corpus_chars: corpus.length,
   });
 });
