@@ -252,11 +252,15 @@ Deno.serve(async (req) => {
   const token = auth_header.replace("Bearer ", "");
   const supabase_url = Deno.env.get("SUPABASE_URL");
   const supabase_anon = Deno.env.get("SUPABASE_ANON_KEY");
-  if (!supabase_url || !supabase_anon) return json({ error: "Missing config" }, 500);
+  const service_role_key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabase_url || !supabase_anon || !service_role_key) return json({ error: "Missing config" }, 500);
 
   const supabase = createClient(supabase_url, supabase_anon, {
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
+  // admin declarado aqui no topo pra ser usado em todas as queries que precisam bypassar RLS
+  // (ex: leitura de third_party_responses anônimas pra alimentar deep reading — W20.6.5)
+  const admin = createClient(supabase_url, service_role_key);
 
   const { data: auth_data, error: auth_err } = await supabase.auth.getUser(token);
   if (auth_err || !auth_data.user) return json({ error: "Unauthorized" }, 401);
@@ -296,11 +300,13 @@ Deno.serve(async (req) => {
   }
 
   // Wave 14 v4 — busca respostas de terceiros (W20.4)
-  // BUG FIX v4.2: usa `supabase` (auth do user) em vez de `admin` que ainda nao foi declarado
+  // W20.6.5 v4.3: usa `admin` (service_role) pra bypassar RLS — garante que
+  // respostas anônimas (reveal_identity=false) cheguem ao deep reading mesmo
+  // quando RLS bloqueia exibição direta pro user no front.
   let thirdPartyCorpus = "";
   try {
     // Busca invites submitted desse cycle
-    const { data: tpInvites, error: invErr } = await supabase
+    const { data: tpInvites, error: invErr } = await admin
       .from("third_party_invites")
       .select("id, question_set, reveal_identity, responder_name")
       .eq("ipe_cycle_id", ipe_cycle_id)
@@ -308,7 +314,7 @@ Deno.serve(async (req) => {
     if (invErr) console.warn("[lucid-deep-reading] tpInvites err:", invErr);
     if (tpInvites && tpInvites.length > 0) {
       const inviteIds = tpInvites.map((i: any) => i.id);
-      const { data: tpResponses, error: respErr } = await supabase
+      const { data: tpResponses, error: respErr } = await admin
         .from("third_party_responses")
         .select("invite_id, question_id, scale_value, open_text, episode_text")
         .in("invite_id", inviteIds);
@@ -396,7 +402,7 @@ Deno.serve(async (req) => {
   }
 
   // Persiste em ipe_cycles.deep_reading_text com timestamp
-  const admin = createClient(supabase_url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  // (admin já declarado no topo — reusa)
   const { error: updErr } = await admin
     .from("ipe_cycles")
     .update({
@@ -413,7 +419,7 @@ Deno.serve(async (req) => {
     ok: true,
     deep_reading_length: deep_reading.length,
     debug_fingerprint: DEPLOY_FINGERPRINT,
-    debug_third_party_chars: thirdPartyCorpus.length,
+    debug_third_party_chars: deep_reading.length > 0 ? thirdPartyCorpus.length : 0,
     debug_pills_chars: pillsCorpus.length,
     debug_questionnaire_chars: qCorpus.length,
     debug_total_corpus_chars: corpus.length,
