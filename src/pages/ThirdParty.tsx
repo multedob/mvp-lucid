@@ -367,7 +367,7 @@ export default function ThirdParty() {
             Pessoas próximas veem coisas que a própria pessoa não consegue ver. Sua perspectiva externa é parte importante dessa leitura.
           </div>
           <div className="r-sub" style={{ marginTop: 8 }}>
-            <strong>Sobre anonimato:</strong> ao final, antes de enviar suas respostas, você escolhe se {capitalizeName(data?.user_name)} pode saber que foi você quem respondeu, ou se prefere ficar anônimo/a.
+            <strong>Sobre anonimato:</strong> ao final você escolhe se {capitalizeName(data?.user_name)} pode ver suas respostas com seu nome, ou se prefere ficar anônimo/a — nesse caso, suas palavras não aparecem para {capitalizeName(data?.user_name)}, mas continuam sendo lidas pelo sistema na composição da leitura profunda.
           </div>
           <div className="r-sub">
             <strong>Tempo:</strong> ~10 minutos. 5 perguntas curtas. Não tem resposta certa.
@@ -522,21 +522,31 @@ export default function ThirdParty() {
             suas respostas vão ajudar {capitalizeName(data?.user_name)} a se ver com mais clareza.
           </div>
           <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 14, lineHeight: 1.75, color: "var(--r-text)", maxWidth: 600, marginLeft: "auto", marginRight: "auto" }}>
-            Você prefere que {capitalizeName(data?.user_name)} saiba que foi você quem respondeu, ou que sua resposta apareça anônima?
+            Como você quer que sua contribuição apareça?
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 600, marginLeft: "auto", marginRight: "auto", width: "100%", marginTop: 8 }}>
-            <div className="r-choice" style={{ cursor: "pointer" }} onClick={() => setRevealIdentity(true)}>
-              <span className={`r-choice-dot${revealIdentity === true ? " selected" : ""}`} />
-              <span className={`r-choice-text${revealIdentity === true ? " selected" : ""}`}>
-                pode dizer que fui eu — {name || "[seu nome]"}
-              </span>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: 600, marginLeft: "auto", marginRight: "auto", width: "100%", marginTop: 8 }}>
+            <div className="r-choice" style={{ cursor: "pointer", flexDirection: "column", alignItems: "flex-start", gap: 6 }} onClick={() => setRevealIdentity(true)}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span className={`r-choice-dot${revealIdentity === true ? " selected" : ""}`} />
+                <span className={`r-choice-text${revealIdentity === true ? " selected" : ""}`}>
+                  pode dizer que fui eu — {name || "[seu nome]"}
+                </span>
+              </div>
+              <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--r-muted)", lineHeight: 1.5, paddingLeft: 22 }}>
+                {capitalizeName(data?.user_name)} verá seu nome e suas respostas escritas no painel.
+              </div>
             </div>
-            <div className="r-choice" style={{ cursor: "pointer" }} onClick={() => setRevealIdentity(false)}>
-              <span className={`r-choice-dot${revealIdentity === false ? " selected" : ""}`} />
-              <span className={`r-choice-text${revealIdentity === false ? " selected" : ""}`}>
-                prefiro anônimo
-              </span>
+            <div className="r-choice" style={{ cursor: "pointer", flexDirection: "column", alignItems: "flex-start", gap: 6 }} onClick={() => setRevealIdentity(false)}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span className={`r-choice-dot${revealIdentity === false ? " selected" : ""}`} />
+                <span className={`r-choice-text${revealIdentity === false ? " selected" : ""}`}>
+                  prefiro anônimo
+                </span>
+              </div>
+              <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--r-muted)", lineHeight: 1.5, paddingLeft: 22 }}>
+                {capitalizeName(data?.user_name)} não verá seu nome nem suas respostas escritas. Suas palavras continuam sendo lidas pelo sistema e participam da leitura profunda — só não aparecem no painel dele/dela.
+              </div>
             </div>
           </div>
 
@@ -584,7 +594,7 @@ export default function ThirdParty() {
           </div>
 
           <div style={{ marginTop: 24, display: "flex", justifyContent: "center" }}>
-            <a
+            
               href={RDWTH_LP_URL}
               style={{
                 fontFamily: "var(--r-font-sys)", fontSize: 13,
