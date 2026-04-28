@@ -1122,6 +1122,51 @@ export type Database = {
           },
         ]
       }
+      third_party_scoring: {
+        Row: {
+          computed_at: string
+          corpus_linhas: Json
+          id: string
+          invite_id: string
+          ipe_cycle_id: string
+          prompt_version_used: string | null
+          question_set: string | null
+        }
+        Insert: {
+          computed_at?: string
+          corpus_linhas?: Json
+          id?: string
+          invite_id: string
+          ipe_cycle_id: string
+          prompt_version_used?: string | null
+          question_set?: string | null
+        }
+        Update: {
+          computed_at?: string
+          corpus_linhas?: Json
+          id?: string
+          invite_id?: string
+          ipe_cycle_id?: string
+          prompt_version_used?: string | null
+          question_set?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "third_party_scoring_invite_id_fkey"
+            columns: ["invite_id"]
+            isOneToOne: true
+            referencedRelation: "third_party_invites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "third_party_scoring_ipe_cycle_id_fkey"
+            columns: ["ipe_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "ipe_cycles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           created_at: string
