@@ -21,6 +21,59 @@ function capitalizeName(s: string | null | undefined): string {
   return s.replace(/\b\w/g, c => c.toUpperCase());
 }
 
+// LocalStorage keys pra onboardings
+const ONBOARDING_CONTEXT_SEEN = "rdwth_onb_context_seen";
+const ONBOARDING_THIRD_PARTY_SEEN = "rdwth_onb_thirdparty_seen";
+
+// ─── OnboardingOverlay — tela cheia, primeira visita ──────────────
+function OnboardingOverlay({ title, blocks, onClose }: {
+  title: string;
+  blocks: Array<{ label?: string; text: string | string[] }>;
+  onClose: () => void;
+}) {
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "var(--r-bg)", zIndex: 100,
+      display: "flex", flexDirection: "column",
+      animation: "fadeIn 300ms ease",
+    }}>
+      <style>{`@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
+      <div className="r-scroll" style={{ padding: "60px 24px 24px", display: "flex", flexDirection: "column", gap: 24 }}>
+        <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 9, color: "var(--r-accent)", letterSpacing: "0.12em" }}>
+          primeira visita
+        </div>
+        <div style={{ fontFamily: "var(--r-font-ed)", fontWeight: 800, fontSize: 22, lineHeight: 1.4, color: "var(--r-text)", maxWidth: 600, marginLeft: "auto", marginRight: "auto" }}>
+          {title}
+        </div>
+        {blocks.map((b, i) => (
+          <div key={i} style={{ borderLeft: "1px solid var(--r-ghost)", paddingLeft: 16, maxWidth: 600, marginLeft: "auto", marginRight: "auto", width: "100%" }}>
+            {b.label && (
+              <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 10, color: "var(--r-sub)", letterSpacing: "0.1em", marginBottom: 8 }}>
+                {b.label}
+              </div>
+            )}
+            {(Array.isArray(b.text) ? b.text : [b.text]).map((p, j) => (
+              <div key={j} style={{ fontFamily: "var(--r-font-ed)", fontSize: 14, lineHeight: 1.7, color: "var(--r-text)", marginBottom: 8 }}>
+                {p}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+      <div className="r-line" />
+      <div style={{ height: 56, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 24px", flexShrink: 0 }}>
+        <span onClick={onClose} style={{
+          fontFamily: "var(--r-font-sys)", fontSize: 13, color: "var(--r-text)",
+          cursor: "pointer", letterSpacing: "0.06em",
+          padding: "8px 24px", border: "1px solid var(--r-text)",
+        }}>
+          entendi →
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ─── ContextSystem — "Como o rdwth funciona" ──────────────────────
 function ContextSystem({ onBack }: { onBack: () => void }) {
   const navigate = useNavigate();
@@ -488,16 +541,7 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
                       {r.open_text && <div style={{ fontStyle: "italic", color: "var(--r-muted)" }}>{r.open_text}</div>}
                     </div>
                   ))}
-                  {insights[inv.id] && (
-                    <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid var(--r-ghost)" }}>
-                      <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 9, color: "var(--r-muted)", letterSpacing: "0.12em", marginBottom: 6 }}>
-                        mini-eco devolvido a essa pessoa
-                      </div>
-                      <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 13, lineHeight: 1.6, color: "var(--r-text)" }}>
-                        {insights[inv.id]}
-                      </div>
-                    </div>
-                  )}
+                  {/* W20.5b: mini-insight do terceiro NÃO aparece pro user — é só do terceiro */}
                 </div>
               )}
             </div>
@@ -526,6 +570,39 @@ export default function Context() {
   const [showCycle, setShowCycle] = useState(false);
   const [showThirdParty, setShowThirdParty] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showOnbContext, setShowOnbContext] = useState(false);
+  const [showOnbThirdParty, setShowOnbThirdParty] = useState(false);
+
+  // Onboarding /contexto: primeira visita ao /context
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem(ONBOARDING_CONTEXT_SEEN)) {
+        setShowOnbContext(true);
+      }
+    } catch {}
+  }, []);
+
+  const dismissOnbContext = () => {
+    try { localStorage.setItem(ONBOARDING_CONTEXT_SEEN, "true"); } catch {}
+    setShowOnbContext(false);
+  };
+
+  // Click em "terceiros": abre onboarding na primeira vez, depois vai direto
+  const handleOpenThirdParty = () => {
+    try {
+      if (!localStorage.getItem(ONBOARDING_THIRD_PARTY_SEEN)) {
+        setShowOnbThirdParty(true);
+        return;
+      }
+    } catch {}
+    setShowThirdParty(true);
+  };
+
+  const dismissOnbThirdParty = () => {
+    try { localStorage.setItem(ONBOARDING_THIRD_PARTY_SEEN, "true"); } catch {}
+    setShowOnbThirdParty(false);
+    setShowThirdParty(true);
+  };
 
   useEffect(() => { loadCycles(); }, []);
 
@@ -572,6 +649,64 @@ export default function Context() {
     } finally {
       setLoading(false);
     }
+  }
+
+  // Onboardings (overlays primeira-visita)
+  if (showOnbContext) {
+    return <OnboardingOverlay
+      onClose={dismissOnbContext}
+      title={userName ? `${capitalizeName(userName)}, este é o seu Contexto.` : "Este é o seu Contexto."}
+      blocks={[
+        {
+          label: "o que você encontra aqui",
+          text: "Cada ciclo do rdwth produz uma leitura estrutural — um retrato dos padrões que aparecem no que você compartilha. Aqui você acessa essa leitura, navega entre ciclos passados e vê como as coisas se desenham ao longo do tempo.",
+        },
+        {
+          label: "ciclos",
+          text: "Um ciclo é um conjunto completo de respostas — pills, questionário, e (opcionalmente) perspectivas de pessoas próximas. Cada ciclo gera sua própria leitura. O sistema amadurece com você ao longo deles.",
+        },
+        {
+          label: "terceiros",
+          text: "Você também pode convidar pessoas próximas pra responder um questionário curto sobre como veem você. A perspectiva externa traz coisas que de dentro ficam invisíveis.",
+        },
+        {
+          label: "leitura profunda",
+          text: "A leitura se constrói conforme você responde. Não é diagnóstico, não é prescrição. É devolução estruturada do que você compartilhou.",
+        },
+      ]}
+    />;
+  }
+  if (showOnbThirdParty) {
+    return <OnboardingOverlay
+      onClose={dismissOnbThirdParty}
+      title="Sobre o questionário de pessoas próximas"
+      blocks={[
+        {
+          label: "por que isso importa",
+          text: "A forma como alguém de fora observa traz dados que você sozinho não enxerga. O rdwth integra essas perspectivas à sua leitura estrutural, principalmente em dimensões internas onde o olhar externo é fundamental.",
+        },
+        {
+          label: "como funciona",
+          text: "Você gera um link único por convite e envia para quem você quiser (5-10 minutos pra responder). A pessoa responde 5 perguntas curtas — escala + descrição de uma situação observada. No final, ela recebe um pequeno espelho sobre como observa.",
+        },
+        {
+          label: "duas versões do questionário",
+          text: "Pra cobrir as 16 dimensões do sistema, geramos automaticamente 2 versões alternadas (α e β). Com pelo menos 1 de cada, a cobertura fica completa.",
+        },
+        {
+          label: "primeiro ciclo: opcional",
+          text: "No seu primeiro ciclo, você pode fechar a leitura só com suas respostas. Convidar terceiros é encorajado mas não obrigatório.",
+        },
+        {
+          label: "a partir do segundo ciclo: necessário",
+          text: "Pra fechar ciclos seguintes (2 em diante), você precisará de pelo menos 2 perspectivas externas (1 α + 1 β). Isso é parte do amadurecimento da leitura — quanto mais entradas, mais nuance.",
+        },
+        {
+          label: "limite",
+          text: "Você pode convidar até 8 pessoas por ciclo. Anonimato é decisão do terceiro: ele escolhe se você sabe quem foi, ou não.",
+        },
+      ]}
+    />;
   }
 
   // Subviews
@@ -687,7 +822,7 @@ export default function Context() {
 
               {/* Terceiros */}
               <div
-                onClick={() => setShowThirdParty(true)}
+                onClick={handleOpenThirdParty}
                 style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
               >
                 <div style={{ width: 1, height: 12, background: "var(--r-ghost)", flexShrink: 0 }} />
