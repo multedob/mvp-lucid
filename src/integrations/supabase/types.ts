@@ -391,6 +391,8 @@ export type Database = {
       ipe_cycles: {
         Row: {
           completed_at: string | null
+          completion_status: string | null
+          completion_status_updated_at: string | null
           cycle_number: number
           deep_reading_text: string | null
           deep_reading_updated_at: string | null
@@ -403,6 +405,8 @@ export type Database = {
         }
         Insert: {
           completed_at?: string | null
+          completion_status?: string | null
+          completion_status_updated_at?: string | null
           cycle_number?: number
           deep_reading_text?: string | null
           deep_reading_updated_at?: string | null
@@ -415,6 +419,8 @@ export type Database = {
         }
         Update: {
           completed_at?: string | null
+          completion_status?: string | null
+          completion_status_updated_at?: string | null
           cycle_number?: number
           deep_reading_text?: string | null
           deep_reading_updated_at?: string | null
@@ -1190,6 +1196,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      count_third_parties_by_set: {
+        Args: { cid: string }
+        Returns: {
+          alpha_count: number
+          beta_count: number
+          total_submitted: number
+        }[]
+      }
       lucid_persist_cycle: {
         Args: {
           p_base_version: number
