@@ -14,7 +14,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.27.3";
 
-const DEPLOY_FINGERPRINT = "wave14-deep-reading-v4.2-fix-admin-scope";
+const DEPLOY_FINGERPRINT = "w20.6.5-deep-reading-v4.3-anon-via-admin";
 
 const NODES_TO_SELECT = 4; // 3-5 conforme decisão DOC
 
