@@ -252,12 +252,10 @@ interface ThirdPartyResponse {
   episode_text: string | null;
 }
 
-interface ThirdPartyMiniInsight {
-  invite_id: string;
-  insight_text: string;
-}
-
 // ─── ContextThirdParty — convites pra terceiros (W20.4) ──────────
+// NOTA W20.5b/W20.6.5: mini_insight do terceiro NUNCA é exibido pro user.
+// Por isso esse componente NÃO faz fetch de third_party_mini_insights — só
+// `service_role` tem permissão de leitura (defesa em profundidade).
 function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   ipeCycleId: string;
   onBack: () => void;
@@ -266,7 +264,6 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   const navigate = useNavigate();
   const [invites, setInvites] = useState<ThirdPartyInvite[]>([]);
   const [responses, setResponses] = useState<Record<string, ThirdPartyResponse[]>>({});
-  const [insights, setInsights] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [selectedPronoun, setSelectedPronoun] = useState<"ela" | "ele" | "elu">("ela");
@@ -288,7 +285,8 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
       const invs: ThirdPartyInvite[] = await invR.json();
       setInvites(invs);
 
-      // Carrega responses + insights de invites com status submitted
+      // Carrega responses dos invites com status submitted.
+      // mini_insights NÃO são puxados — eles são privados do terceiro (W20.5b/W20.6.5).
       const submittedIds = invs.filter(i => i.status === "submitted").map(i => i.id);
       if (submittedIds.length > 0) {
         const idsCsv = submittedIds.map(id => `"${id}"`).join(",");
@@ -303,15 +301,6 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
           grouped[r.invite_id].push(r);
         }
         setResponses(grouped);
-
-        const insR = await fetch(
-          `${SUPABASE_URL}/rest/v1/third_party_mini_insights?invite_id=in.(${idsCsv})`,
-          { headers }
-        );
-        const ins: ThirdPartyMiniInsight[] = await insR.json();
-        const insMap: Record<string, string> = {};
-        for (const i of ins) insMap[i.invite_id] = i.insight_text;
-        setInsights(insMap);
       }
     } catch (err) {
       console.error("[ContextThirdParty] load error:", err);
@@ -478,6 +467,26 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
             {submittedCount} respondidos · {activeCount} ativos · {invites.length} no total
           </div>
         )}
+
+        {!loading && (() => {
+          const anonCount = invites.filter(i => i.status === "submitted" && i.reveal_identity === false).length;
+          if (anonCount === 0) return null;
+          return (
+            <div style={{
+              marginTop: 12,
+              padding: "10px 12px",
+              border: "0.5px solid var(--r-ghost)",
+              borderLeft: "2px solid var(--r-ghost)",
+              fontFamily: "var(--r-font-ed)",
+              fontSize: 12,
+              lineHeight: 1.6,
+              color: "var(--r-muted)",
+              fontStyle: "italic",
+            }}>
+              {anonCount === 1 ? "1 pessoa optou" : `${anonCount} pessoas optaram`} por anonimato. As respostas escritas não aparecem aqui, mas estão sendo lidas pelo sistema e participam da sua leitura profunda.
+            </div>
+          );
+        })()}
 
         {!loading && invites.map(inv => {
           // Filtra registros técnicos (__contact__) da contagem
@@ -690,14 +699,6 @@ export default function Context() {
           text: "Você gera um link único por convite e envia para quem você quiser (5-10 minutos pra responder). A pessoa responde 5 perguntas curtas, e ajuda o sistema a enxergar padrões antes invisíveis.",
         },
         {
-          label: "coragem de se mostrar",
-          text: "Pedir que alguém descreva você é, por si só, um ato. Não há jeito de fazer isso sem se expor um pouco. E é justo aí que algo se abre — o que escolhemos esconder de nós mesmos costuma ser exatamente o que outro olhar entrega de volta sem peso.",
-        },
-        {
-          label: "ninguém se vê de fora sem ajuda",
-          text: "Todo mundo carrega pontos cegos sobre si — não por descuido, mas porque a perspectiva interna não consegue ocupar dois lugares ao mesmo tempo. O olhar de quem te conhece não substitui o seu. Adiciona um ângulo que, de dentro, fica invisível.",
-        },
-        {
           label: "primeiro ciclo: opcional",
           text: "No seu primeiro ciclo, você pode fechar a leitura só com suas respostas. Convidar terceiros é encorajado, mas não obrigatório.",
         },
@@ -708,6 +709,10 @@ export default function Context() {
         {
           label: "limite",
           text: "Você pode convidar até 8 pessoas por ciclo. Anonimato é decisão do terceiro: ele escolhe se você sabe quem foi, ou não.",
+        },
+        {
+          label: "um ato de coragem",
+          text: "Pedir que alguém te descreva é um ato de coragem — não há como fazer isso sem se expor um pouco. E é justo aí que algo se abre: a perspectiva interna não consegue ocupar dois lugares ao mesmo tempo, então o que escolhemos esconder de nós mesmos costuma ser exatamente o que um outro olhar entrega de volta sem peso.",
         },
       ]}
     />;
