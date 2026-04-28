@@ -663,7 +663,7 @@ export default function Context() {
         },
         {
           label: "ciclos",
-          text: "Um ciclo é um conjunto completo de respostas — pills, questionário, e (opcionalmente) perspectivas de pessoas próximas. Cada ciclo gera sua própria leitura. O sistema amadurece com você ao longo deles.",
+          text: "Um ciclo é um conjunto completo de respostas — pills, questionário e perspectivas de pessoas próximas. Cada ciclo gera sua própria leitura. O sistema amadurece com você ao longo deles.",
         },
         {
           label: "terceiros",
@@ -687,19 +687,23 @@ export default function Context() {
         },
         {
           label: "como funciona",
-          text: "Você gera um link único por convite e envia para quem você quiser (5-10 minutos pra responder). A pessoa responde 5 perguntas curtas — escala + descrição de uma situação observada. No final, ela recebe um pequeno espelho sobre como observa.",
+          text: "Você gera um link único por convite e envia para quem você quiser (5-10 minutos pra responder). A pessoa responde 5 perguntas curtas, e ajuda o sistema a enxergar padrões antes invisíveis.",
         },
         {
-          label: "duas versões do questionário",
-          text: "Pra cobrir as 16 dimensões do sistema, geramos automaticamente 2 versões alternadas (α e β). Com pelo menos 1 de cada, a cobertura fica completa.",
+          label: "coragem de se mostrar",
+          text: "Pedir que alguém descreva você é, por si só, um ato. Não há jeito de fazer isso sem se expor um pouco. E é justo aí que algo se abre — o que escolhemos esconder de nós mesmos costuma ser exatamente o que outro olhar entrega de volta sem peso.",
+        },
+        {
+          label: "ninguém se vê de fora sem ajuda",
+          text: "Todo mundo carrega pontos cegos sobre si — não por descuido, mas porque a perspectiva interna não consegue ocupar dois lugares ao mesmo tempo. O olhar de quem te conhece não substitui o seu. Adiciona um ângulo que, de dentro, fica invisível.",
         },
         {
           label: "primeiro ciclo: opcional",
-          text: "No seu primeiro ciclo, você pode fechar a leitura só com suas respostas. Convidar terceiros é encorajado mas não obrigatório.",
+          text: "No seu primeiro ciclo, você pode fechar a leitura só com suas respostas. Convidar terceiros é encorajado, mas não obrigatório.",
         },
         {
           label: "a partir do segundo ciclo: necessário",
-          text: "Pra fechar ciclos seguintes (2 em diante), você precisará de pelo menos 2 perspectivas externas (1 α + 1 β). Isso é parte do amadurecimento da leitura — quanto mais entradas, mais nuance.",
+          text: "Pra fechar ciclos seguintes (2 em diante), você precisará de pelo menos 2 perspectivas externas. Isso é parte do amadurecimento da leitura — quanto mais entradas, mais nuance.",
         },
         {
           label: "limite",
