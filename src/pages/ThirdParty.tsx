@@ -594,7 +594,7 @@ export default function ThirdParty() {
           </div>
 
           <div style={{ marginTop: 24, display: "flex", justifyContent: "center" }}>
-            
+            <a
               href={RDWTH_LP_URL}
               style={{
                 fontFamily: "var(--r-font-sys)", fontSize: 13,
