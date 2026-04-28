@@ -13,7 +13,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.27.3";
 
-const DEPLOY_FINGERPRINT = "w20.1-finalize-v1";
+const DEPLOY_FINGERPRINT = "w20.6-finalize-v2-trigger-scoring";
 const APP_BASE_URL = "https://mvp-lucid.lovable.app";
 
 const CORS_HEADERS = {
@@ -179,6 +179,24 @@ Deno.serve(async (req) => {
   if (updErr) {
     return json({ error: "Failed to finalize invite", detail: updErr.message }, 500);
   }
+
+  // Wave 20.6 — dispara scoring de terceiros async (fire-and-forget)
+  // Não aguarda resposta pra não atrasar retorno pro terceiro
+  (async () => {
+    try {
+      await fetch(`${supabase_url}/functions/v1/ipe-scoring-third-party`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${service_role}`,
+          "apikey": service_role,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ invite_id: invite.id }),
+      });
+    } catch (err) {
+      console.warn("[finalize] scoring trigger failed:", err);
+    }
+  })();
 
   return json({
     ok: true,
