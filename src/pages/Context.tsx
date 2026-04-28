@@ -142,8 +142,6 @@ function ContextSystem({ onBack }: { onBack: () => void }) {
       <div className="r-line" />
       <div style={{ height: 52, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, flexShrink: 0 }}>
         <span onClick={onBack} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
-        <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-ghost)" }}>|</span>
-        <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-ghost)", letterSpacing: "0.08em" }}>Contexto</span>
       </div>
     </div>
   );
@@ -178,8 +176,6 @@ function ContextCycle({ cycle, onBack, userName }: { cycle: CycleData; onBack: (
       <div className="r-line" />
       <div style={{ height: 52, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, flexShrink: 0 }}>
         <span onClick={onBack} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
-        <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-ghost)" }}>|</span>
-        <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-ghost)", letterSpacing: "0.08em" }}>Contexto</span>
       </div>
     </div>
   );
@@ -214,8 +210,6 @@ function ContextDeep({ cycle, onBack, userName }: { cycle: CycleData; onBack: ()
       <div className="r-line" />
       <div style={{ height: 52, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, flexShrink: 0 }}>
         <span onClick={onBack} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
-        <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-ghost)" }}>|</span>
-        <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-ghost)", letterSpacing: "0.08em" }}>Contexto</span>
       </div>
     </div>
   );
@@ -489,8 +483,8 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
         })()}
 
         {!loading && invites.map(inv => {
-          // Filtra registros técnicos (__contact__) da contagem
-          const respList = (responses[inv.id] ?? []).filter(r => r.question_id !== "__contact__");
+          const VALID_QIDS = new Set(["calibration", "q1", "q2", "q3", "q4", "q5"]);
+          const respList = (responses[inv.id] ?? []).filter(r => VALID_QIDS.has(r.question_id));
           const respCount = respList.length;
           const expectedTotal = 6; // calibration + 5 perguntas
           const showDetails = expanded === inv.id;
@@ -561,8 +555,6 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
       <div className="r-line" />
       <div style={{ height: 52, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, flexShrink: 0 }}>
         <span onClick={onBack} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
-        <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-ghost)" }}>|</span>
-        <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-ghost)", letterSpacing: "0.08em" }}>Contexto</span>
       </div>
     </div>
   );
@@ -708,7 +700,7 @@ export default function Context() {
         },
         {
           label: "limite",
-          text: "Você pode convidar até 8 pessoas por ciclo. Anonimato é decisão do terceiro: ele escolhe se você sabe quem foi, ou não.",
+          text: "Você pode convidar até 8 pessoas por ciclo. Anonimato é decisão do terceiro: ele escolhe se você enxerga as respostas e quem respondeu.",
         },
         {
           label: "um ato de coragem",
