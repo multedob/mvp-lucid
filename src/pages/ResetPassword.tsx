@@ -38,12 +38,12 @@ export default function ResetPassword() {
     setMessage(null);
 
     if (password.length < 8) {
-      setError("use at least 8 characters.");
+      setError("use pelo menos 8 caracteres.");
       return;
     }
 
     if (password !== confirmPassword) {
-      setError("passwords do not match.");
+      setError("as senhas não coincidem.");
       return;
     }
 
@@ -56,14 +56,14 @@ export default function ResetPassword() {
       return;
     }
 
-    setMessage("password updated. you can sign in now.");
+    setMessage("senha atualizada. você já pode entrar.");
     window.setTimeout(() => navigate("/auth", { replace: true }), 1200);
   };
 
   return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label" style={{ cursor: "pointer" }} onClick={() => navigate("/")}>_rdwth</span>
+        <span className="r-header-label" style={{ cursor: "pointer" }} onClick={() => navigate("/")}>rdwth</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -73,13 +73,13 @@ export default function ResetPassword() {
       <div style={{ padding: "0 24px 32px", flexShrink: 0 }}>
         <div style={{ marginBottom: 36 }}>
           <div style={{ fontFamily: "var(--r-font-ed)", fontWeight: 800, fontSize: 22, lineHeight: 1.3, color: "var(--r-text)" }}>
-            choose a new<br />password.
+            escolha uma nova<br />senha.
           </div>
         </div>
 
         {!ready ? (
           <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-muted)", letterSpacing: "0.04em", lineHeight: 1.7 }}>
-            open the reset link from your email again.
+            abra novamente o link de redefinição no seu email.
           </div>
         ) : (
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -87,7 +87,7 @@ export default function ResetPassword() {
               <input
                 type="password"
                 className="r-textarea"
-                placeholder="new password"
+                placeholder="nova senha"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
@@ -100,7 +100,7 @@ export default function ResetPassword() {
               <input
                 type="password"
                 className="r-textarea"
-                placeholder="confirm password"
+                placeholder="confirmar senha"
                 value={confirmPassword}
                 onChange={e => setConfirmPassword(e.target.value)}
                 required
@@ -137,7 +137,7 @@ export default function ResetPassword() {
             >
               <span style={{ width: 1, height: 13, background: "var(--r-accent)", flexShrink: 0 }} />
               <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-text)", letterSpacing: "0.06em" }}>
-                {loading ? "..." : "update password"}
+                {loading ? "..." : "atualizar senha"}
               </span>
             </button>
           </form>
