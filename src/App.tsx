@@ -14,7 +14,7 @@ import Consent from "./pages/Consent";
 import Onboarding from "./pages/Onboarding";
 import Pills from "./pages/Pills";
 import PillFlow from "./pages/pill/PillFlow";
-import Context from "./pages/Context";
+import Context, { ContextSystem } from "./pages/Context";
 import Reed from "./pages/Reed";
 import Settings from "./pages/Settings";
 import Questionnaire from "./pages/Questionnaire";
@@ -149,6 +149,7 @@ const App = () => (
           <Route path="/pill/:pillId" element={<ProtectedRoute><PillFlow /></ProtectedRoute>} />
           <Route path="/questionnaire" element={<ProtectedRoute><Questionnaire /></ProtectedRoute>} />
           <Route path="/context" element={<ProtectedRoute><Context /></ProtectedRoute>} />
+          <Route path="/como-funciona" element={<ProtectedRoute><ContextSystem /></ProtectedRoute>} />
           <Route path="/reed" element={<ProtectedRoute><Reed /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/privacy" element={<Privacy />} />
