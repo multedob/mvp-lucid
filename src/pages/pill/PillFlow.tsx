@@ -99,12 +99,12 @@ const FALLBACK_M2: Record<PillId, string> = {
 };
 
 const FALLBACK_M3_2_SITUACAO: Record<PillId, string> = {
-  PI: `Someone close to you is doing something you consider wrong. It's not illegal. But it goes against what you believe.\n\nThis person doesn't know that you know. And there's a real cost in any direction you choose.`,
-  PII:  "You've been offered a role that others think fits you perfectly. But something in you hesitates.\n\nThe offer is real. The deadline is tomorrow.",
-  PIII: "Someone you were close to is back in your life. The distance between you has changed both of you.\n\nYou don't know yet if that's good or bad.",
-  PIV:  "You know what needs to be done. You've known for a while.\n\nThe cost of acting is clear. So is the cost of waiting.",
-  PV:   "You feel something shifting, but there's no clear name for it yet.\n\nPeople around you don't seem to notice. Or maybe they do.",
-  PVI:  "You've been building something for months. It's working — but the pace is taking something from you.\n\nYou can't tell yet if that's a problem or just the cost.",
+  PI: `Alguém próximo está fazendo algo que você considera errado. Não é ilegal. Mas vai contra o que você acredita.\n\nEssa pessoa não sabe que você sabe. E existe um custo real em qualquer direção que você escolha.`,
+  PII:  "Ofereceram a você um papel que, para os outros, parece encaixar perfeitamente. Mas algo em você hesita.\n\nA oferta é real. O prazo é amanhã.",
+  PIII: "Alguém de quem você era próximo voltou para sua vida. A distância entre vocês mudou os dois.\n\nVocê ainda não sabe se isso é bom ou ruim.",
+  PIV:  "Você sabe o que precisa ser feito. Já sabe há algum tempo.\n\nO custo de agir está claro. O custo de esperar também.",
+  PV:   "Você sente algo mudando, mas ainda não existe um nome claro para isso.\n\nAs pessoas ao redor parecem não notar. Ou talvez notem.",
+  PVI:  "Você vem construindo algo há meses. Está funcionando — mas o ritmo está tirando algo de você.\n\nVocê ainda não sabe se isso é um problema ou apenas o custo.",
 };
 
 const FALLBACK_M3_2_OPCOES: Record<PillId, Array<{ id: "A"|"B"|"C"|"D"; text: string }>> = {
