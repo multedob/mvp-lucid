@@ -81,21 +81,21 @@ interface State {
 // ─── Fallback content (V1 hardcoded — used when variation selector fails) ────
 
 const FALLBACK_PILLS: Record<PillId, { tensao: string; frase: string }> = {
-  PI:   { tensao: "Eu ↔ Pertencimento",       frase: "I moved. Not everything moved with me." },
-  PII:  { tensao: "Eu ↔ Papel",            frase: "Still doing what I've always done. But something inside isn't with it anymore." },
-  PIII: { tensao: "Presença ↔ Distância", frase: "It's over. And now I can see what I couldn't while it was happening." },
-  PIV:  { tensao: "Clareza ↔ Ação",    frase: "I know what's right. And I'm carrying the weight of acting on it." },
-  PV:   { tensao: "Dentro ↔ Fora",    frase: "No crisis. Just an openness with nowhere to go yet." },
-  PVI:  { tensao: "Movimento ↔ Pausa",    frase: "Building something that matters. The vertigo is part of the work." },
+  PI:   { tensao: "Eu ↔ Pertencimento",       frase: "Eu me movi. Nem tudo veio comigo." },
+  PII:  { tensao: "Eu ↔ Papel",            frase: "Ainda fazendo o que sempre fiz. Mas algo por dentro já não acompanha." },
+  PIII: { tensao: "Presença ↔ Distância", frase: "Acabou. E agora consigo ver o que não via enquanto acontecia." },
+  PIV:  { tensao: "Clareza ↔ Ação",    frase: "Eu sei o que é certo. E carrego o peso de agir sobre isso." },
+  PV:   { tensao: "Dentro ↔ Fora",    frase: "Sem crise. Só uma abertura sem lugar claro pra ir ainda." },
+  PVI:  { tensao: "Movimento ↔ Pausa",    frase: "Construindo algo que importa. A vertigem faz parte do trabalho." },
 };
 
 const FALLBACK_M2: Record<PillId, string> = {
-  PI: `Marina is 34. Her mother is getting older and over the past few months it has become clear she needs more care. Her siblings don't live in the same city. Marina does.\n\nEveryone agrees they "need to do something" — but no one has taken the first step.\n\nLast night, after visiting her mother, Marina sat in her car outside the house for twenty minutes before driving away. She didn't call any of her siblings. She just sat there, looking at the light in her mother's bedroom window.\n\nWhat do you think is happening with Marina right now?`,
-  PII:  "Describe a concrete situation where I ↔ Role became visible in your daily life.\n\nWhat were you doing when you first noticed it?",
-  PIII: "Describe a concrete situation where Presence ↔ Distance became visible in your daily life.\n\nWhat were you doing when you first noticed it?",
-  PIV:  "Describe a concrete situation where Clarity ↔ Action became visible in your daily life.\n\nWhat were you doing when you first noticed it?",
-  PV:   "Describe a concrete situation where Inside ↔ Outside became visible in your daily life.\n\nWhat were you doing when you first noticed it?",
-  PVI:  "Describe a concrete situation where Movement ↔ Pause became visible in your daily life.\n\nWhat were you doing when you first noticed it?",
+  PI: `Marina tem 34 anos. A mãe está envelhecendo e, nos últimos meses, ficou claro que ela precisa de mais cuidado. Os irmãos não moram na mesma cidade. Marina mora.\n\nTodos concordam que "precisam fazer alguma coisa" — mas ninguém deu o primeiro passo.\n\nOntem à noite, depois de visitar a mãe, Marina ficou vinte minutos sentada no carro em frente à casa antes de ir embora. Não ligou para nenhum irmão. Só ficou ali, olhando a luz acesa no quarto da mãe.\n\nO que você acha que está acontecendo com Marina agora?`,
+  PII:  "Descreva uma situação concreta em que Eu ↔ Papel ficou visível na sua vida cotidiana.\n\nO que você estava fazendo quando percebeu isso pela primeira vez?",
+  PIII: "Descreva uma situação concreta em que Presença ↔ Distância ficou visível na sua vida cotidiana.\n\nO que você estava fazendo quando percebeu isso pela primeira vez?",
+  PIV:  "Descreva uma situação concreta em que Clareza ↔ Ação ficou visível na sua vida cotidiana.\n\nO que você estava fazendo quando percebeu isso pela primeira vez?",
+  PV:   "Descreva uma situação concreta em que Dentro ↔ Fora ficou visível na sua vida cotidiana.\n\nO que você estava fazendo quando percebeu isso pela primeira vez?",
+  PVI:  "Descreva uma situação concreta em que Movimento ↔ Pausa ficou visível na sua vida cotidiana.\n\nO que você estava fazendo quando percebeu isso pela primeira vez?",
 };
 
 const FALLBACK_M3_2_SITUACAO: Record<PillId, string> = {
