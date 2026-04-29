@@ -1,6 +1,6 @@
 // src/pages/Settings.tsx
 // v2.0 — iOS.2 compliance: real delete account, data export, no placeholders
-// Privacy Policy | Terms of Use | How _rdwth works | Download my data | Delete account
+// Política de Privacidade | Termos de Uso | Como o rdwth funciona | Baixar meus dados | Apagar conta
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -87,7 +87,7 @@ export default function Settings() {
   return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · settings</span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span> · ajustes</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -95,10 +95,10 @@ export default function Settings() {
       <div style={{ flex: 1, padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 0 }}>
 
         {[
-          { label: "Privacy Policy",   action: () => navigate("/privacy") },
-          { label: "Terms of Use",     action: () => navigate("/terms") },
-          { label: "How _rdwth works", action: () => navigate("/context") },
-          { label: "Sign out",         action: handleSignOut },
+          { label: "Política de Privacidade", action: () => navigate("/privacy") },
+          { label: "Termos de Uso",            action: () => navigate("/terms") },
+          { label: "Como o rdwth funciona",    action: () => navigate("/como-funciona") },
+          { label: "Sair",                     action: handleSignOut },
         ].map((item, i) => (
           <div key={i}>
             <div
@@ -123,12 +123,12 @@ export default function Settings() {
 
         {[
           {
-            label: exporting ? "exporting..." : "Download my data",
+            label: exporting ? "baixando..." : "Baixar meus dados",
             color: "var(--r-sub)",
             action: exporting ? undefined : handleDownloadData,
           },
           {
-            label: deleting ? "deleting..." : "Delete account",
+            label: deleting ? "apagando..." : "Apagar conta",
             color: "var(--r-accent)",
             action: deleting ? undefined : handleDeleteAccount,
           },
