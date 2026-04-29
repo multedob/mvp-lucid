@@ -233,7 +233,6 @@ const Footer = forwardRef<HTMLDivElement, FooterProps>(({
       <div className="r-line" />
       <div ref={ref} className="r-footer">
         {onBack && <span className="r-footer-back" onClick={onBack}>‹</span>}
-        {onBack && <span className="r-footer-sep">|</span>}
         {onContinue && (
           <span
             className="r-footer-action"
