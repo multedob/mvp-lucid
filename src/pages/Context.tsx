@@ -372,7 +372,7 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
     <div className="r-screen">
       <div className="r-header">
         <span className="r-header-label">
-          <span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · contexto · terceiros
+          <span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span> · contexto · terceiros
         </span>
         <span className="r-header-date">{getToday()}</span>
       </div>
@@ -729,7 +729,7 @@ export default function Context() {
   if (!loading && cycles.length === 0) return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · contexto</span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span> · contexto</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -749,7 +749,7 @@ export default function Context() {
 
       {/* Header */}
       <div className="r-header">
-        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · contexto</span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span> · contexto</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -804,7 +804,7 @@ export default function Context() {
                 {cycles.map((c, i) => (
                   <span
                     key={c.id}
-                    onClick={() => { setSelectedIdx(i); setShowCycle(true); }}
+                    onClick={() => { setSelectedIdx(i); }}
                     style={{
                       fontFamily: "var(--r-font-sys)",
                       fontWeight: selectedIdx === i ? 400 : 300,
