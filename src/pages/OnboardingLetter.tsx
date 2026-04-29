@@ -1,7 +1,7 @@
 // src/pages/OnboardingLetter.tsx
 // Exibida uma única vez após consentimento.
 // Persiste flag em localStorage: "rdwth_letter_seen"
-// Após "Begin" → /onboarding (coleta de nome)
+// Após "começar" → /onboarding (coleta de nome)
 
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
@@ -310,7 +310,7 @@ export default function OnboardingLetter() {
 
       </div>
 
-      {/* Footer — Begin */}
+      {/* Footer — começar */}
       <div className="r-line" />
       <div
         style={{
