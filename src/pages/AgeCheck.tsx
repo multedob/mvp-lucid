@@ -21,7 +21,7 @@ export default function AgeCheck() {
           fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11,
           color: "var(--r-muted)", letterSpacing: "0.04em", lineHeight: 1.8,
         }}>
-          rdwth está disponível para pessoas<br />com 16 anos ou mais.
+          rdwth está disponível para pessoas com 16 anos ou mais.
         </div>
       </div>
       <div className="r-line" />

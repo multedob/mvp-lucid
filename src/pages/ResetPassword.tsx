@@ -73,7 +73,7 @@ export default function ResetPassword() {
       <div style={{ padding: "0 24px 32px", flexShrink: 0 }}>
         <div style={{ marginBottom: 36 }}>
           <div style={{ fontFamily: "var(--r-font-ed)", fontWeight: 800, fontSize: 22, lineHeight: 1.3, color: "var(--r-text)" }}>
-            escolha uma nova<br />senha.
+            escolha uma nova senha.
           </div>
         </div>
 

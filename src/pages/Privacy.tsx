@@ -47,7 +47,7 @@ export default function Privacy() {
 
           <p style={{ marginBottom: 8 }}><strong>Serviços de terceiros:</strong></p>
           <p style={{ marginBottom: 16 }}>
-            Lovable Cloud (banco de dados e autenticação); Anthropic (modelo de linguagem usado nas conversas com Reed — o texto da conversa é enviado para processamento; a Anthropic não usa dados de API para treinamento). Não compartilhamos seus dados com outros terceiros.
+            Supabase (banco de dados e autenticação, hospedado na AWS); Anthropic (modelo de linguagem usado nas conversas com Reed — o texto da conversa é enviado para a API da Anthropic para processamento; a Anthropic não usa dados de API para treinamento). Não compartilhamos seus dados com outros terceiros.
           </p>
 
           <p style={{ marginBottom: 8 }}><strong>Retenção de dados:</strong></p>
