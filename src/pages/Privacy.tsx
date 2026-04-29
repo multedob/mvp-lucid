@@ -1,5 +1,5 @@
 // src/pages/Privacy.tsx
-// Privacy Policy — required for Apple App Store + LGPD/GDPR
+// Política de Privacidade — required for Apple App Store + LGPD/GDPR
 
 import { useNavigate } from "react-router-dom";
 import { getToday } from "@/lib/api";
@@ -10,9 +10,7 @@ export default function Privacy() {
   return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label">
-          <span onClick={() => navigate(-1 as any)} style={{ cursor: "pointer" }}>← back</span>
-        </span>
+        <span className="r-header-label">rdwth · privacidade</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -22,7 +20,7 @@ export default function Privacy() {
           fontFamily: "var(--r-font-ed)", fontWeight: 800, fontSize: 16,
           lineHeight: 1.7, color: "var(--r-text)", marginBottom: 24,
         }}>
-          Privacy Policy
+          Política de Privacidade
         </div>
 
         <div style={{
@@ -30,48 +28,53 @@ export default function Privacy() {
           lineHeight: 1.8, color: "var(--r-sub)", letterSpacing: "0.01em",
         }}>
           <p style={{ marginBottom: 16 }}>
-            <strong>Last updated:</strong> April 2026
+            <strong>Última atualização:</strong> abril de 2026
           </p>
 
           <p style={{ marginBottom: 16 }}>
-            rdwth ("we", "us") is a structural self-knowledge application. We take your privacy seriously. This policy explains what data we collect, how we use it, and your rights.
+            rdwth é uma aplicação de autoconhecimento estrutural. Levamos sua privacidade a sério. Esta política explica quais dados coletamos, como usamos esses dados e quais são seus direitos.
           </p>
 
-          <p style={{ marginBottom: 8 }}><strong>Data we collect:</strong></p>
+          <p style={{ marginBottom: 8 }}><strong>Dados que coletamos:</strong></p>
           <p style={{ marginBottom: 16 }}>
-            Email address and authentication credentials; your first name (provided during onboarding); your responses to pills (narrative readings); your answers to the questionnaire; your conversations with Reed (our AI companion); structural analysis data derived from your responses; device and usage metadata.
+            Endereço de email e credenciais de autenticação; seu primeiro nome, informado no onboarding; suas respostas às Pills; suas respostas ao questionário; suas conversas com Reed; dados de análise estrutural derivados das suas respostas; metadados de dispositivo e uso.
           </p>
 
-          <p style={{ marginBottom: 8 }}><strong>How we use your data:</strong></p>
+          <p style={{ marginBottom: 8 }}><strong>Como usamos seus dados:</strong></p>
           <p style={{ marginBottom: 16 }}>
-            To generate your structural readings and self-knowledge profile; to enable Reed to provide personalized responses; to improve the accuracy of the structural instrument over time. We do not sell your data. We do not use your data for advertising.
+            Para gerar suas leituras estruturais e seu perfil de autoconhecimento; para permitir que Reed ofereça respostas personalizadas; para melhorar a precisão do instrumento estrutural ao longo do tempo. Não vendemos seus dados. Não usamos seus dados para publicidade.
           </p>
 
-          <p style={{ marginBottom: 8 }}><strong>Third-party services:</strong></p>
+          <p style={{ marginBottom: 8 }}><strong>Serviços de terceiros:</strong></p>
           <p style={{ marginBottom: 16 }}>
-            Supabase (database and authentication, hosted in AWS); Anthropic (AI language model for Reed conversations — your conversation text is sent to Anthropic's API for processing; Anthropic does not use API data for training). We do not share your data with any other third parties.
+            Lovable Cloud (banco de dados e autenticação); Anthropic (modelo de linguagem usado nas conversas com Reed — o texto da conversa é enviado para processamento; a Anthropic não usa dados de API para treinamento). Não compartilhamos seus dados com outros terceiros.
           </p>
 
-          <p style={{ marginBottom: 8 }}><strong>Data retention:</strong></p>
+          <p style={{ marginBottom: 8 }}><strong>Retenção de dados:</strong></p>
           <p style={{ marginBottom: 16 }}>
-            Your data is retained for as long as your account is active. You can export all your data at any time via Settings → Download my data. You can permanently delete all your data via Settings → Delete account.
+            Seus dados são mantidos enquanto sua conta estiver ativa. Você pode exportar todos os seus dados a qualquer momento em Ajustes → Baixar meus dados. Você pode apagar permanentemente todos os seus dados em Ajustes → Apagar conta.
           </p>
 
-          <p style={{ marginBottom: 8 }}><strong>Your rights (LGPD / GDPR):</strong></p>
+          <p style={{ marginBottom: 8 }}><strong>Seus direitos (LGPD / GDPR):</strong></p>
           <p style={{ marginBottom: 16 }}>
-            You have the right to access, export, correct, and delete your personal data. To exercise these rights, use the in-app tools in Settings or contact us at multedob@gmail.com.
+            Você tem o direito de acessar, exportar, corrigir e apagar seus dados pessoais. Para exercer esses direitos, use as ferramentas do app em Ajustes ou entre em contato pelo email multedob@gmail.com.
           </p>
 
-          <p style={{ marginBottom: 8 }}><strong>Age restriction:</strong></p>
+          <p style={{ marginBottom: 8 }}><strong>Restrição de idade:</strong></p>
           <p style={{ marginBottom: 16 }}>
-            rdwth is intended for users aged 16 and older. By creating an account, you confirm that you are at least 16 years old.
+            rdwth é destinado a pessoas com 16 anos ou mais. Ao criar uma conta, você confirma que tem pelo menos 16 anos.
           </p>
 
-          <p style={{ marginBottom: 8 }}><strong>Contact:</strong></p>
+          <p style={{ marginBottom: 8 }}><strong>Contato:</strong></p>
           <p style={{ marginBottom: 0 }}>
-            For questions about this policy: multedob@gmail.com
+            Para dúvidas sobre esta política: multedob@gmail.com
           </p>
         </div>
+      </div>
+
+      <div className="r-line" />
+      <div style={{ height: 52, display: "flex", alignItems: "center", padding: "0 24px", flexShrink: 0 }}>
+        <span onClick={() => navigate(-1 as any)} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
       </div>
     </div>
   );

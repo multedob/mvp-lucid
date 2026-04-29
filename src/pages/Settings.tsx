@@ -1,12 +1,11 @@
 // src/pages/Settings.tsx
 // v2.0 — iOS.2 compliance: real delete account, data export, no placeholders
-// Privacy Policy | Terms of Use | How _rdwth works | Download my data | Delete account
+// Política de Privacidade | Termos de Uso | Como o rdwth funciona | Baixar meus dados | Apagar conta
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunction, getToday } from "@/lib/api";
-import NavBottom from "@/components/NavBottom";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -15,11 +14,11 @@ export default function Settings() {
 
   const handleDeleteAccount = async () => {
     const first = window.confirm(
-      "Delete your account and all data?\nThis cannot be undone."
+      "Apagar sua conta e todos os dados?\nIsso não pode ser desfeito."
     );
     if (!first) return;
     const second = window.confirm(
-      "Are you absolutely sure? All your readings, pills, questionnaire data, and conversations will be permanently deleted."
+      "Tem certeza absoluta? Todas as suas leituras, Pills, dados do questionário e conversas serão apagados permanentemente."
     );
     if (!second) return;
 
@@ -73,7 +72,7 @@ export default function Settings() {
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Export error:", err);
-      alert("Something went wrong exporting your data. Please try again.");
+      alert("Algo deu errado ao exportar seus dados. Tente novamente.");
     }
     setExporting(false);
   };
@@ -87,7 +86,7 @@ export default function Settings() {
   return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · settings</span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span> · ajustes</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -95,10 +94,10 @@ export default function Settings() {
       <div style={{ flex: 1, padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 0 }}>
 
         {[
-          { label: "Privacy Policy",   action: () => navigate("/privacy") },
-          { label: "Terms of Use",     action: () => navigate("/terms") },
-          { label: "How _rdwth works", action: () => navigate("/context") },
-          { label: "Sign out",         action: handleSignOut },
+          { label: "Política de Privacidade", action: () => navigate("/privacy-policy") },
+          { label: "Termos de Uso",            action: () => navigate("/terms-of-use") },
+          { label: "Como o rdwth funciona",    action: () => navigate("/como-funciona") },
+          { label: "Sair",                     action: handleSignOut },
         ].map((item, i) => (
           <div key={i}>
             <div
@@ -123,12 +122,12 @@ export default function Settings() {
 
         {[
           {
-            label: exporting ? "exporting..." : "Download my data",
+            label: exporting ? "baixando..." : "Baixar meus dados",
             color: "var(--r-sub)",
             action: exporting ? undefined : handleDownloadData,
           },
           {
-            label: deleting ? "deleting..." : "Delete account",
+            label: deleting ? "apagando..." : "Apagar conta",
             color: "var(--r-accent)",
             action: deleting ? undefined : handleDeleteAccount,
           },
@@ -155,7 +154,10 @@ export default function Settings() {
 
       </div>
 
-      <NavBottom active="settings" />
+      <div className="r-line" />
+      <div style={{ height: 52, display: "flex", alignItems: "center", padding: "0 24px", flexShrink: 0 }}>
+        <span onClick={() => navigate(-1 as any)} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
+      </div>
     </div>
   );
 }

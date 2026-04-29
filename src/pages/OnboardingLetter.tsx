@@ -1,7 +1,7 @@
 // src/pages/OnboardingLetter.tsx
 // Exibida uma única vez após consentimento.
 // Persiste flag em localStorage: "rdwth_letter_seen"
-// Após "Begin" → /onboarding (coleta de nome)
+// Após "começar" → /onboarding (coleta de nome)
 
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
@@ -195,7 +195,7 @@ export default function OnboardingLetter() {
 
       {/* Header */}
       <div className="r-header">
-        <span className="r-header-label">_rdwth</span>
+        <span className="r-header-label">rdwth</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -221,7 +221,7 @@ export default function OnboardingLetter() {
               color: "var(--r-text)",
               lineHeight: 1,
               letterSpacing: "-0.01em",
-            }}>_</span>
+            }}></span>
             {(["r","d","w","t","h"] as LetterKey[]).map(letter => (
               <span
                 key={letter}
@@ -247,7 +247,7 @@ export default function OnboardingLetter() {
               opacity: 0.7,
             }}
           >
-            Read With
+            read with
           </div>
         </div>
 
@@ -262,33 +262,33 @@ export default function OnboardingLetter() {
             letterSpacing: "0.03em",
           }}
         >
-          We make patterns visible.<br />
-          We make complexity readable.
+          Tornamos padrões visíveis.<br />
+          Tornamos a complexidade legível.
           <br /><br />
-          Behind every choice, conflict, impulse, or repetition,<br />
-          there is a structure at work.
+          Por trás de cada escolha, conflito, impulso ou repetição,<br />
+          existe uma estrutura em ação.
           <br /><br />
-          _rdwth was built to make that structure legible —<br />
-          without reducing a person to a type,<br />
-          turning difference into hierarchy,<br />
-          or mistaking pattern for identity.
+          rdwth foi criado para tornar essa estrutura legível —<br />
+          sem reduzir uma pessoa a um tipo,<br />
+          transformar diferença em hierarquia,<br />
+          ou confundir padrão com identidade.
           <br /><br />
-          We do not offer ready-made answers.<br />
-          We offer reading.
+          Não oferecemos respostas prontas.<br />
+          Oferecemos leitura.
           <br /><br />
-          The kind of reading that brings tensions into focus,<br />
-          organizes complexity,<br />
-          and returns something rare:
+          O tipo de leitura que coloca tensões em foco,<br />
+          organiza a complexidade,<br />
+          e devolve algo raro:
           <br /><br />
-          a clearer view of what is shaping<br />
-          someone's experience,<br />
-          while keeping responsibility in their hands.
+          uma visão mais clara do que está moldando<br />
+          a experiência de alguém,<br />
+          mantendo a responsabilidade nas mãos dela.
           <br /><br />
-          No diagnosis.<br />
-          No prescription.<br />
-          No fixed conclusions.
+          Sem diagnóstico.<br />
+          Sem prescrição.<br />
+          Sem conclusões fixas.
           <br /><br />
-          Just one simple and radical proposition:
+          Só uma proposição simples e radical:
         </div>
 
         {/* Proposição — destaque */}
@@ -304,13 +304,13 @@ export default function OnboardingLetter() {
             marginBottom: 32,
           }}
         >
-          see more precisely<br />
-          what is already there.
+          ver com mais precisão<br />
+          o que já está ali.
         </div>
 
       </div>
 
-      {/* Footer — Begin */}
+      {/* Footer — começar */}
       <div className="r-line" />
       <div
         style={{
@@ -342,7 +342,7 @@ export default function OnboardingLetter() {
               letterSpacing: "0.08em",
             }}
           >
-            Begin
+            começar
           </span>
         </div>
       </div>

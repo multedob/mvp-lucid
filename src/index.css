@@ -61,7 +61,7 @@
   body { @apply bg-background text-foreground; }
 }
 
-/* ─── _rdwth design system — prefixo --r- para não colidir com shadcn ── */
+/* ─── rdwth design system — prefixo --r- para não colidir com shadcn ── */
 
 :root {
   --r-bg:       #FAFAF9;

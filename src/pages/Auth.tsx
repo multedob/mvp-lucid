@@ -16,7 +16,7 @@ export default function Auth() {
 
   const handleGoogleSignIn = async () => {
     if (mode === "signup" && !ageConfirmed) {
-      setError("you must confirm you are 16 or older.");
+      setError("confirme que você tem 16 anos ou mais.");
       return;
     }
     setLoading(true);
@@ -59,7 +59,7 @@ export default function Auth() {
       // Age gate — required for signup
       if (!ageConfirmed) {
         setLoading(false);
-        return setError("you must confirm you are 16 or older.");
+        return setError("confirme que você tem 16 anos ou mais.");
       }
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -75,7 +75,7 @@ export default function Auth() {
       if (data.session) {
         navigate("/", { replace: true });
       } else {
-        setMessage("check your email to confirm your account.");
+        setMessage("verifique seu email para confirmar sua conta.");
       }
     }
   };
@@ -90,7 +90,7 @@ export default function Auth() {
           style={{ cursor: "pointer" }}
           onClick={() => navigate("/")}
         >
-          _rdwth
+          rdwth
         </span>
         <span className="r-header-date">{getToday()}</span>
       </div>
@@ -114,7 +114,7 @@ export default function Auth() {
               color: "var(--r-text)",
             }}
           >
-            something brought<br />you here.
+            algo te trouxe<br />aqui.
           </div>
         </div>
 
@@ -140,7 +140,7 @@ export default function Auth() {
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
             </svg>
             <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 12, color: "var(--r-text)", letterSpacing: "0.04em" }}>
-              continue with google
+              continuar com google
             </span>
           </div>
         </div>
@@ -149,7 +149,7 @@ export default function Auth() {
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
           <div style={{ flex: 1, height: "0.5px", background: "var(--r-ghost)" }} />
           <span style={{ fontFamily: "var(--r-font-sys)", fontSize: 9, color: "var(--r-ghost)", letterSpacing: "0.08em" }}>
-            or
+            ou
           </span>
           <div style={{ flex: 1, height: "0.5px", background: "var(--r-ghost)" }} />
         </div>
@@ -173,7 +173,7 @@ export default function Auth() {
             <input
               type="password"
               className="r-textarea"
-              placeholder="password"
+              placeholder="senha"
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
@@ -208,7 +208,7 @@ export default function Auth() {
                 fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10,
                 color: "var(--r-sub)", letterSpacing: "0.04em",
               }}>
-                I confirm I am 16 years or older
+                confirmo que tenho 16 anos ou mais
               </span>
             </div>
           )}
@@ -251,7 +251,7 @@ export default function Auth() {
             >
               <div style={{ width: 1, height: 13, background: "var(--r-accent)", flexShrink: 0 }} />
               <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-text)", letterSpacing: "0.06em" }}>
-                {loading ? "..." : mode === "signin" ? "sign in" : "create account"}
+                {loading ? "..." : mode === "signin" ? "entrar" : "criar conta"}
               </span>
             </div>
 
@@ -259,23 +259,25 @@ export default function Auth() {
               onClick={() => { setMode(m => m === "signin" ? "signup" : "signin"); setError(null); setMessage(null); }}
               style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 9, color: "var(--r-muted)", letterSpacing: "0.04em", cursor: "pointer" }}
             >
-              {mode === "signin" ? "no account? sign up" : "have an account? sign in"}
+              {mode === "signin" ? "sem conta? cadastrar" : "já tem conta? entrar"}
             </span>
           </div>
         </form>
 
         {/* legal */}
         <div style={{ marginTop: 20, fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 8, color: "var(--r-ghost)", letterSpacing: "0.06em", lineHeight: 1.8 }}>
-          by continuing you agree to our{" "}
-          <span onClick={() => navigate("/terms")} style={{ textDecoration: "underline", cursor: "pointer" }}>terms</span>
-          {" "}and{" "}
-          <span onClick={() => navigate("/privacy")} style={{ textDecoration: "underline", cursor: "pointer" }}>privacy policy</span>.
+          ao continuar você concorda com nossos{" "}
+          <span onClick={() => navigate("/terms-of-use")} style={{ textDecoration: "underline", cursor: "pointer" }}>termos</span>
+          {" "}e{" "}
+          <span onClick={() => navigate("/privacy-policy")} style={{ textDecoration: "underline", cursor: "pointer" }}>política de privacidade</span>.
         </div>
 
       </div>
 
       <div className="r-line" />
-      <div style={{ height: 56, flexShrink: 0 }} />
+      <div style={{ height: 52, display: "flex", alignItems: "center", padding: "0 24px", flexShrink: 0 }}>
+        <span onClick={() => navigate(-1 as any)} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
+      </div>
 
     </div>
   );

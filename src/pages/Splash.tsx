@@ -1,5 +1,5 @@
 // src/pages/Splash.tsx
-// Tela de abertura — animação _rdwth com morphing de fontes
+// Tela de abertura — animação rdwth com morphing de fontes
 // Auto-avança para /auth após 4s. Clique antecipa.
 
 import { useEffect, useRef } from "react";
@@ -282,7 +282,7 @@ export default function Splash() {
 
       {/* wordmark animado — ancorado no rodapé */}
       <div style={{ padding: "20px 24px 20px", flexShrink: 0 }}>
-        {/* Letras _rdwth */}
+        {/* Letras rdwth */}
         <div style={{
           display: "flex",
           alignItems: "flex-end",
@@ -290,16 +290,6 @@ export default function Splash() {
           lineHeight: 1,
           marginBottom: 10,
         }}>
-          {/* underscore prefixo — estático */}
-          <span style={{
-            fontFamily: "'IBM Plex Mono', monospace",
-            fontWeight: 700,
-            fontSize: "clamp(52px, 9.5vw, 112px)",
-            color: "var(--r-text)",
-            lineHeight: 1,
-            letterSpacing: "-0.02em",
-          }}>_</span>
-
           {(["r","d","w","t","h"] as LetterKey[]).map(letter => (
             <span
               key={letter}

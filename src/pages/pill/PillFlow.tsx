@@ -81,68 +81,68 @@ interface State {
 // ─── Fallback content (V1 hardcoded — used when variation selector fails) ────
 
 const FALLBACK_PILLS: Record<PillId, { tensao: string; frase: string }> = {
-  PI:   { tensao: "Eu ↔ Pertencimento",       frase: "I moved. Not everything moved with me." },
-  PII:  { tensao: "Eu ↔ Papel",            frase: "Still doing what I've always done. But something inside isn't with it anymore." },
-  PIII: { tensao: "Presença ↔ Distância", frase: "It's over. And now I can see what I couldn't while it was happening." },
-  PIV:  { tensao: "Clareza ↔ Ação",    frase: "I know what's right. And I'm carrying the weight of acting on it." },
-  PV:   { tensao: "Dentro ↔ Fora",    frase: "No crisis. Just an openness with nowhere to go yet." },
-  PVI:  { tensao: "Movimento ↔ Pausa",    frase: "Building something that matters. The vertigo is part of the work." },
+  PI:   { tensao: "Eu ↔ Pertencimento",       frase: "Eu me movi. Nem tudo veio comigo." },
+  PII:  { tensao: "Eu ↔ Papel",            frase: "Ainda fazendo o que sempre fiz. Mas algo por dentro já não acompanha." },
+  PIII: { tensao: "Presença ↔ Distância", frase: "Acabou. E agora consigo ver o que não via enquanto acontecia." },
+  PIV:  { tensao: "Clareza ↔ Ação",    frase: "Eu sei o que é certo. E carrego o peso de agir sobre isso." },
+  PV:   { tensao: "Dentro ↔ Fora",    frase: "Sem crise. Só uma abertura sem lugar claro pra ir ainda." },
+  PVI:  { tensao: "Movimento ↔ Pausa",    frase: "Construindo algo que importa. A vertigem faz parte do trabalho." },
 };
 
 const FALLBACK_M2: Record<PillId, string> = {
-  PI: `Marina is 34. Her mother is getting older and over the past few months it has become clear she needs more care. Her siblings don't live in the same city. Marina does.\n\nEveryone agrees they "need to do something" — but no one has taken the first step.\n\nLast night, after visiting her mother, Marina sat in her car outside the house for twenty minutes before driving away. She didn't call any of her siblings. She just sat there, looking at the light in her mother's bedroom window.\n\nWhat do you think is happening with Marina right now?`,
-  PII:  "Describe a concrete situation where I ↔ Role became visible in your daily life.\n\nWhat were you doing when you first noticed it?",
-  PIII: "Describe a concrete situation where Presence ↔ Distance became visible in your daily life.\n\nWhat were you doing when you first noticed it?",
-  PIV:  "Describe a concrete situation where Clarity ↔ Action became visible in your daily life.\n\nWhat were you doing when you first noticed it?",
-  PV:   "Describe a concrete situation where Inside ↔ Outside became visible in your daily life.\n\nWhat were you doing when you first noticed it?",
-  PVI:  "Describe a concrete situation where Movement ↔ Pause became visible in your daily life.\n\nWhat were you doing when you first noticed it?",
+  PI: `Marina tem 34 anos. A mãe está envelhecendo e, nos últimos meses, ficou claro que ela precisa de mais cuidado. Os irmãos não moram na mesma cidade. Marina mora.\n\nTodos concordam que "precisam fazer alguma coisa" — mas ninguém deu o primeiro passo.\n\nOntem à noite, depois de visitar a mãe, Marina ficou vinte minutos sentada no carro em frente à casa antes de ir embora. Não ligou para nenhum irmão. Só ficou ali, olhando a luz acesa no quarto da mãe.\n\nO que você acha que está acontecendo com Marina agora?`,
+  PII:  "Descreva uma situação concreta em que Eu ↔ Papel ficou visível na sua vida cotidiana.\n\nO que você estava fazendo quando percebeu isso pela primeira vez?",
+  PIII: "Descreva uma situação concreta em que Presença ↔ Distância ficou visível na sua vida cotidiana.\n\nO que você estava fazendo quando percebeu isso pela primeira vez?",
+  PIV:  "Descreva uma situação concreta em que Clareza ↔ Ação ficou visível na sua vida cotidiana.\n\nO que você estava fazendo quando percebeu isso pela primeira vez?",
+  PV:   "Descreva uma situação concreta em que Dentro ↔ Fora ficou visível na sua vida cotidiana.\n\nO que você estava fazendo quando percebeu isso pela primeira vez?",
+  PVI:  "Descreva uma situação concreta em que Movimento ↔ Pausa ficou visível na sua vida cotidiana.\n\nO que você estava fazendo quando percebeu isso pela primeira vez?",
 };
 
 const FALLBACK_M3_2_SITUACAO: Record<PillId, string> = {
-  PI: `Someone close to you is doing something you consider wrong. It's not illegal. But it goes against what you believe.\n\nThis person doesn't know that you know. And there's a real cost in any direction you choose.`,
-  PII:  "You've been offered a role that others think fits you perfectly. But something in you hesitates.\n\nThe offer is real. The deadline is tomorrow.",
-  PIII: "Someone you were close to is back in your life. The distance between you has changed both of you.\n\nYou don't know yet if that's good or bad.",
-  PIV:  "You know what needs to be done. You've known for a while.\n\nThe cost of acting is clear. So is the cost of waiting.",
-  PV:   "You feel something shifting, but there's no clear name for it yet.\n\nPeople around you don't seem to notice. Or maybe they do.",
-  PVI:  "You've been building something for months. It's working — but the pace is taking something from you.\n\nYou can't tell yet if that's a problem or just the cost.",
+  PI: `Alguém próximo está fazendo algo que você considera errado. Não é ilegal. Mas vai contra o que você acredita.\n\nEssa pessoa não sabe que você sabe. E existe um custo real em qualquer direção que você escolha.`,
+  PII:  "Ofereceram a você um papel que, para os outros, parece encaixar perfeitamente. Mas algo em você hesita.\n\nA oferta é real. O prazo é amanhã.",
+  PIII: "Alguém de quem você era próximo voltou para sua vida. A distância entre vocês mudou os dois.\n\nVocê ainda não sabe se isso é bom ou ruim.",
+  PIV:  "Você sabe o que precisa ser feito. Já sabe há algum tempo.\n\nO custo de agir está claro. O custo de esperar também.",
+  PV:   "Você sente algo mudando, mas ainda não existe um nome claro para isso.\n\nAs pessoas ao redor parecem não notar. Ou talvez notem.",
+  PVI:  "Você vem construindo algo há meses. Está funcionando — mas o ritmo está tirando algo de você.\n\nVocê ainda não sabe se isso é um problema ou apenas o custo.",
 };
 
 const FALLBACK_M3_2_OPCOES: Record<PillId, Array<{ id: "A"|"B"|"C"|"D"; text: string }>> = {
   PI: [
-    { id: "A", text: "I don't get involved. Everyone is responsible for their own choices." },
-    { id: "B", text: "I speak directly with the person. I accept whatever happens after." },
-    { id: "C", text: "I find a way to act without direct confrontation — a third path." },
-    { id: "D", text: "I need more context before I can decide anything." },
+    { id: "A", text: "Não me envolvo. Cada pessoa é responsável pelas próprias escolhas." },
+    { id: "B", text: "Falo diretamente com a pessoa. Aceito o que acontecer depois." },
+    { id: "C", text: "Encontro um jeito de agir sem confronto direto — uma terceira via." },
+    { id: "D", text: "Preciso de mais contexto antes de decidir qualquer coisa." },
   ],
   PII: [
-    { id: "A", text: "I accept. Alignment with others' expectations is enough for now." },
-    { id: "B", text: "I decline. I trust my hesitation more than their certainty." },
-    { id: "C", text: "I ask for time and try to understand what's driving my hesitation." },
-    { id: "D", text: "I accept, but I hold the discomfort — and watch what happens." },
+    { id: "A", text: "Aceito. Estar alinhado com a expectativa dos outros basta por enquanto." },
+    { id: "B", text: "Recuso. Confio mais na minha hesitação do que na certeza deles." },
+    { id: "C", text: "Peço tempo e tento entender o que está movendo minha hesitação." },
+    { id: "D", text: "Aceito, mas sustento o desconforto — e observo o que acontece." },
   ],
   PIII: [
-    { id: "A", text: "I meet the distance with distance. I wait to see who they are now." },
-    { id: "B", text: "I bring who I am now. Whatever happens next is information." },
-    { id: "C", text: "I acknowledge the change directly. It feels dishonest not to." },
-    { id: "D", text: "I need more time before I can know how to be with them." },
+    { id: "A", text: "Encontro a distância com distância. Espero para ver quem essa pessoa é agora." },
+    { id: "B", text: "Levo quem eu sou agora. O que acontecer depois é informação." },
+    { id: "C", text: "Reconheço a mudança diretamente. Parece desonesto não fazer isso." },
+    { id: "D", text: "Preciso de mais tempo antes de saber como estar com essa pessoa." },
   ],
   PIV: [
-    { id: "A", text: "I act. The cost of waiting is higher than the cost of moving." },
-    { id: "B", text: "I wait. I'm not ready — and forcing it would make it worse." },
-    { id: "C", text: "I take a smaller step. Not the full thing, but something." },
-    { id: "D", text: "I name the conflict out loud — to myself, or to someone else." },
+    { id: "A", text: "Eu ajo. O custo de esperar é maior que o custo de me mover." },
+    { id: "B", text: "Eu espero. Não estou pronto — e forçar pioraria as coisas." },
+    { id: "C", text: "Dou um passo menor. Não tudo, mas alguma coisa." },
+    { id: "D", text: "Nomeio o conflito em voz alta — para mim ou para outra pessoa." },
   ],
   PV: [
-    { id: "A", text: "I stay quiet. It's too early to name it." },
-    { id: "B", text: "I speak it anyway. Naming it might help me understand it." },
-    { id: "C", text: "I act as if I understand it, even if I don't — and see what I learn." },
-    { id: "D", text: "I look for the thing I might be avoiding by not naming it." },
+    { id: "A", text: "Fico em silêncio. Ainda é cedo demais para nomear." },
+    { id: "B", text: "Falo mesmo assim. Nomear talvez me ajude a entender." },
+    { id: "C", text: "Ajo como se entendesse, mesmo sem entender — e vejo o que aprendo." },
+    { id: "D", text: "Procuro aquilo que talvez eu esteja evitando ao não nomear." },
   ],
   PVI: [
-    { id: "A", text: "I continue. The cost is acceptable. The work is worth it." },
-    { id: "B", text: "I slow down. The pace is telling me something I need to hear." },
-    { id: "C", text: "I finish this phase, then reassess. I can't decide in the middle." },
-    { id: "D", text: "I try to name what's being taken — before I decide what to do." },
+    { id: "A", text: "Continuo. O custo é aceitável. O trabalho vale isso." },
+    { id: "B", text: "Desacelero. O ritmo está me dizendo algo que preciso ouvir." },
+    { id: "C", text: "Termino esta fase e depois reavalio. Não consigo decidir no meio." },
+    { id: "D", text: "Tento nomear o que está sendo tirado — antes de decidir o que fazer." },
   ],
 };
 
@@ -206,7 +206,7 @@ const Header = forwardRef<HTMLDivElement, { moment: Moment }>(({ moment }, ref) 
     <>
       <div ref={ref} className="r-header">
         <span className="r-header-label">
-          {counter ? `_rdwth · pills · ${counter}` : "_rdwth · pills"}
+          {counter ? `rdwth · pills · ${counter}` : "rdwth · pills"}
         </span>
         <span className="r-header-date">{getToday()}</span>
       </div>
@@ -233,7 +233,6 @@ const Footer = forwardRef<HTMLDivElement, FooterProps>(({
       <div className="r-line" />
       <div ref={ref} className="r-footer">
         {onBack && <span className="r-footer-back" onClick={onBack}>‹</span>}
-        {onBack && <span className="r-footer-sep">|</span>}
         {onContinue && (
           <span
             className="r-footer-action"

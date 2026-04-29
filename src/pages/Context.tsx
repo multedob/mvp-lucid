@@ -75,8 +75,9 @@ function OnboardingOverlay({ title, blocks, onClose }: {
 }
 
 // ─── ContextSystem — "Como o rdwth funciona" ──────────────────────
-function ContextSystem({ onBack }: { onBack: () => void }) {
+export function ContextSystem({ onBack }: { onBack?: () => void }) {
   const navigate = useNavigate();
+  const handleBack = onBack ?? (() => navigate(-1 as any));
   const ITEMS = [
     {
       label: "O que é isso",
@@ -115,7 +116,7 @@ function ContextSystem({ onBack }: { onBack: () => void }) {
   return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · sistema</span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span> · sistema</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -141,7 +142,7 @@ function ContextSystem({ onBack }: { onBack: () => void }) {
 
       <div className="r-line" />
       <div style={{ height: 52, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, flexShrink: 0 }}>
-        <span onClick={onBack} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
+        <span onClick={handleBack} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
       </div>
     </div>
   );
@@ -153,7 +154,7 @@ function ContextCycle({ cycle, onBack, userName }: { cycle: CycleData; onBack: (
   return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · contexto · {cycle.id}</span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span> · contexto · {cycle.id}</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -187,7 +188,7 @@ function ContextDeep({ cycle, onBack, userName }: { cycle: CycleData; onBack: ()
   return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · contexto · {cycle.id}</span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span> · contexto · {cycle.id}</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -371,7 +372,7 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
     <div className="r-screen">
       <div className="r-header">
         <span className="r-header-label">
-          <span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · contexto · terceiros
+          <span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span> · contexto · terceiros
         </span>
         <span className="r-header-date">{getToday()}</span>
       </div>
@@ -728,7 +729,7 @@ export default function Context() {
   if (!loading && cycles.length === 0) return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · contexto</span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span> · contexto</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -748,7 +749,7 @@ export default function Context() {
 
       {/* Header */}
       <div className="r-header">
-        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · contexto</span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span> · contexto</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -803,7 +804,7 @@ export default function Context() {
                 {cycles.map((c, i) => (
                   <span
                     key={c.id}
-                    onClick={() => { setSelectedIdx(i); setShowCycle(true); }}
+                    onClick={() => { setSelectedIdx(i); }}
                     style={{
                       fontFamily: "var(--r-font-sys)",
                       fontWeight: selectedIdx === i ? 400 : 300,
