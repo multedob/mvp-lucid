@@ -1,24 +1,24 @@
 // src/pages/Consent.tsx
-// Aceite de Privacy Policy + Terms — segundo passo do onboarding
-// Checkbox → habilita "Continue" → seta flag + /letter
+// Aceite de Política de Privacidade + Termos — segundo passo do onboarding
+// Checkbox → habilita "continuar" → seta flag + /letter
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const ABOUT = [
-  "_rdwth offers structural reflexive readings based on your responses.",
-  "It is not a clinical diagnosis.",
-  "It does not replace licensed professionals.",
-  "It does not determine identity or human value.",
-  "No structural configuration implies superiority.",
+  "rdwth oferece leituras reflexivas estruturais baseadas nas suas respostas.",
+  "Não é diagnóstico clínico.",
+  "Não substitui profissionais habilitados.",
+  "Não determina identidade nem valor humano.",
+  "Nenhuma configuração estrutural implica superioridade.",
 ];
 
 const DATA = [
-  "We collect what you share with us.",
-  "We generate structural readings from your responses.",
-  "We store your history if you choose to continue.",
-  "You can delete your data at any time.",
-  "You can request a copy of your data at any time.",
+  "Coletamos o que você compartilha conosco.",
+  "Geramos leituras estruturais a partir das suas respostas.",
+  "Guardamos seu histórico se você escolher continuar.",
+  "Você pode apagar seus dados a qualquer momento.",
+  "Você pode solicitar uma cópia dos seus dados a qualquer momento.",
 ];
 
 export default function Consent() {
@@ -28,7 +28,7 @@ export default function Consent() {
   return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label">_rdwth</span>
+        <span className="r-header-label">rdwth</span>
       </div>
       <div className="r-line" />
 
@@ -38,7 +38,7 @@ export default function Consent() {
           letterSpacing: "-0.01em", lineHeight: 1.3, color: "var(--r-text)",
           marginBottom: 24,
         }}>
-          Before you begin.
+          antes de começar.
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
@@ -88,13 +88,13 @@ export default function Consent() {
             fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11,
             color: "var(--r-text)", letterSpacing: "0.04em", lineHeight: 1.6,
           }}>
-            I agree to the{" "}
+            concordo com a{" "}
             <span style={{ color: "var(--r-accent)", borderBottom: "1px solid var(--r-accent)", paddingBottom: 1 }}>
-              Privacy Policy
+              Política de Privacidade
             </span>
-            {" "}and{" "}
+            {" "}e os{" "}
             <span style={{ color: "var(--r-accent)", borderBottom: "1px solid var(--r-accent)", paddingBottom: 1 }}>
-              Terms of Use
+              Termos de Uso
             </span>.
           </span>
         </div>
@@ -117,7 +117,7 @@ export default function Consent() {
             fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11,
             color: "var(--r-text)", letterSpacing: "0.06em",
           }}>
-            Continue
+            continuar
           </span>
         </div>
       </div>
