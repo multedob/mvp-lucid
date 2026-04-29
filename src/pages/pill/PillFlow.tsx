@@ -206,7 +206,7 @@ const Header = forwardRef<HTMLDivElement, { moment: Moment }>(({ moment }, ref) 
     <>
       <div ref={ref} className="r-header">
         <span className="r-header-label">
-          {counter ? `_rdwth · pills · ${counter}` : "_rdwth · pills"}
+          {counter ? `rdwth · pills · ${counter}` : "rdwth · pills"}
         </span>
         <span className="r-header-date">{getToday()}</span>
       </div>

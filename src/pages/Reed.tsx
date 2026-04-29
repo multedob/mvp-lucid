@@ -1,7 +1,7 @@
 // src/pages/Reed.tsx
 // Reed — conversational companion inside rdwth
-// v3.7 — welcome message, pill context, questionnaire nav, _rdwth link
-// Header: "_rdwth · reed" | data
+// v3.7 — welcome message, pill context, questionnaire nav, rdwth link
+// Header: "rdwth · reed" | data
 // Nav bottom: pills | questionnaire | context | reed (ativo) | settings dot
 
 import { useState, useEffect, useRef } from 'react'
@@ -420,7 +420,7 @@ export default function Reed() {
 
       {/* Header */}
       <div className="r-header">
-        <span className="r-header-label" onClick={() => navigate('/home')} style={{ cursor: 'pointer' }}>_rdwth</span>
+        <span className="r-header-label" onClick={() => navigate('/home')} style={{ cursor: 'pointer' }}>rdwth</span>
         <span className="r-header-label" style={{ cursor: 'default' }}>{' '}· reed</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
