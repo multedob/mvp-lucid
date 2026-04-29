@@ -1,5 +1,5 @@
 // src/pages/Privacy.tsx
-// Privacy Policy — required for Apple App Store + LGPD/GDPR
+// Política de Privacidade — required for Apple App Store + LGPD/GDPR
 
 import { useNavigate } from "react-router-dom";
 import { getToday } from "@/lib/api";
@@ -10,9 +10,7 @@ export default function Privacy() {
   return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label">
-          <span onClick={() => navigate(-1 as any)} style={{ cursor: "pointer" }}>← back</span>
-        </span>
+        <span className="r-header-label">rdwth · privacidade</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -22,7 +20,7 @@ export default function Privacy() {
           fontFamily: "var(--r-font-ed)", fontWeight: 800, fontSize: 16,
           lineHeight: 1.7, color: "var(--r-text)", marginBottom: 24,
         }}>
-          Privacy Policy
+          Política de Privacidade
         </div>
 
         <div style={{
@@ -30,21 +28,21 @@ export default function Privacy() {
           lineHeight: 1.8, color: "var(--r-sub)", letterSpacing: "0.01em",
         }}>
           <p style={{ marginBottom: 16 }}>
-            <strong>Last updated:</strong> April 2026
+            <strong>Última atualização:</strong> abril de 2026
           </p>
 
           <p style={{ marginBottom: 16 }}>
-            rdwth ("we", "us") is a structural self-knowledge application. We take your privacy seriously. This policy explains what data we collect, how we use it, and your rights.
+            rdwth é uma aplicação de autoconhecimento estrutural. Levamos sua privacidade a sério. Esta política explica quais dados coletamos, como usamos esses dados e quais são seus direitos.
           </p>
 
-          <p style={{ marginBottom: 8 }}><strong>Data we collect:</strong></p>
+          <p style={{ marginBottom: 8 }}><strong>Dados que coletamos:</strong></p>
           <p style={{ marginBottom: 16 }}>
-            Email address and authentication credentials; your first name (provided during onboarding); your responses to pills (narrative readings); your answers to the questionnaire; your conversations with Reed (our AI companion); structural analysis data derived from your responses; device and usage metadata.
+            Endereço de email e credenciais de autenticação; seu primeiro nome, informado no onboarding; suas respostas às Pills; suas respostas ao questionário; suas conversas com Reed; dados de análise estrutural derivados das suas respostas; metadados de dispositivo e uso.
           </p>
 
-          <p style={{ marginBottom: 8 }}><strong>How we use your data:</strong></p>
+          <p style={{ marginBottom: 8 }}><strong>Como usamos seus dados:</strong></p>
           <p style={{ marginBottom: 16 }}>
-            To generate your structural readings and self-knowledge profile; to enable Reed to provide personalized responses; to improve the accuracy of the structural instrument over time. We do not sell your data. We do not use your data for advertising.
+            Para gerar suas leituras estruturais e seu perfil de autoconhecimento; para permitir que Reed ofereça respostas personalizadas; para melhorar a precisão do instrumento estrutural ao longo do tempo. Não vendemos seus dados. Não usamos seus dados para publicidade.
           </p>
 
           <p style={{ marginBottom: 8 }}><strong>Third-party services:</strong></p>
