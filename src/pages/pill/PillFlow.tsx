@@ -133,16 +133,16 @@ const FALLBACK_M3_2_OPCOES: Record<PillId, Array<{ id: "A"|"B"|"C"|"D"; text: st
     { id: "D", text: "Nomeio o conflito em voz alta — para mim ou para outra pessoa." },
   ],
   PV: [
-    { id: "A", text: "I stay quiet. It's too early to name it." },
-    { id: "B", text: "I speak it anyway. Naming it might help me understand it." },
-    { id: "C", text: "I act as if I understand it, even if I don't — and see what I learn." },
-    { id: "D", text: "I look for the thing I might be avoiding by not naming it." },
+    { id: "A", text: "Fico em silêncio. Ainda é cedo demais para nomear." },
+    { id: "B", text: "Falo mesmo assim. Nomear talvez me ajude a entender." },
+    { id: "C", text: "Ajo como se entendesse, mesmo sem entender — e vejo o que aprendo." },
+    { id: "D", text: "Procuro aquilo que talvez eu esteja evitando ao não nomear." },
   ],
   PVI: [
-    { id: "A", text: "I continue. The cost is acceptable. The work is worth it." },
-    { id: "B", text: "I slow down. The pace is telling me something I need to hear." },
-    { id: "C", text: "I finish this phase, then reassess. I can't decide in the middle." },
-    { id: "D", text: "I try to name what's being taken — before I decide what to do." },
+    { id: "A", text: "Continuo. O custo é aceitável. O trabalho vale isso." },
+    { id: "B", text: "Desacelero. O ritmo está me dizendo algo que preciso ouvir." },
+    { id: "C", text: "Termino esta fase e depois reavalio. Não consigo decidir no meio." },
+    { id: "D", text: "Tento nomear o que está sendo tirado — antes de decidir o que fazer." },
   ],
 };
 
