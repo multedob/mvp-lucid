@@ -6,7 +6,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunction, getToday } from "@/lib/api";
-import NavBottom from "@/components/NavBottom";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -15,11 +14,11 @@ export default function Settings() {
 
   const handleDeleteAccount = async () => {
     const first = window.confirm(
-      "Delete your account and all data?\nThis cannot be undone."
+      "Apagar sua conta e todos os dados?\nIsso não pode ser desfeito."
     );
     if (!first) return;
     const second = window.confirm(
-      "Are you absolutely sure? All your readings, pills, questionnaire data, and conversations will be permanently deleted."
+      "Tem certeza absoluta? Todas as suas leituras, Pills, dados do questionário e conversas serão apagados permanentemente."
     );
     if (!second) return;
 
@@ -73,7 +72,7 @@ export default function Settings() {
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error("Export error:", err);
-      alert("Something went wrong exporting your data. Please try again.");
+      alert("Algo deu errado ao exportar seus dados. Tente novamente.");
     }
     setExporting(false);
   };
@@ -155,7 +154,10 @@ export default function Settings() {
 
       </div>
 
-      <NavBottom active="settings" />
+      <div className="r-line" />
+      <div style={{ height: 52, display: "flex", alignItems: "center", padding: "0 24px", flexShrink: 0 }}>
+        <span onClick={() => navigate(-1 as any)} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
+      </div>
     </div>
   );
 }
