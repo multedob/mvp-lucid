@@ -153,7 +153,9 @@ const App = () => (
           <Route path="/reed" element={<ProtectedRoute><Reed /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/privacy" element={<Privacy />} />
+          <Route path="/privacy-policy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
+          <Route path="/terms-of-use" element={<Terms />} />
           {/* W20.2 — Third-party questionnaire (público, sem auth do app) */}
           <Route path="/third-party/:token" element={<ThirdParty />} />
           <Route path="/test" element={<Navigate to="/home" replace />} />

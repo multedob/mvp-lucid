@@ -94,8 +94,8 @@ export default function Settings() {
       <div style={{ flex: 1, padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 0 }}>
 
         {[
-          { label: "Política de Privacidade", action: () => navigate("/privacy") },
-          { label: "Termos de Uso",            action: () => navigate("/terms") },
+          { label: "Política de Privacidade", action: () => navigate("/privacy-policy") },
+          { label: "Termos de Uso",            action: () => navigate("/terms-of-use") },
           { label: "Como o rdwth funciona",    action: () => navigate("/como-funciona") },
           { label: "Sair",                     action: handleSignOut },
         ].map((item, i) => (

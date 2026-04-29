@@ -267,15 +267,17 @@ export default function Auth() {
         {/* legal */}
         <div style={{ marginTop: 20, fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 8, color: "var(--r-ghost)", letterSpacing: "0.06em", lineHeight: 1.8 }}>
           ao continuar você concorda com nossos{" "}
-          <span onClick={() => navigate("/terms")} style={{ textDecoration: "underline", cursor: "pointer" }}>termos</span>
+          <span onClick={() => navigate("/terms-of-use")} style={{ textDecoration: "underline", cursor: "pointer" }}>termos</span>
           {" "}e{" "}
-          <span onClick={() => navigate("/privacy")} style={{ textDecoration: "underline", cursor: "pointer" }}>política de privacidade</span>.
+          <span onClick={() => navigate("/privacy-policy")} style={{ textDecoration: "underline", cursor: "pointer" }}>política de privacidade</span>.
         </div>
 
       </div>
 
       <div className="r-line" />
-      <div style={{ height: 56, flexShrink: 0 }} />
+      <div style={{ height: 52, display: "flex", alignItems: "center", padding: "0 24px", flexShrink: 0 }}>
+        <span onClick={() => navigate(-1 as any)} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
+      </div>
 
     </div>
   );
