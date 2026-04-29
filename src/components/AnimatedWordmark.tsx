@@ -1,6 +1,6 @@
 // src/components/AnimatedWordmark.tsx
 // ============================================================
-// Wordmark _rdwth com morph SVG (mesma lógica do Splash).
+// Wordmark rdwth com morph SVG (mesma lógica do Splash).
 // Reusável em qualquer página onde queremos a marca animada.
 // ============================================================
 
