@@ -45,31 +45,36 @@ export default function Privacy() {
             Para gerar suas leituras estruturais e seu perfil de autoconhecimento; para permitir que Reed ofereça respostas personalizadas; para melhorar a precisão do instrumento estrutural ao longo do tempo. Não vendemos seus dados. Não usamos seus dados para publicidade.
           </p>
 
-          <p style={{ marginBottom: 8 }}><strong>Third-party services:</strong></p>
+          <p style={{ marginBottom: 8 }}><strong>Serviços de terceiros:</strong></p>
           <p style={{ marginBottom: 16 }}>
-            Supabase (database and authentication, hosted in AWS); Anthropic (AI language model for Reed conversations — your conversation text is sent to Anthropic's API for processing; Anthropic does not use API data for training). We do not share your data with any other third parties.
+            Lovable Cloud (banco de dados e autenticação); Anthropic (modelo de linguagem usado nas conversas com Reed — o texto da conversa é enviado para processamento; a Anthropic não usa dados de API para treinamento). Não compartilhamos seus dados com outros terceiros.
           </p>
 
-          <p style={{ marginBottom: 8 }}><strong>Data retention:</strong></p>
+          <p style={{ marginBottom: 8 }}><strong>Retenção de dados:</strong></p>
           <p style={{ marginBottom: 16 }}>
-            Your data is retained for as long as your account is active. You can export all your data at any time via Settings → Download my data. You can permanently delete all your data via Settings → Delete account.
+            Seus dados são mantidos enquanto sua conta estiver ativa. Você pode exportar todos os seus dados a qualquer momento em Ajustes → Baixar meus dados. Você pode apagar permanentemente todos os seus dados em Ajustes → Apagar conta.
           </p>
 
-          <p style={{ marginBottom: 8 }}><strong>Your rights (LGPD / GDPR):</strong></p>
+          <p style={{ marginBottom: 8 }}><strong>Seus direitos (LGPD / GDPR):</strong></p>
           <p style={{ marginBottom: 16 }}>
-            You have the right to access, export, correct, and delete your personal data. To exercise these rights, use the in-app tools in Settings or contact us at multedob@gmail.com.
+            Você tem o direito de acessar, exportar, corrigir e apagar seus dados pessoais. Para exercer esses direitos, use as ferramentas do app em Ajustes ou entre em contato pelo email multedob@gmail.com.
           </p>
 
-          <p style={{ marginBottom: 8 }}><strong>Age restriction:</strong></p>
+          <p style={{ marginBottom: 8 }}><strong>Restrição de idade:</strong></p>
           <p style={{ marginBottom: 16 }}>
-            rdwth is intended for users aged 16 and older. By creating an account, you confirm that you are at least 16 years old.
+            rdwth é destinado a pessoas com 16 anos ou mais. Ao criar uma conta, você confirma que tem pelo menos 16 anos.
           </p>
 
-          <p style={{ marginBottom: 8 }}><strong>Contact:</strong></p>
+          <p style={{ marginBottom: 8 }}><strong>Contato:</strong></p>
           <p style={{ marginBottom: 0 }}>
-            For questions about this policy: multedob@gmail.com
+            Para dúvidas sobre esta política: multedob@gmail.com
           </p>
         </div>
+      </div>
+
+      <div className="r-line" />
+      <div style={{ height: 52, display: "flex", alignItems: "center", padding: "0 24px", flexShrink: 0 }}>
+        <span onClick={() => navigate(-1 as any)} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
       </div>
     </div>
   );
