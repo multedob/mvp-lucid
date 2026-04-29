@@ -1,6 +1,6 @@
 // src/pages/Questionnaire.tsx
 // Fluxo: /plan → /next-block loop → lucid-engine
-// Design system: _rdwth — mesmo padrão visual das Pills (header-label + date, Footer component)
+// Design system: rdwth — mesmo padrão visual das Pills (header-label + date, Footer component)
 
 import { useState, useEffect, useRef, forwardRef } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -39,7 +39,7 @@ const Header = forwardRef<HTMLDivElement>((_, ref) => {
   return (
     <>
       <div ref={ref} className="r-header">
-        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>_rdwth</span> · questionário</span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span> · questionário</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
