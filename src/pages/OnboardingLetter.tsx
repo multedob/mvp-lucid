@@ -195,7 +195,7 @@ export default function OnboardingLetter() {
 
       {/* Header */}
       <div className="r-header">
-        <span className="r-header-label">_rdwth</span>
+        <span className="r-header-label">rdwth</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -221,7 +221,7 @@ export default function OnboardingLetter() {
               color: "var(--r-text)",
               lineHeight: 1,
               letterSpacing: "-0.01em",
-            }}>_</span>
+            }}></span>
             {(["r","d","w","t","h"] as LetterKey[]).map(letter => (
               <span
                 key={letter}
@@ -247,7 +247,7 @@ export default function OnboardingLetter() {
               opacity: 0.7,
             }}
           >
-            Read With
+            read with
           </div>
         </div>
 
@@ -262,19 +262,19 @@ export default function OnboardingLetter() {
             letterSpacing: "0.03em",
           }}
         >
-          We make patterns visible.<br />
-          We make complexity readable.
+          Tornamos padrões visíveis.<br />
+          Tornamos a complexidade legível.
           <br /><br />
-          Behind every choice, conflict, impulse, or repetition,<br />
-          there is a structure at work.
+          Por trás de cada escolha, conflito, impulso ou repetição,<br />
+          existe uma estrutura em ação.
           <br /><br />
-          _rdwth was built to make that structure legible —<br />
-          without reducing a person to a type,<br />
-          turning difference into hierarchy,<br />
-          or mistaking pattern for identity.
+          rdwth foi criado para tornar essa estrutura legível —<br />
+          sem reduzir uma pessoa a um tipo,<br />
+          transformar diferença em hierarquia,<br />
+          ou confundir padrão com identidade.
           <br /><br />
-          We do not offer ready-made answers.<br />
-          We offer reading.
+          Não oferecemos respostas prontas.<br />
+          Oferecemos leitura.
           <br /><br />
           The kind of reading that brings tensions into focus,<br />
           organizes complexity,<br />
