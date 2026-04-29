@@ -109,16 +109,16 @@ const FALLBACK_M3_2_SITUACAO: Record<PillId, string> = {
 
 const FALLBACK_M3_2_OPCOES: Record<PillId, Array<{ id: "A"|"B"|"C"|"D"; text: string }>> = {
   PI: [
-    { id: "A", text: "I don't get involved. Everyone is responsible for their own choices." },
-    { id: "B", text: "I speak directly with the person. I accept whatever happens after." },
-    { id: "C", text: "I find a way to act without direct confrontation — a third path." },
-    { id: "D", text: "I need more context before I can decide anything." },
+    { id: "A", text: "Não me envolvo. Cada pessoa é responsável pelas próprias escolhas." },
+    { id: "B", text: "Falo diretamente com a pessoa. Aceito o que acontecer depois." },
+    { id: "C", text: "Encontro um jeito de agir sem confronto direto — uma terceira via." },
+    { id: "D", text: "Preciso de mais contexto antes de decidir qualquer coisa." },
   ],
   PII: [
-    { id: "A", text: "I accept. Alignment with others' expectations is enough for now." },
-    { id: "B", text: "I decline. I trust my hesitation more than their certainty." },
-    { id: "C", text: "I ask for time and try to understand what's driving my hesitation." },
-    { id: "D", text: "I accept, but I hold the discomfort — and watch what happens." },
+    { id: "A", text: "Aceito. Estar alinhado com a expectativa dos outros basta por enquanto." },
+    { id: "B", text: "Recuso. Confio mais na minha hesitação do que na certeza deles." },
+    { id: "C", text: "Peço tempo e tento entender o que está movendo minha hesitação." },
+    { id: "D", text: "Aceito, mas sustento o desconforto — e observo o que acontece." },
   ],
   PIII: [
     { id: "A", text: "I meet the distance with distance. I wait to see who they are now." },
