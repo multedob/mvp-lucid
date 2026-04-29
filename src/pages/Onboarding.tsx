@@ -1,7 +1,7 @@
 // src/pages/Onboarding.tsx
 // Coleta do primeiro nome — fluxo de onboarding
 // Persiste nome em localStorage + Supabase user_metadata
-// Continue → /home
+// continuar → /home
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -34,7 +34,7 @@ export default function Onboarding() {
   return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label">_rdwth</span>
+        <span className="r-header-label">rdwth</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -47,7 +47,7 @@ export default function Onboarding() {
           fontFamily: "var(--r-font-ed)", fontWeight: 800, fontSize: 16,
           lineHeight: 1.6, color: "var(--r-text)", marginBottom: 20,
         }}>
-          How should Reed address you?
+          como Reed deve chamar você?
         </div>
 
         <div style={{
@@ -58,7 +58,7 @@ export default function Onboarding() {
             value={name}
             onChange={e => setName(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter") handleContinue(); }}
-            placeholder="your name"
+            placeholder="seu nome"
             autoFocus
             style={{
               background: "transparent", border: "none", outline: "none",
@@ -82,7 +82,7 @@ export default function Onboarding() {
             fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 12,
             color: "var(--r-text)", letterSpacing: "0.06em",
           }}>
-            Continue
+            continuar
           </span>
         </div>
       </div>
