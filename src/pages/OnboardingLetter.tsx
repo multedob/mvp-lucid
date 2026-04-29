@@ -276,19 +276,19 @@ export default function OnboardingLetter() {
           Não oferecemos respostas prontas.<br />
           Oferecemos leitura.
           <br /><br />
-          The kind of reading that brings tensions into focus,<br />
-          organizes complexity,<br />
-          and returns something rare:
+          O tipo de leitura que coloca tensões em foco,<br />
+          organiza a complexidade,<br />
+          e devolve algo raro:
           <br /><br />
-          a clearer view of what is shaping<br />
-          someone's experience,<br />
-          while keeping responsibility in their hands.
+          uma visão mais clara do que está moldando<br />
+          a experiência de alguém,<br />
+          mantendo a responsabilidade nas mãos dela.
           <br /><br />
-          No diagnosis.<br />
-          No prescription.<br />
-          No fixed conclusions.
+          Sem diagnóstico.<br />
+          Sem prescrição.<br />
+          Sem conclusões fixas.
           <br /><br />
-          Just one simple and radical proposition:
+          Só uma proposição simples e radical:
         </div>
 
         {/* Proposição — destaque */}
@@ -304,8 +304,8 @@ export default function OnboardingLetter() {
             marginBottom: 32,
           }}
         >
-          see more precisely<br />
-          what is already there.
+          ver com mais precisão<br />
+          o que já está ali.
         </div>
 
       </div>
@@ -342,7 +342,7 @@ export default function OnboardingLetter() {
               letterSpacing: "0.08em",
             }}
           >
-            Begin
+            começar
           </span>
         </div>
       </div>
