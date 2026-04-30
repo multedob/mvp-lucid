@@ -13,6 +13,8 @@ import { useUserName } from "@/hooks/useUserName";
 import NavBottom from "@/components/NavBottom";
 import { fetchQuestionnaireProgress } from "@/lib/questionnaireProgress";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import RadarContexto from "@/components/RadarContexto";
+import { useCycleAggregate } from "@/hooks/useCycleAggregate";
 
 const SUPABASE_URL = "https://tomtximafvrhmuchjyqt.supabase.co";
 const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRvbXR4aW1hZnZyaG11Y2hqeXF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MjE4MzYsImV4cCI6MjA4NzI5NzgzNn0.4e7TbCSrL8fecsgKCHDBEerXO8ePd5-5QeaC6czEkzo";
