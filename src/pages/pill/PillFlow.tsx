@@ -7,6 +7,7 @@ import { RevealText } from "@/components/RevealText";
 import { AudioRecorder } from "@/components/AudioRecorder";
 import { EcoLoadingScreen } from "@/components/EcoLoadingScreen";
 import { triggerDeepReadingRefresh } from "@/lib/deepReading";
+import { AutoResizeTextarea } from "@/components/AutoResizeTextarea";
 
 // ─── Types ────────────────────────────────────────────────────────
 type PillId = "PI" | "PII" | "PIII" | "PIV" | "PV" | "PVI";
@@ -254,19 +255,13 @@ Footer.displayName = "Footer";
 const InvisibleTextarea = forwardRef<HTMLDivElement, {
   value: string; onChange: (v: string) => void; placeholder?: string; disabled?: boolean;
 }>(({ value, onChange, placeholder = "escreva aqui", disabled = false }, fwdRef) => {
-  const ref = useRef<HTMLTextAreaElement>(null);
-  useEffect(() => {
-    if (ref.current) {
-      ref.current.style.height = "auto";
-      ref.current.style.height = ref.current.scrollHeight + "px";
-    }
-  }, [value]);
   return (
     <div ref={fwdRef} className={`r-input-wrap${disabled ? " disabled" : ""}`}>
-      <textarea
-        ref={ref} className="r-textarea" value={value}
+      <AutoResizeTextarea
+        className="r-textarea" value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder} rows={1}
+        maxRows={5}
         disabled={disabled}
         readOnly={disabled}
       />
