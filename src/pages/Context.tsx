@@ -590,6 +590,13 @@ export default function Context() {
   const [loadingScreenDone, setLoadingScreenDone] = useState(false);
   const [showOnbContext, setShowOnbContext] = useState(false);
   const [showOnbThirdParty, setShowOnbThirdParty] = useState(false);
+  const [compareIdx, setCompareIdx] = useState<number | null>(null);
+
+  // Hooks de agregação — chamados sempre (mesmo com id null)
+  const primaryCycleId = cycles[selectedIdx]?.ipeCycleId ?? null;
+  const compareCycleId = compareIdx != null ? cycles[compareIdx]?.ipeCycleId ?? null : null;
+  const { data: primaryAgg } = useCycleAggregate(primaryCycleId);
+  const { data: comparisonAgg } = useCycleAggregate(compareCycleId);
 
   // Onboarding /contexto: primeira visita ao /context
   useEffect(() => {
