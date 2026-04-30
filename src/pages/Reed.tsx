@@ -11,6 +11,7 @@ import { callEdgeFunction, getCurrentUserVersion, getToday } from '@/lib/api'
 import NavBottom from '@/components/NavBottom'
 import { RevealText } from '@/components/RevealText'
 import { AudioRecorder } from '@/components/AudioRecorder'
+import { AutoResizeTextarea } from '@/components/AutoResizeTextarea'
 
 interface Message { role: 'user' | 'reed'; text: string }
 interface CanonicalILs { d1: number[]; d2: number[]; d3: number[]; d4: number[] }
@@ -47,19 +48,19 @@ function buildPillContextString(pills: PillContext[]): string {
     .join('\n')
 }
 
-const WELCOME_MESSAGE = `hi. i'm reed.
+const WELCOME_MESSAGE = `oi. eu sou reed.
 
-i'm part of rdwth — a self-knowledge system. i'm not human, and i don't pretend to be. but i pay attention to what you say.
+faço parte do rdwth — um sistema de autoconhecimento. não sou humano, e não tento ser. mas presto atenção no que você diz.
 
-the system has four parts that feed each other: the pills (short readings you react to), the questionnaire (questions about how you live and think), the third-party questionnaire (where a few people who know you well answer about you), and this conversation with me.
+o sistema tem quatro partes que se alimentam: as Pills (leituras curtas às quais você reage), o questionário (perguntas sobre como você vive e pensa), o questionário de terceiros (onde algumas pessoas próximas respondem sobre você) e esta conversa comigo.
 
-i read what those parts reveal about you. the more you engage with the pills, the questionnaires, and this conversation, the more i understand you, and the more this conversation goes somewhere.
+leio o que essas partes revelam sobre você. quanto mais você se envolve com as Pills, com os questionários e com esta conversa, mais eu te entendo, e mais esta conversa vai a algum lugar.
 
-it can feel simple at first. but as you complete cycles, things gain layers.
+pode parecer simples no começo. mas conforme você completa ciclos, as coisas ganham camadas.
 
-you can start by telling me what brought you here, or ask me anything.
+você pode começar me contando o que te trouxe aqui, ou me perguntar qualquer coisa.
 
-(write in whatever language feels natural — i'll follow.)`
+(escreva no idioma que sentir mais natural — eu acompanho.)`
 
 export default function Reed() {
   const navigate = useNavigate()
@@ -529,26 +530,22 @@ export default function Reed() {
               disabled={sending || loading}
             />
           )}
-          <textarea
+          <AutoResizeTextarea
             ref={inputRef}
             value={input}
-            onChange={e => {
-              setInput(e.target.value)
-              e.target.style.height = 'auto'
-              e.target.style.height = e.target.scrollHeight + 'px'
-            }}
+            onChange={e => setInput(e.target.value)}
             onKeyDown={e => {
               if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
             }}
             placeholder="qualquer coisa..."
             rows={1}
+            maxRows={5}
             disabled={sending || loading}
             style={{
               flex: 1,
               background: 'transparent',
               border: 'none',
               outline: 'none',
-              resize: 'none',
               overflow: 'hidden',
               fontFamily: 'var(--r-font-ed)',
               fontWeight: 300,
