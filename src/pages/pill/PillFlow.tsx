@@ -1,5 +1,5 @@
 // src/pages/pill/PillFlow.tsx
-import { useState, useEffect, useRef, useCallback, forwardRef } from "react";
+import { useState, useEffect, useRef, useCallback, forwardRef, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunction, getToday } from "@/lib/api";
@@ -252,13 +252,16 @@ Footer.displayName = "Footer";
 
 const InvisibleTextarea = forwardRef<HTMLDivElement, {
   value: string; onChange: (v: string) => void; placeholder?: string; disabled?: boolean;
-  recorder?: React.ReactNode; onSend?: () => void; sendActive?: boolean;
+  recorder?: ReactNode; onSend?: () => void; sendActive?: boolean;
 }>(({ value, onChange, placeholder = "escreva aqui", disabled = false, recorder, onSend, sendActive = false }, fwdRef) => {
   return (
     <div ref={fwdRef} className={`r-input-wrap${disabled ? " disabled" : ""}`}>
       <AutoResizeTextarea
         className="r-textarea" value={value}
         onChange={e => onChange(e.target.value)}
+        onKeyDown={e => {
+          if (onSend && e.key === "Enter" && (e.metaKey || e.ctrlKey)) onSend();
+        }}
         placeholder={placeholder} rows={1}
         maxRows={5}
         disabled={disabled}

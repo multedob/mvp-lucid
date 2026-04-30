@@ -2,7 +2,7 @@
 // Fluxo: /plan → /next-block loop → lucid-engine
 // Design system: rdwth — mesmo padrão visual das Pills (header-label + date, Footer component)
 
-import { useState, useEffect, useRef, forwardRef } from 'react'
+import { useState, useEffect, useRef, forwardRef, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { callEdgeFunction, getCurrentUserVersion, getToday } from '@/lib/api'
@@ -96,7 +96,7 @@ interface QTextareaProps {
   onChange: (v: string) => void
   disabled?: boolean
   onCmdEnter?: () => void
-  recorder?: React.ReactNode
+  recorder?: ReactNode
   onSend?: () => void
   sendActive?: boolean
 }
@@ -485,9 +485,6 @@ export default function Questionnaire() {
 
       {/* Footer — mesmo padrão das pills */}
       <Footer
-        onContinue={() => handleSubmit()}
-        continueLabel={submitting ? '...' : 'send'}
-        disabled={submitting || answer.trim().length < 2}
         onFallback={canFallback ? handleFallback : undefined}
         fallbackLabel={fallbackLabel}
       />
