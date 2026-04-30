@@ -117,7 +117,8 @@ export function ContextSystem({ onBack }: { onBack?: () => void }) {
   return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span> · sistema</span>
+        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
+        <span className="r-header-section">sistema</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -155,7 +156,8 @@ function ContextCycle({ cycle, onBack, userName }: { cycle: CycleData; onBack: (
   return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span> · contexto · {cycle.id}</span>
+        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
+        <span className="r-header-section">contexto · {cycle.id}</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -189,7 +191,8 @@ function ContextDeep({ cycle, onBack, userName }: { cycle: CycleData; onBack: ()
   return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span> · contexto · {cycle.id}</span>
+        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
+        <span className="r-header-section">contexto · {cycle.id}</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -373,9 +376,8 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label">
-          <span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span> · contexto · terceiros
-        </span>
+        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
+        <span className="r-header-section">contexto · terceiros</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -731,7 +733,8 @@ export default function Context() {
   if (!loading && cycles.length === 0) return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span> · contexto</span>
+        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
+        <span className="r-header-section">contexto</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -751,7 +754,8 @@ export default function Context() {
 
       {/* Header */}
       <div className="r-header">
-        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span> · contexto</span>
+        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
+        <span className="r-header-section">contexto</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />

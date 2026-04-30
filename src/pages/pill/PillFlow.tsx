@@ -207,9 +207,8 @@ const Header = forwardRef<HTMLDivElement, { moment: Moment }>(({ moment }, ref) 
   return (
     <>
       <div ref={ref} className="r-header">
-        <span className="r-header-label">
-          <span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>{counter ? ` · pills · ${counter}` : " · pills"}
-        </span>
+        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
+        <span className="r-header-section">{counter ? `pills · ${counter}` : "pills"}</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />

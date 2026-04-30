@@ -42,7 +42,8 @@ const Header = forwardRef<HTMLDivElement>((_, ref) => {
   return (
     <>
       <div ref={ref} className="r-header">
-        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span> · questionário</span>
+        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
+        <span className="r-header-section">questionário</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -174,6 +175,7 @@ export default function Questionnaire() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [remainingQuestions, setRemainingQuestions] = useState<number | null>(null)
+  const [loadingScreenDone, setLoadingScreenDone] = useState(false)
 
   // Rotation variants: loaded once after /plan, used for principal question text
   const [rotationVariants, setRotationVariants] = useState<
@@ -431,21 +433,38 @@ export default function Questionnaire() {
   // Render
   // ─────────────────────────────────────
 
-  if (phase === 'loading') return <QuestionnaireLoadingScreen />
+  // Loading screen sobreposta enquanto phase==='loading' OU enquanto a animação ainda não terminou
+  const showLoadingOverlay = phase === 'loading' || !loadingScreenDone
+  const loadingOverlay = showLoadingOverlay ? (
+    <QuestionnaireLoadingScreen
+      loadComplete={phase !== 'loading'}
+      onDone={() => setLoadingScreenDone(true)}
+    />
+  ) : null
+
+  if (phase === 'loading') return <>{loadingOverlay}</>
 
   if (phase === 'transition') return (
-    <div className="r-screen" style={{ justifyContent: 'center', alignItems: 'center' }}>
-      <div style={{ width: 32, height: 0.5, background: 'var(--r-line)' }} />
-    </div>
+    <>
+      {loadingOverlay}
+      <div className="r-screen" style={{ justifyContent: 'center', alignItems: 'center' }}>
+        <div style={{ width: 32, height: 0.5, background: 'var(--r-line)' }} />
+      </div>
+    </>
   )
 
   if (phase === 'done') return (
-    <div className="r-screen" style={{ justifyContent: 'center', alignItems: 'center' }}>
-      <span className="r-header-label">pronto</span>
-    </div>
+    <>
+      {loadingOverlay}
+      <div className="r-screen" style={{ justifyContent: 'center', alignItems: 'center' }}>
+        <span className="r-header-label">pronto</span>
+      </div>
+    </>
   )
 
   return (
+    <>
+    {loadingOverlay}
     <div className="r-screen">
 
       <Header />
@@ -506,5 +525,6 @@ export default function Questionnaire() {
       />
 
     </div>
+    </>
   )
 }
