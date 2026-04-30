@@ -14,6 +14,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getToday } from "@/lib/api";
 import { AnimatedWordmark } from "@/components/AnimatedWordmark";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { AudioRecorder } from "@/components/AudioRecorder";
 import { AutoResizeTextarea } from "@/components/AutoResizeTextarea";
 
