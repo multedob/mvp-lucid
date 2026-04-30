@@ -308,7 +308,8 @@ export default function ThirdParty() {
   const Header = ({ subtitle }: { subtitle?: string }) => (
     <>
       <div className="r-header">
-        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>{subtitle ? ` · ${subtitle}` : ""}</span>
+        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
+        <span className="r-header-section">{subtitle || "convite"}</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
