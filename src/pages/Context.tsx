@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getToday } from "@/lib/api";
 import { useUserName } from "@/hooks/useUserName";
 import NavBottom from "@/components/NavBottom";
+import { fetchQuestionnaireProgress } from "@/lib/questionnaireProgress";
 
 const SUPABASE_URL = "https://tomtximafvrhmuchjyqt.supabase.co";
 const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRvbXR4aW1hZnZyaG11Y2hqeXF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MjE4MzYsImV4cCI6MjA4NzI5NzgzNn0.4e7TbCSrL8fecsgKCHDBEerXO8ePd5-5QeaC6czEkzo";
@@ -223,6 +224,7 @@ interface CycleData {
   cycleNumber: number;
   description: string;
   deep: string;
+  questionnaireRemaining: number;
 }
 
 interface ThirdPartyInvite {
@@ -625,10 +627,11 @@ export default function Context() {
 
       // Wave 14 — apenas deep_reading_text (incremental). Sem fallback pra cycles.llm_response
       // (esse legado tinha invenções/diagnósticos). Sem texto = mensagem de pending.
-      const cycleData: CycleData[] = ipeCycles.map((ipe: any) => {
+      const cycleData: CycleData[] = await Promise.all(ipeCycles.map(async (ipe: any) => {
         const text: string = ipe.deep_reading_text ?? "";
         const paragraphs = text.split("\n\n").filter(Boolean);
         const hasPending = !text;
+        const progress = await fetchQuestionnaireProgress(ipe.id);
         const description = hasPending
           ? "A leitura aparece conforme você responde — pills e questionário alimentam ela."
           : paragraphs.slice(0, 2).join("\n\n");
@@ -641,8 +644,9 @@ export default function Context() {
           cycleNumber: ipe.cycle_number,
           description,
           deep,
+          questionnaireRemaining: progress.remaining,
         };
-      });
+      }));
 
       setCycles(cycleData);
     } catch (err) {
@@ -751,6 +755,13 @@ export default function Context() {
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
+      {cycle && (
+        <div style={{ padding: "10px 24px 0", flexShrink: 0 }}>
+          <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-muted)", letterSpacing: "0.04em" }}>
+            {cycle.questionnaireRemaining} de 16 perguntas restantes do questionário
+          </span>
+        </div>
+      )}
 
       {/* Conteúdo principal */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 24px 16px", overflow: "hidden" }}>
