@@ -63,7 +63,7 @@ export default function ResetPassword() {
   return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label" style={{ cursor: "pointer" }} onClick={() => navigate("/")}>rdwth</span>
+        <span className="r-header-label" style={{ cursor: "pointer" }} onClick={() => navigate("/home")}>rdwth</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
