@@ -718,11 +718,13 @@ export default function Context() {
     />;
   }
 
-  // Loading inicial — overlay com identidade rdwth
-  if (loading) {
+  // Loading inicial — overlay com identidade rdwth (mostra enquanto carrega
+  // E também durante phase 3 + fade out, controlado por loadingScreenDone)
+  if (!loadingScreenDone) {
     return <LoadingScreen
       phrases={["buscando seu ciclo...", "compondo a leitura...", "pronto."]}
-      loadComplete={false}
+      loadComplete={!loading}
+      onDone={() => setLoadingScreenDone(true)}
     />;
   }
 
