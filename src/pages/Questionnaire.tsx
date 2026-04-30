@@ -2,7 +2,7 @@
 // Fluxo: /plan → /next-block loop → lucid-engine
 // Design system: rdwth — mesmo padrão visual das Pills (header-label + date, Footer component)
 
-import { useState, useEffect, useRef, forwardRef } from 'react'
+import { useState, useEffect, useRef, forwardRef, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { callEdgeFunction, getCurrentUserVersion, getToday } from '@/lib/api'
@@ -54,7 +54,7 @@ interface QFooterProps {
   continueLabel?: string
   onFallback?: () => void
   fallbackLabel?: string
-  recorder?: React.ReactNode
+  recorder?: ReactNode
   disabled?: boolean
 }
 const Footer = forwardRef<HTMLDivElement, QFooterProps>(({
@@ -454,9 +454,6 @@ export default function Questionnaire() {
           onChange={setAnswer}
           disabled={submitting}
           onCmdEnter={() => handleSubmit()}
-          userId={userId}
-          cycleId={cycleId}
-          pillId={currentBlock ?? 'questionnaire'}
         />
       </div>
 
@@ -467,6 +464,18 @@ export default function Questionnaire() {
         disabled={submitting || answer.trim().length < 2}
         onFallback={canFallback ? handleFallback : undefined}
         fallbackLabel={fallbackLabel}
+        recorder={userId && cycleId ? (
+          <AudioRecorder
+            userId={userId}
+            cycleId={cycleId}
+            pillId={currentBlock ?? 'questionnaire'}
+            moment="questionnaire"
+            language="pt-BR"
+            onLiveTranscript={setAnswer}
+            onFinalTranscript={setAnswer}
+            disabled={submitting}
+          />
+        ) : undefined}
       />
 
     </div>
