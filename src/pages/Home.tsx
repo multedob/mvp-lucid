@@ -43,7 +43,6 @@ export default function Home() {
       {/* Header */}
       <div className="r-header">
         <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
-        <span className="r-header-section">início</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
