@@ -10,7 +10,7 @@
 // Ao finalizar: chama finalize → recebe mini-insight → mostra com CTA pro rdwth.
 // ============================================================
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getToday } from "@/lib/api";
 import { AnimatedWordmark } from "@/components/AnimatedWordmark";
@@ -365,7 +365,7 @@ export default function ThirdParty() {
     placeholder: string;
     minLength: number;
     onSend: () => void;
-    recorder?: React.ReactNode;
+    recorder?: ReactNode;
     minHeight?: number;
   }) => {
     const active = value.trim().length >= minLength && !submitting;
