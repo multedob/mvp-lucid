@@ -12,6 +12,7 @@ import { getToday } from "@/lib/api";
 import { useUserName } from "@/hooks/useUserName";
 import NavBottom from "@/components/NavBottom";
 import { fetchQuestionnaireProgress } from "@/lib/questionnaireProgress";
+import { LoadingScreen } from "@/components/LoadingScreen";
 
 const SUPABASE_URL = "https://tomtximafvrhmuchjyqt.supabase.co";
 const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRvbXR4aW1hZnZyaG11Y2hqeXF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MjE4MzYsImV4cCI6MjA4NzI5NzgzNn0.4e7TbCSrL8fecsgKCHDBEerXO8ePd5-5QeaC6czEkzo";
@@ -265,6 +266,7 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   const [invites, setInvites] = useState<ThirdPartyInvite[]>([]);
   const [responses, setResponses] = useState<Record<string, ThirdPartyResponse[]>>({});
   const [loading, setLoading] = useState(true);
+  const [loadingScreenDone, setLoadingScreenDone] = useState(false);
   const [creating, setCreating] = useState(false);
   const [selectedPronoun, setSelectedPronoun] = useState<"ela" | "ele" | "elu">("ela");
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
@@ -373,6 +375,14 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   const activeCount = invites.filter(i => i.status === "pending" || i.status === "submitted").length;
   const submittedCount = invites.filter(i => i.status === "submitted").length;
 
+  if (!loadingScreenDone) {
+    return <LoadingScreen
+      phrases={["buscando perspectivas...", "organizando...", "pronto."]}
+      loadComplete={!loading}
+      onDone={() => setLoadingScreenDone(true)}
+    />;
+  }
+
   return (
     <div className="r-screen">
       <div className="r-header">
@@ -453,7 +463,7 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
         )}
 
         {/* Lista de invites */}
-        {loading && <div className="r-sub" style={{ textAlign: "center" }}>carregando...</div>}
+        
 
         {!loading && invites.length === 0 && (
           <div className="r-sub" style={{ textAlign: "center", padding: "20px 0" }}>
@@ -575,6 +585,7 @@ export default function Context() {
   const [showCycle, setShowCycle] = useState(false);
   const [showThirdParty, setShowThirdParty] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingScreenDone, setLoadingScreenDone] = useState(false);
   const [showOnbContext, setShowOnbContext] = useState(false);
   const [showOnbThirdParty, setShowOnbThirdParty] = useState(false);
 
@@ -713,6 +724,16 @@ export default function Context() {
           text: "Pedir que alguém te descreva é um ato de coragem — não há como fazer isso sem se expor um pouco. E é justo aí que algo se abre: a perspectiva interna não consegue ocupar dois lugares ao mesmo tempo, então o que escolhemos esconder de nós mesmos costuma ser exatamente o que um outro olhar entrega de volta sem peso.",
         },
       ]}
+    />;
+  }
+
+  // Loading inicial — overlay com identidade rdwth (mostra enquanto carrega
+  // E também durante phase 3 + fade out, controlado por loadingScreenDone)
+  if (!loadingScreenDone) {
+    return <LoadingScreen
+      phrases={["buscando seu ciclo...", "compondo a leitura...", "pronto."]}
+      loadComplete={!loading}
+      onDone={() => setLoadingScreenDone(true)}
     />;
   }
 

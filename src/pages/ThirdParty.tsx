@@ -14,6 +14,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getToday } from "@/lib/api";
 import { AnimatedWordmark } from "@/components/AnimatedWordmark";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { AudioRecorder } from "@/components/AudioRecorder";
 import { AutoResizeTextarea } from "@/components/AutoResizeTextarea";
 
@@ -122,6 +123,7 @@ export default function ThirdParty() {
   const [revealIdentity, setRevealIdentity] = useState<boolean | null>(null);
   const [miniInsight, setMiniInsight] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [finalizeLoadingDone, setFinalizeLoadingDone] = useState(false);
 
   const validatedRef = useRef(false);
 
@@ -614,12 +616,17 @@ export default function ThirdParty() {
   }
 
   // ─── FINALIZING ───────────────────────────────────────────
-  if (phase === "finalizing") {
+  if (phase === "finalizing" || (phase === "done" && !finalizeLoadingDone)) {
     return (
-      <div className="r-screen" style={{ alignItems: "center", justifyContent: "center", display: "flex", flexDirection: "column", gap: 20 }}>
-        <span className="r-pulse" />
-        <div className="r-sub" style={{ textAlign: "center" }}>processando suas respostas...</div>
-      </div>
+      <LoadingScreen
+        phrases={[
+          "lendo o que você trouxe...",
+          "enxergando o que tem por trás...",
+          "pronto.",
+        ]}
+        loadComplete={phase === "done"}
+        onDone={() => setFinalizeLoadingDone(true)}
+      />
     );
   }
 
