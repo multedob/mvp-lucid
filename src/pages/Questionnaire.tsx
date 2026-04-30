@@ -175,6 +175,8 @@ export default function Questionnaire() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [remainingQuestions, setRemainingQuestions] = useState<number | null>(null)
+  const [dataReady, setDataReady] = useState(false)
+  const [pendingPhase, setPendingPhase] = useState<Phase | null>(null)
 
   // Rotation variants: loaded once after /plan, used for principal question text
   const [rotationVariants, setRotationVariants] = useState<
