@@ -463,7 +463,7 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
         )}
 
         {/* Lista de invites */}
-        {loading && <div className="r-sub" style={{ textAlign: "center" }}>carregando...</div>}
+        
 
         {!loading && invites.length === 0 && (
           <div className="r-sub" style={{ textAlign: "center", padding: "20px 0" }}>
