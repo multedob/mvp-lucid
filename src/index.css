@@ -134,9 +134,10 @@ body {
 .r-header {
   padding: 18px 24px 14px;
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   flex-shrink: 0;
+  position: relative;
 }
 
 .r-header-label {
@@ -152,6 +153,8 @@ body {
   font-size: 9px;
   color: var(--r-ghost);
   letter-spacing: 0.06em;
+  position: absolute;
+  right: 24px;
 }
 
 /* ─── footer ────────────────────────────────────────────────────── */

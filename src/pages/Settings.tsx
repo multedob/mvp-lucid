@@ -96,7 +96,7 @@ export default function Settings() {
         {[
           { label: "Política de Privacidade", action: () => navigate("/privacy-policy") },
           { label: "Termos de Uso",            action: () => navigate("/terms-of-use") },
-          { label: "Como o rdwth funciona",    action: () => navigate("/como-funciona") },
+          { label: "sistema",                  action: () => navigate("/como-funciona") },
           { label: "Sair",                     action: handleSignOut },
         ].map((item, i) => (
           <div key={i}>
