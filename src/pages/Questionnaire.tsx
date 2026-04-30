@@ -445,15 +445,21 @@ export default function Questionnaire() {
   if (phase === 'loading') return <>{loadingOverlay}</>
 
   if (phase === 'transition') return (
-    <div className="r-screen" style={{ justifyContent: 'center', alignItems: 'center' }}>
-      <div style={{ width: 32, height: 0.5, background: 'var(--r-line)' }} />
-    </div>
+    <>
+      {loadingOverlay}
+      <div className="r-screen" style={{ justifyContent: 'center', alignItems: 'center' }}>
+        <div style={{ width: 32, height: 0.5, background: 'var(--r-line)' }} />
+      </div>
+    </>
   )
 
   if (phase === 'done') return (
-    <div className="r-screen" style={{ justifyContent: 'center', alignItems: 'center' }}>
-      <span className="r-header-label">pronto</span>
-    </div>
+    <>
+      {loadingOverlay}
+      <div className="r-screen" style={{ justifyContent: 'center', alignItems: 'center' }}>
+        <span className="r-header-label">pronto</span>
+      </div>
+    </>
   )
 
   return (
