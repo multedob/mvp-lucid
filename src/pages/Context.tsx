@@ -576,6 +576,7 @@ export default function Context() {
   const [showCycle, setShowCycle] = useState(false);
   const [showThirdParty, setShowThirdParty] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingScreenDone, setLoadingScreenDone] = useState(false);
   const [showOnbContext, setShowOnbContext] = useState(false);
   const [showOnbThirdParty, setShowOnbThirdParty] = useState(false);
 
