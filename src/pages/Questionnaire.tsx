@@ -237,6 +237,7 @@ export default function Questionnaire() {
   const [phase, setPhase] = useState<Phase>('loading')
   const [cycleId, setCycleId] = useState<string | null>(null)
   const [stateId, setStateId] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
 
   const [currentBlock, setCurrentBlock] = useState<string | null>(null)
   const [currentVariant, setCurrentVariant] = useState<string | null>(null)
@@ -261,6 +262,7 @@ export default function Questionnaire() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { navigate('/auth'); return }
+      setUserId(session.user.id)
 
       const { data: cycle } = await supabase
         .from('ipe_cycles')
@@ -540,6 +542,9 @@ export default function Questionnaire() {
           onChange={setAnswer}
           disabled={submitting}
           onCmdEnter={() => handleSubmit()}
+          userId={userId}
+          cycleId={cycleId}
+          pillId={currentBlock ?? 'questionnaire'}
         />
       </div>
 
