@@ -12,6 +12,7 @@ interface NavBottomProps {
 
 export default function NavBottom({ active = 'none' }: NavBottomProps) {
   const navigate = useNavigate()
+  const itemGap = 'clamp(16px, 5vw, 28px)'
 
   // labels visíveis em PT-BR; "slug" = identificador interno (mesmo do prop "active") pra preservar API.
   const navItems = [
@@ -32,7 +33,7 @@ export default function NavBottom({ active = 'none' }: NavBottomProps) {
         padding: '0 24px',
         flexShrink: 0,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: itemGap, minWidth: 0 }}>
           {navItems.map(({ label, slug, path }) => (
             <span
               key={slug}
@@ -52,7 +53,7 @@ export default function NavBottom({ active = 'none' }: NavBottomProps) {
         </div>
 
         <div style={{ marginLeft: 'auto' }} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: itemGap }}>
           <div
             onClick={() => navigate('/settings')}
             style={{
