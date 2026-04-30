@@ -260,7 +260,7 @@ export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(({
           height: 6,
           padding: 0,
           borderRadius: "50%",
-          border: isRecording ? "none" : "0.5px solid var(--r-dim)",
+          border: isRecording ? "none" : "1px solid var(--r-ghost)",
           background: isRecording ? accentColor : "transparent",
           cursor: disabled || isProcessing ? "default" : "pointer",
           opacity: isProcessing ? 0.6 : 1,
