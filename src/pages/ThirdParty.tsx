@@ -320,11 +320,13 @@ export default function ThirdParty() {
     onContinue,
     continueLabel = "continuar",
     onBack,
+    recorder,
     disabled = false,
   }: {
     onContinue: () => void;
     continueLabel?: string;
     onBack?: () => void;
+    recorder?: React.ReactNode;
     disabled?: boolean;
   }) => (
     <>
@@ -333,18 +335,20 @@ export default function ThirdParty() {
         {onBack && (
           <span onClick={onBack} style={{ fontFamily: "var(--r-font-sys)", fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
         )}
-        <span style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--r-ghost)" }}>|</span>
-        <span
-          onClick={!disabled && !submitting ? onContinue : undefined}
-          style={{
-            fontFamily: "var(--r-font-sys)", fontSize: 13,
-            color: disabled || submitting ? "var(--r-ghost)" : "var(--r-text)",
-            cursor: disabled || submitting ? "default" : "pointer",
-            letterSpacing: "0.04em",
-          }}
-        >
-          {submitting ? "..." : continueLabel}
-        </span>
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 14 }}>
+          {recorder}
+          <span
+            onClick={!disabled && !submitting ? onContinue : undefined}
+            style={{
+              fontFamily: "var(--r-font-sys)", fontSize: 13,
+              color: disabled || submitting ? "var(--r-ghost)" : "var(--r-text)",
+              cursor: disabled || submitting ? "default" : "pointer",
+              letterSpacing: "0.04em",
+            }}
+          >
+            {submitting ? "..." : continueLabel}
+          </span>
+        </div>
       </div>
     </>
   );
