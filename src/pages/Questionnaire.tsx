@@ -64,6 +64,7 @@ const Footer = forwardRef<HTMLDivElement, QFooterProps>(({
   onEthics,
   disabled = false,
 }, ref) => {
+  const navigate = useNavigate()
   return (
     <>
       <div className="r-line" />
