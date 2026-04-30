@@ -13,8 +13,6 @@ import { useUserName } from "@/hooks/useUserName";
 import NavBottom from "@/components/NavBottom";
 import { fetchQuestionnaireProgress } from "@/lib/questionnaireProgress";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import RadarContexto from "@/components/RadarContexto";
-import { useCycleAggregate } from "@/hooks/useCycleAggregate";
 
 const SUPABASE_URL = "https://tomtximafvrhmuchjyqt.supabase.co";
 const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRvbXR4aW1hZnZyaG11Y2hqeXF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MjE4MzYsImV4cCI6MjA4NzI5NzgzNn0.4e7TbCSrL8fecsgKCHDBEerXO8ePd5-5QeaC6czEkzo";
@@ -364,7 +362,7 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   };
 
   const copyUrl = async (token: string) => {
-    const url = `https://mvp-lucid.lovable.app/third-party/${token}`;
+    const url = `https://rdwth.com/third-party/${token}`;
     try { await navigator.clipboard.writeText(url); } catch {}
   };
 
@@ -590,14 +588,6 @@ export default function Context() {
   const [loadingScreenDone, setLoadingScreenDone] = useState(false);
   const [showOnbContext, setShowOnbContext] = useState(false);
   const [showOnbThirdParty, setShowOnbThirdParty] = useState(false);
-  const [compareIdx, setCompareIdx] = useState<number | null>(null);
-
-  // Hooks de agregação — chamados sempre (mesmo com id null)
-  const primaryCycleId = cycles[selectedIdx]?.ipeCycleId ?? null;
-  const compareCycleId = compareIdx != null ? cycles[compareIdx]?.ipeCycleId ?? null : null;
-  const { data: primaryAgg } = useCycleAggregate(primaryCycleId);
-  const { data: comparisonAgg } = useCycleAggregate(compareCycleId);
-
   // Onboarding /contexto: primeira visita ao /context
   useEffect(() => {
     try {
@@ -830,53 +820,8 @@ export default function Context() {
           </div>
         )}
 
-        {/* MIDDLE — radar estrutural */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "12px 0", minHeight: 0 }}>
-          <RadarContexto
-            primary={primaryAgg?.il_aggregated ?? null}
-            comparison={comparisonAgg?.il_aggregated ?? null}
-            primaryLabel={cycle?.id ?? "atual"}
-            comparisonLabel={compareIdx != null ? cycles[compareIdx]?.id ?? "comparação" : "comparação"}
-            size={260}
-          />
-          {cycles.length > 1 && (
-            <div style={{ marginTop: 8, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
-              <span style={{ fontFamily: "var(--r-font-sys)", fontSize: 9, color: "var(--r-ghost)", letterSpacing: "0.08em" }}>
-                comparar com
-              </span>
-              {cycles.map((c, i) =>
-                i === selectedIdx ? null : (
-                  <span
-                    key={c.id}
-                    onClick={() => setCompareIdx(compareIdx === i ? null : i)}
-                    style={{
-                      fontFamily: "var(--r-font-sys)",
-                      fontSize: 10,
-                      letterSpacing: "0.06em",
-                      color: compareIdx === i ? "var(--r-accent)" : "var(--r-sub)",
-                      borderBottom: compareIdx === i ? "1px solid var(--r-accent)" : "1px solid transparent",
-                      paddingBottom: 1,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {c.id}
-                  </span>
-                )
-              )}
-              {compareIdx != null && (
-                <span
-                  onClick={() => setCompareIdx(null)}
-                  style={{
-                    fontFamily: "var(--r-font-sys)", fontSize: 9, color: "var(--r-ghost)",
-                    letterSpacing: "0.06em", cursor: "pointer",
-                  }}
-                >
-                  limpar
-                </span>
-              )}
-            </div>
-          )}
-        </div>
+        {/* MIDDLE — spacer */}
+        <div style={{ flex: 1 }} />
 
         {/* BOTTOM */}
         <div style={{ flexShrink: 0 }}>
@@ -892,7 +837,7 @@ export default function Context() {
                 {cycles.map((c, i) => (
                   <span
                     key={c.id}
-                    onClick={() => { setSelectedIdx(i); setCompareIdx((prev) => (prev === i ? null : prev)); }}
+                    onClick={() => setSelectedIdx(i)}
                     style={{
                       fontFamily: "var(--r-font-sys)",
                       fontWeight: selectedIdx === i ? 400 : 300,

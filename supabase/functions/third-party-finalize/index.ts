@@ -14,7 +14,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.27.3";
 
 const DEPLOY_FINGERPRINT = "w20.6-finalize-v2-trigger-scoring";
-const APP_BASE_URL = "https://mvp-lucid.lovable.app";
+const APP_BASE_URL = "https://rdwth.com";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
