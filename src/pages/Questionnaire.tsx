@@ -463,6 +463,8 @@ export default function Questionnaire() {
   )
 
   return (
+    <>
+    {loadingOverlay}
     <div className="r-screen">
 
       <Header />
