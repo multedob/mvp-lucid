@@ -568,7 +568,6 @@ export default function Context() {
   const [cycles, setCycles] = useState<CycleData[]>([]);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [showDeep, setShowDeep] = useState(false);
-  const [showSystem, setShowSystem] = useState(false);
   const [showCycle, setShowCycle] = useState(false);
   const [showThirdParty, setShowThirdParty] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -712,7 +711,6 @@ export default function Context() {
   }
 
   // Subviews
-  if (showSystem) return <ContextSystem onBack={() => setShowSystem(false)} />;
   if (showDeep && cycles[selectedIdx]) return <ContextDeep cycle={cycles[selectedIdx]} onBack={() => setShowDeep(false)} userName={userName} />;
   if (showCycle && cycles[selectedIdx]) return <ContextCycle cycle={cycles[selectedIdx]} onBack={() => setShowCycle(false)} userName={userName} />;
   if (showThirdParty && cycles[selectedIdx]) {
