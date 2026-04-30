@@ -43,6 +43,37 @@ interface TranscribeRequest {
   language?: string;  // ISO-639-1 ("pt", "en", …)
 }
 
+const DEPLOY_FINGERPRINT = "transcribe-audio-v2-anti-hallucination";
+const INITIAL_PROMPT = "Transcrição literal de fala em português brasileiro coloquial. Aplicativo de autoconhecimento estrutural. NÃO incluir legendas de filme, créditos finais, nomes de tradutores, ou texto promocional.";
+
+const HALLUCINATION_PATTERNS = [
+  /\bLegenda(?:s)?\s+(?:por\s+)?[A-Z][a-zà-ú]+\s+[A-Z][a-zà-ú]+\.?$/i,
+  /\bLegendas?:?\s+[A-Z][a-zà-ú]+\s+[A-Z][a-zà-ú]+\.?$/i,
+  /\bTraduç(?:ão|ões)\s+(?:por\s+)?[A-Z][a-zà-ú]+\s+[A-Z][a-zà-ú]+\.?$/i,
+  /\bTradução:?\s+[A-Z][a-zà-ú]+\s+[A-Z][a-zà-ú]+\.?$/i,
+  /\bCréditos?:?\s+[A-Z][a-zà-ú]+\s+[A-Z][a-zà-ú]+\.?$/i,
+  /\bRevis(?:ão|ada)\s+(?:por\s+)?[A-Z][a-zà-ú]+\s+[A-Z][a-zà-ú]+\.?$/i,
+  /\bSubtitles?\s+(?:by\s+)?[A-Z][a-z]+\s+[A-Z][a-z]+\.?$/i,
+  /\bAmara\.org\b/i,
+  /\bwww\.\S+\.com\b\s*$/i,
+  /\bObrigado por assistir\.?$/i,
+  /\bAté a próxima\.?$/i,
+  /\bInscreva-se no canal\.?$/i,
+];
+
+function cleanTranscription(text: string): string {
+  let cleaned = text.trim();
+
+  for (const pattern of HALLUCINATION_PATTERNS) {
+    cleaned = cleaned.replace(pattern, "").trim();
+  }
+
+  cleaned = cleaned.replace(/[.\s]+$/, ".");
+  return cleaned;
+}
+
+console.log(`[transcribe-audio] deploy_fingerprint: ${DEPLOY_FINGERPRINT}`);
+
 // ─── Provider helpers ────────────────────────────────────────
 
 interface ProviderResult {
@@ -61,6 +92,7 @@ async function callGroq(
   const formData = new FormData();
   formData.append("file", fileData, fileName);
   formData.append("model", "whisper-large-v3");
+  formData.append("prompt", INITIAL_PROMPT);
   if (language) formData.append("language", language);
   formData.append("response_format", "text");
 
@@ -74,7 +106,7 @@ async function callGroq(
     const detail = await res.text();
     return { ok: false, status: res.status, detail };
   }
-  const text = (await res.text()).trim();
+  const text = cleanTranscription(await res.text());
   return { ok: true, text };
 }
 
@@ -100,7 +132,7 @@ async function callOpenAI(
     const detail = await res.text();
     return { ok: false, status: res.status, detail };
   }
-  const text = (await res.text()).trim();
+  const text = cleanTranscription(await res.text());
   return { ok: true, text };
 }
 
