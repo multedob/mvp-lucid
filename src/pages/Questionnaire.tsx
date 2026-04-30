@@ -54,7 +54,6 @@ interface QFooterProps {
   continueLabel?: string
   onFallback?: () => void
   fallbackLabel?: string
-  onEthics?: () => void
   disabled?: boolean
 }
 const Footer = forwardRef<HTMLDivElement, QFooterProps>(({
@@ -62,7 +61,6 @@ const Footer = forwardRef<HTMLDivElement, QFooterProps>(({
   continueLabel = "send",
   onFallback,
   fallbackLabel,
-  onEthics,
   disabled = false,
 }, ref) => {
   const navigate = useNavigate()
@@ -87,11 +85,6 @@ const Footer = forwardRef<HTMLDivElement, QFooterProps>(({
             }}
           >
             {continueLabel}
-          </span>
-        )}
-        {onEthics && (
-          <span className="r-footer-ethics" onClick={onEthics}>
-            prefiro não
           </span>
         )}
       </div>
@@ -356,9 +349,9 @@ export default function Questionnaire() {
   // ─────────────────────────────────────
   // Submit
   // ─────────────────────────────────────
-  async function handleSubmit(protecao = false) {
+  async function handleSubmit() {
     if (!cycleId || !currentBlock || submitting) return
-    if (!protecao && answer.trim().length < 2) return
+    if (answer.trim().length < 2) return
 
     setSubmitting(true)
     setError(null)
@@ -372,16 +365,16 @@ export default function Questionnaire() {
       ? {
           block_id: currentBlock,
           principal_resposta: null,
-          variante_resposta: protecao ? null : answer.trim(),
-          protecao_etica: protecao,
+          variante_resposta: answer.trim(),
+          protecao_etica: false,
           tempo_resposta_segundos: tempo,
           rotation_variation_key: rotationKey,
         }
       : {
           block_id: currentBlock,
-          principal_resposta: protecao ? null : answer.trim(),
+          principal_resposta: answer.trim(),
           variante_resposta: null,
-          protecao_etica: protecao,
+          protecao_etica: false,
           tempo_resposta_segundos: tempo,
           rotation_variation_key: rotationKey,
         }
@@ -555,7 +548,6 @@ export default function Questionnaire() {
         disabled={submitting || answer.trim().length < 2}
         onFallback={canFallback ? handleFallback : undefined}
         fallbackLabel={fallbackLabel}
-        onEthics={() => handleSubmit(true)}
       />
 
     </div>
