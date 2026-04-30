@@ -837,7 +837,7 @@ export default function Context() {
                 {cycles.map((c, i) => (
                   <span
                     key={c.id}
-                    onClick={() => { setSelectedIdx(i); setCompareIdx((prev) => (prev === i ? null : prev)); }}
+                    onClick={() => setSelectedIdx(i)}
                     style={{
                       fontFamily: "var(--r-font-sys)",
                       fontWeight: selectedIdx === i ? 400 : 300,
