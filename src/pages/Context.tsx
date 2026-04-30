@@ -830,8 +830,53 @@ export default function Context() {
           </div>
         )}
 
-        {/* MIDDLE — respiro */}
-        <div style={{ flex: 1 }} />
+        {/* MIDDLE — radar estrutural */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "12px 0", minHeight: 0 }}>
+          <RadarContexto
+            primary={primaryAgg?.il_aggregated ?? null}
+            comparison={comparisonAgg?.il_aggregated ?? null}
+            primaryLabel={cycle?.id ?? "atual"}
+            comparisonLabel={compareIdx != null ? cycles[compareIdx]?.id ?? "comparação" : "comparação"}
+            size={260}
+          />
+          {cycles.length > 1 && (
+            <div style={{ marginTop: 8, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
+              <span style={{ fontFamily: "var(--r-font-sys)", fontSize: 9, color: "var(--r-ghost)", letterSpacing: "0.08em" }}>
+                comparar com
+              </span>
+              {cycles.map((c, i) =>
+                i === selectedIdx ? null : (
+                  <span
+                    key={c.id}
+                    onClick={() => setCompareIdx(compareIdx === i ? null : i)}
+                    style={{
+                      fontFamily: "var(--r-font-sys)",
+                      fontSize: 10,
+                      letterSpacing: "0.06em",
+                      color: compareIdx === i ? "var(--r-accent)" : "var(--r-sub)",
+                      borderBottom: compareIdx === i ? "1px solid var(--r-accent)" : "1px solid transparent",
+                      paddingBottom: 1,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {c.id}
+                  </span>
+                )
+              )}
+              {compareIdx != null && (
+                <span
+                  onClick={() => setCompareIdx(null)}
+                  style={{
+                    fontFamily: "var(--r-font-sys)", fontSize: 9, color: "var(--r-ghost)",
+                    letterSpacing: "0.06em", cursor: "pointer",
+                  }}
+                >
+                  limpar
+                </span>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* BOTTOM */}
         <div style={{ flexShrink: 0 }}>
