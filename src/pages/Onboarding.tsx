@@ -34,7 +34,7 @@ export default function Onboarding() {
   return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label">rdwth</span>
+        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
