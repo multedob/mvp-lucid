@@ -54,6 +54,7 @@ interface QFooterProps {
   continueLabel?: string
   onFallback?: () => void
   fallbackLabel?: string
+  recorder?: React.ReactNode
   disabled?: boolean
 }
 const Footer = forwardRef<HTMLDivElement, QFooterProps>(({
@@ -61,6 +62,7 @@ const Footer = forwardRef<HTMLDivElement, QFooterProps>(({
   continueLabel = "send",
   onFallback,
   fallbackLabel,
+  recorder,
   disabled = false,
 }, ref) => {
   const navigate = useNavigate()
@@ -69,24 +71,23 @@ const Footer = forwardRef<HTMLDivElement, QFooterProps>(({
       <div className="r-line" />
       <div ref={ref} className="r-footer">
         <span onClick={() => navigate(-1)} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
-        {onFallback && fallbackLabel && (
-          <span className="r-footer-action" onClick={onFallback}>
-            {fallbackLabel}
-          </span>
-        )}
-        {onContinue && (
-          <span
-            className="r-footer-action"
-            onClick={disabled ? undefined : onContinue}
-            style={{
-              opacity: disabled ? 0.3 : 1,
-              cursor: disabled ? 'default' : 'pointer',
-              marginLeft: onFallback ? 0 : undefined,
-            }}
-          >
-            {continueLabel}
-          </span>
-        )}
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 14 }}>
+          {onFallback && fallbackLabel && (
+            <span className="r-footer-action" onClick={onFallback}>
+              {fallbackLabel}
+            </span>
+          )}
+          {recorder}
+          {onContinue && (
+            <span
+              className="r-footer-action"
+              onClick={disabled ? undefined : onContinue}
+              style={{ opacity: disabled ? 0.3 : 1, cursor: disabled ? 'default' : 'pointer' }}
+            >
+              {continueLabel}
+            </span>
+          )}
+        </div>
       </div>
     </>
   )
@@ -98,26 +99,14 @@ interface QTextareaProps {
   onChange: (v: string) => void
   disabled?: boolean
   onCmdEnter?: () => void
-  userId?: string | null
-  cycleId?: string | null
-  pillId?: string
 }
 const InvisibleTextarea = forwardRef<HTMLDivElement, QTextareaProps>(({
   value,
   onChange,
   disabled = false,
   onCmdEnter,
-  userId,
-  cycleId,
-  pillId = 'questionnaire',
 }, fwdRef) => {
   const ref = useRef<HTMLTextAreaElement>(null)
-  const valueRef = useRef(value)
-  const recogRef = useRef<any>(null)
-  const [listening, setListening] = useState(false)
-  const [interimText, setInterimText] = useState('')
-
-  useEffect(() => { valueRef.current = value }, [value])
 
   useEffect(() => {
     if (ref.current) {
@@ -129,46 +118,6 @@ const InvisibleTextarea = forwardRef<HTMLDivElement, QTextareaProps>(({
   useEffect(() => {
     setTimeout(() => ref.current?.focus(), 100)
   }, [])
-
-  function toggleMic() {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-    if (!SR) return
-    if (listening) {
-      recogRef.current?.stop()
-      setListening(false)
-      setInterimText('')
-      return
-    }
-    const r = new SR()
-    r.lang = 'pt-BR'
-    r.continuous = true
-    r.interimResults = true
-    r.onresult = (e: any) => {
-      let finalStr = ''
-      let interimStr = ''
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) {
-          finalStr += e.results[i][0].transcript
-        } else {
-          interimStr += e.results[i][0].transcript
-        }
-      }
-      if (finalStr) {
-        const prev = valueRef.current
-        onChange((prev ? prev + ' ' : '') + finalStr)
-      }
-      setInterimText(interimStr)
-    }
-    r.onend = () => { setListening(false); setInterimText('') }
-    r.onerror = () => { setListening(false); setInterimText('') }
-    r.start()
-    recogRef.current = r
-    setListening(true)
-  }
-
-  const hasSpeech = typeof window !== 'undefined' && (
-    !!(window as any).SpeechRecognition || !!(window as any).webkitSpeechRecognition
-  )
 
   return (
     <div ref={fwdRef} className="r-input-wrap">
@@ -186,36 +135,6 @@ const InvisibleTextarea = forwardRef<HTMLDivElement, QTextareaProps>(({
         rows={1}
         disabled={disabled}
       />
-      {listening && interimText && (
-        <div style={{
-          fontFamily: 'var(--r-font-sys)',
-          fontSize: 11,
-          fontWeight: 300,
-          color: 'var(--r-ghost)',
-          letterSpacing: '0.02em',
-          lineHeight: 1.6,
-          padding: '6px 0 2px',
-        }}>
-          {interimText}
-        </div>
-      )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
-        {userId && cycleId ? (
-          <AudioRecorder
-            userId={userId}
-            cycleId={cycleId}
-            pillId={pillId}
-            moment="questionnaire"
-            language="pt-BR"
-            onLiveTranscript={onChange}
-            onFinalTranscript={onChange}
-            disabled={disabled}
-          />
-        ) : hasSpeech && (
-          <div onClick={disabled ? undefined : toggleMic} title={listening ? 'parar gravação' : 'falar resposta'} style={{ width: 6, height: 6, borderRadius: '50%', border: listening ? 'none' : '0.5px solid var(--r-dim)', background: listening ? 'var(--r-accent)' : 'transparent', cursor: disabled ? 'default' : 'pointer', flexShrink: 0, transition: 'all 0.2s', outline: listening ? '2px solid var(--r-accent)' : 'none', outlineOffset: '3px' }} />
-        )}
-        <div className={`r-send-dot${value.trim().length >= 2 ? ' active' : ''}`} />
-      </div>
     </div>
   )
 });
