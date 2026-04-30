@@ -431,7 +431,7 @@ export default function Reed() {
       <div className="r-line" />
 
       {/* Mensagens */}
-      <div className="r-scroll" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div className="r-scroll" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '20px 24px 16px' }}>
         {messages.map((msg, i) => {
           const isSys = msg.role === 'reed' && msg.text.startsWith('[sys]')
 
