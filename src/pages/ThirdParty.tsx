@@ -10,7 +10,7 @@
 // Ao finalizar: chama finalize → recebe mini-insight → mostra com CTA pro rdwth.
 // ============================================================
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getToday } from "@/lib/api";
 import { AnimatedWordmark } from "@/components/AnimatedWordmark";
@@ -326,7 +326,7 @@ export default function ThirdParty() {
     onContinue: () => void;
     continueLabel?: string;
     onBack?: () => void;
-    recorder?: React.ReactNode;
+    recorder?: ReactNode;
     disabled?: boolean;
   }) => (
     <>
@@ -478,21 +478,6 @@ export default function ThirdParty() {
             placeholder="conta a situação aqui (mínimo 30 caracteres)"
             maxRows={5}
           />
-          {data?.invite_id && (
-            <div style={{ maxWidth: 600, marginLeft: "auto", marginRight: "auto", width: "100%" }}>
-              <AudioRecorder
-                userId={data.invite_id}
-                cycleId={token ?? "third-party"}
-                pillId={qid}
-                moment="third-party"
-                language="pt-BR"
-                onLiveTranscript={text => setEpisodes((prev) => ({ ...prev, [qid]: text }))}
-                onFinalTranscript={text => setEpisodes((prev) => ({ ...prev, [qid]: text }))}
-                disabled={submitting}
-              />
-            </div>
-          )}
-
           <div className="r-sub" style={{ marginTop: 16 }}>{replaceName(currentQ.scale_label)}</div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "8px 0", maxWidth: 600, marginLeft: "auto", marginRight: "auto", width: "100%" }}>
             <div style={{ display: "flex", gap: 16, padding: "8px 0" }}>
@@ -529,6 +514,18 @@ export default function ThirdParty() {
           onContinue={handleSubmitQuestion}
           onBack={handleBack}
           continueLabel={isLastQuestion ? "última etapa" : "continuar"}
+          recorder={data?.invite_id ? (
+            <AudioRecorder
+              userId={data.invite_id}
+              cycleId={token ?? "third-party"}
+              pillId={qid}
+              moment="third-party"
+              language="pt-BR"
+              onLiveTranscript={text => setEpisodes((prev) => ({ ...prev, [qid]: text }))}
+              onFinalTranscript={text => setEpisodes((prev) => ({ ...prev, [qid]: text }))}
+              disabled={submitting}
+            />
+          ) : undefined}
         />
       </div>
     );
