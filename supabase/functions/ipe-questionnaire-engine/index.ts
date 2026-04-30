@@ -81,6 +81,53 @@ const SEQUENCIA_BLOCOS: BlocoConfig[] = [
   { line_id: "L4.4", dimensao: "D4", tipo: "SEMPRE",      posicao: 16 },
 ];
 
+const PILL_LINES: Record<string, LineId[]> = {
+  PI:   ["L1.1","L2.1","L3.1","L3.2","L4.4"],
+  PII:  ["L1.2","L1.3","L1.4","L2.1","L2.3","L3.4"],
+  PIII: ["L1.4","L2.1","L2.2","L3.4","L4.2"],
+  PIV:  ["L1.1","L3.2","L3.3","L3.4","L4.1","L4.2"],
+  PV:   ["L1.1","L2.2","L4.1","L4.2","L4.3"],
+  PVI:  ["L1.2","L1.3","L1.4","L2.3","L3.1","L4.1","L4.2"],
+};
+
+function normalizeCoveredLine(line_id: string): string {
+  return line_id === "L3.4_CP" ? "L3.4" : line_id;
+}
+
+async function getCoveredLinesByCompletedPills(
+  supabase: ReturnType<typeof createClient>,
+  ipe_cycle_id: string
+): Promise<Set<string>> {
+  const { data: cycle } = await (supabase as any)
+    .from("ipe_cycles")
+    .select("pills_completed")
+    .eq("id", ipe_cycle_id)
+    .maybeSingle();
+
+  const covered = new Set<string>();
+  for (const pillId of (cycle?.pills_completed ?? []) as string[]) {
+    for (const line of PILL_LINES[pillId] ?? []) covered.add(line);
+  }
+  return covered;
+}
+
+function filterPlanByCompletedPills(
+  plan: ExecutionPlan,
+  coveredLines: Set<string>,
+  resultados: Record<string, ResultadoBloco> = {}
+): ExecutionPlan {
+  const answered = new Set(Object.keys(resultados).map(normalizeCoveredLine));
+  const blocos_ativos = plan.blocos_ativos.filter(lid => {
+    const normalized = normalizeCoveredLine(lid as string);
+    return !coveredLines.has(normalized) || answered.has(normalized);
+  });
+  const blocos_skip = Array.from(new Set([
+    ...plan.blocos_skip,
+    ...plan.blocos_ativos.filter(lid => !blocos_ativos.includes(lid)),
+  ])) as LineId[];
+  return { ...plan, blocos_ativos, blocos_skip };
+}
+
 // ─────────────────────────────────────────
 // MAPA DE VARIANTES POR BLOCO
 // Fonte: PIPELINE_EXECUCAO §5.1 (39 variantes — 1 canônica por corte/tipo)
