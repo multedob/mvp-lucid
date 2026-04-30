@@ -556,14 +556,13 @@ export default function Reed() {
               disabled={sending || loading}
             />
           )}
-          <div
-            onClick={handleSend}
-            style={{
-              width: 6, height: 6, borderRadius: '50%', flexShrink: 0, cursor: 'pointer',
-              background: input.trim() ? 'var(--r-accent)' : 'transparent',
-              border: `1px solid ${input.trim() ? 'var(--r-accent)' : 'var(--r-ghost)'}`,
-              transition: 'all 0.2s',
-            }}
+          <button
+            type="button"
+            className={`r-send-dot${input.trim() ? ' active' : ''}`}
+            onClick={input.trim() ? handleSend : undefined}
+            disabled={!input.trim() || sending || loading}
+            aria-label="enviar"
+            style={{ cursor: input.trim() ? 'pointer' : 'default' }}
           />
         </div>
       </div>

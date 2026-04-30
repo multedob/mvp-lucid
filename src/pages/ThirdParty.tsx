@@ -320,13 +320,11 @@ export default function ThirdParty() {
     onContinue,
     continueLabel = "continuar",
     onBack,
-    recorder,
     disabled = false,
   }: {
-    onContinue: () => void;
+    onContinue?: () => void;
     continueLabel?: string;
     onBack?: () => void;
-    recorder?: ReactNode;
     disabled?: boolean;
   }) => (
     <>
@@ -335,11 +333,11 @@ export default function ThirdParty() {
         {onBack && (
           <span onClick={onBack} style={{ fontFamily: "var(--r-font-sys)", fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
         )}
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 14 }}>
-          {recorder}
+        {onContinue && (
           <span
             onClick={!disabled && !submitting ? onContinue : undefined}
             style={{
+              marginLeft: "auto",
               fontFamily: "var(--r-font-sys)", fontSize: 13,
               color: disabled || submitting ? "var(--r-ghost)" : "var(--r-text)",
               cursor: disabled || submitting ? "default" : "pointer",
@@ -348,10 +346,55 @@ export default function ThirdParty() {
           >
             {submitting ? "..." : continueLabel}
           </span>
-        </div>
+        )}
       </div>
     </>
   );
+
+  const ResponseInput = ({
+    value,
+    onChange,
+    placeholder,
+    minLength,
+    onSend,
+    recorder,
+    minHeight,
+  }: {
+    value: string;
+    onChange: (value: string) => void;
+    placeholder: string;
+    minLength: number;
+    onSend: () => void;
+    recorder?: ReactNode;
+    minHeight?: number;
+  }) => {
+    const active = value.trim().length >= minLength && !submitting;
+    return (
+      <div className="r-input-wrap" style={minHeight ? { alignItems: "flex-end" } : undefined}>
+        <AutoResizeTextarea
+          className="r-textarea"
+          style={minHeight ? { minHeight } : undefined}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) onSend();
+          }}
+          placeholder={placeholder}
+          rows={1}
+          maxRows={5}
+        />
+        {recorder}
+        <button
+          type="button"
+          className={`r-send-dot${active ? " active" : ""}`}
+          onClick={active ? onSend : undefined}
+          disabled={!active}
+          aria-label="enviar"
+          style={{ cursor: active ? "pointer" : "default" }}
+        />
+      </div>
+    );
+  };
 
   // ─── ONBOARDING ───────────────────────────────────────────
   if (phase === "onboarding") {
@@ -470,13 +513,25 @@ export default function ThirdParty() {
         <div className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
           <div className="r-sub" style={{ fontStyle: "italic" }}>{replaceName(currentQ.stem)}</div>
           <div className="r-question">{replaceName(currentQ.episode_prompt)}</div>
-          <AutoResizeTextarea
-            className="r-textarea"
-            style={{ minHeight: 80, maxWidth: 600, marginLeft: "auto", marginRight: "auto", width: "100%", borderBottom: "0.5px solid var(--r-ghost)" }}
+          <ResponseInput
             value={episodes[qid] ?? ""}
-            onChange={(e) => setEpisodes((prev) => ({ ...prev, [qid]: e.target.value }))}
+            onChange={(value) => setEpisodes((prev) => ({ ...prev, [qid]: value }))}
             placeholder="conta a situação aqui (mínimo 30 caracteres)"
-            maxRows={5}
+            minLength={30}
+            minHeight={80}
+            onSend={handleSubmitQuestion}
+            recorder={data?.invite_id ? (
+              <AudioRecorder
+                userId={data.invite_id}
+                cycleId={token ?? "third-party"}
+                pillId={qid}
+                moment="third-party"
+                language="pt-BR"
+                onLiveTranscript={text => setEpisodes((prev) => ({ ...prev, [qid]: text }))}
+                onFinalTranscript={text => setEpisodes((prev) => ({ ...prev, [qid]: text }))}
+                disabled={submitting}
+              />
+            ) : undefined}
           />
           <div className="r-sub" style={{ marginTop: 16 }}>{replaceName(currentQ.scale_label)}</div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "8px 0", maxWidth: 600, marginLeft: "auto", marginRight: "auto", width: "100%" }}>
@@ -497,36 +552,17 @@ export default function ThirdParty() {
           </div>
 
           <div className="r-sub" style={{ marginTop: 16 }}>{replaceName(currentQ.open_prompt)}</div>
-          <div className="r-input-wrap">
-            <AutoResizeTextarea
-              className="r-textarea"
-              value={opens[qid] ?? ""}
-              onChange={(e) => setOpens((prev) => ({ ...prev, [qid]: e.target.value }))}
-              placeholder="uma frase"
-              rows={1}
-              maxRows={5}
-            />
-          </div>
+          <ResponseInput
+            value={opens[qid] ?? ""}
+            onChange={(value) => setOpens((prev) => ({ ...prev, [qid]: value }))}
+            placeholder="uma frase"
+            minLength={5}
+            onSend={handleSubmitQuestion}
+          />
 
           {errorMsg && <div style={{ color: "var(--terracota, #b85a3e)", fontSize: 13 }}>{errorMsg}</div>}
         </div>
-        <Footer
-          onContinue={handleSubmitQuestion}
-          onBack={handleBack}
-          continueLabel={isLastQuestion ? "última etapa" : "continuar"}
-          recorder={data?.invite_id ? (
-            <AudioRecorder
-              userId={data.invite_id}
-              cycleId={token ?? "third-party"}
-              pillId={qid}
-              moment="third-party"
-              language="pt-BR"
-              onLiveTranscript={text => setEpisodes((prev) => ({ ...prev, [qid]: text }))}
-              onFinalTranscript={text => setEpisodes((prev) => ({ ...prev, [qid]: text }))}
-              disabled={submitting}
-            />
-          ) : undefined}
-        />
+        <Footer onBack={handleBack} />
       </div>
     );
   }

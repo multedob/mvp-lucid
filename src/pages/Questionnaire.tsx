@@ -54,7 +54,6 @@ interface QFooterProps {
   continueLabel?: string
   onFallback?: () => void
   fallbackLabel?: string
-  recorder?: ReactNode
   disabled?: boolean
 }
 const Footer = forwardRef<HTMLDivElement, QFooterProps>(({
@@ -62,7 +61,6 @@ const Footer = forwardRef<HTMLDivElement, QFooterProps>(({
   continueLabel = "send",
   onFallback,
   fallbackLabel,
-  recorder,
   disabled = false,
 }, ref) => {
   const navigate = useNavigate()
@@ -77,7 +75,6 @@ const Footer = forwardRef<HTMLDivElement, QFooterProps>(({
               {fallbackLabel}
             </span>
           )}
-          {recorder}
           {onContinue && (
             <span
               className="r-footer-action"
@@ -99,12 +96,18 @@ interface QTextareaProps {
   onChange: (v: string) => void
   disabled?: boolean
   onCmdEnter?: () => void
+  recorder?: ReactNode
+  onSend?: () => void
+  sendActive?: boolean
 }
 const InvisibleTextarea = forwardRef<HTMLDivElement, QTextareaProps>(({
   value,
   onChange,
   disabled = false,
   onCmdEnter,
+  recorder,
+  onSend,
+  sendActive = false,
 }, fwdRef) => {
   const ref = useRef<HTMLTextAreaElement>(null)
 
@@ -134,6 +137,15 @@ const InvisibleTextarea = forwardRef<HTMLDivElement, QTextareaProps>(({
         placeholder=""
         rows={1}
         disabled={disabled}
+      />
+      {recorder}
+      <button
+        type="button"
+        className={`r-send-dot${sendActive ? ' active' : ''}`}
+        onClick={sendActive ? onSend : undefined}
+        disabled={!sendActive}
+        aria-label="enviar"
+        style={{ cursor: sendActive ? 'pointer' : 'default' }}
       />
     </div>
   )
@@ -454,28 +466,27 @@ export default function Questionnaire() {
           onChange={setAnswer}
           disabled={submitting}
           onCmdEnter={() => handleSubmit()}
+          onSend={() => handleSubmit()}
+          sendActive={!submitting && answer.trim().length >= 2}
+          recorder={userId && cycleId ? (
+            <AudioRecorder
+              userId={userId}
+              cycleId={cycleId}
+              pillId={currentBlock ?? 'questionnaire'}
+              moment="questionnaire"
+              language="pt-BR"
+              onLiveTranscript={setAnswer}
+              onFinalTranscript={setAnswer}
+              disabled={submitting}
+            />
+          ) : undefined}
         />
       </div>
 
       {/* Footer — mesmo padrão das pills */}
       <Footer
-        onContinue={() => handleSubmit()}
-        continueLabel={submitting ? '...' : 'send'}
-        disabled={submitting || answer.trim().length < 2}
         onFallback={canFallback ? handleFallback : undefined}
         fallbackLabel={fallbackLabel}
-        recorder={userId && cycleId ? (
-          <AudioRecorder
-            userId={userId}
-            cycleId={cycleId}
-            pillId={currentBlock ?? 'questionnaire'}
-            moment="questionnaire"
-            language="pt-BR"
-            onLiveTranscript={setAnswer}
-            onFinalTranscript={setAnswer}
-            disabled={submitting}
-          />
-        ) : undefined}
       />
 
     </div>
