@@ -4,7 +4,7 @@
 
 import { useNavigate } from 'react-router-dom'
 
-type ActivePage = 'reed' | 'pills' | 'questionnaire' | 'context' | 'home' | 'settings' | 'none'
+type ActivePage = 'reed' | 'pills' | 'questionnaire' | 'context' | 'system' | 'home' | 'settings' | 'none'
 
 interface NavBottomProps {
   active?: ActivePage
@@ -22,7 +22,7 @@ export default function NavBottom({ active = 'none' }: NavBottomProps) {
 
   const rightItems = [
     { label: 'contexto', slug: 'context', path: '/context' },
-    { label: 'sistema', slug: 'none', path: '/como-funciona' },
+    { label: 'sistema', slug: 'system', path: '/como-funciona' },
   ]
 
   return (
