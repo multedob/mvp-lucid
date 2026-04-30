@@ -22,6 +22,7 @@ export default function NavBottom({ active = 'none' }: NavBottomProps) {
 
   const rightItems = [
     { label: 'contexto', slug: 'context', path: '/context' },
+    { label: 'sistema', slug: 'none', path: '/como-funciona' },
   ]
 
   return (
