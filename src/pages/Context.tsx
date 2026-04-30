@@ -376,9 +376,8 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label">
-          <span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span> · contexto · terceiros
-        </span>
+        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
+        <span className="r-header-section">contexto · terceiros</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
