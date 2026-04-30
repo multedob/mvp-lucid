@@ -561,6 +561,18 @@ export default function ThirdParty() {
             placeholder="uma frase"
             minLength={5}
             onSend={handleSubmitQuestion}
+            recorder={data?.invite_id ? (
+              <AudioRecorder
+                userId={data.invite_id}
+                cycleId={token ?? "third-party"}
+                pillId={`${qid}_open`}
+                moment="third-party"
+                language="pt-BR"
+                onLiveTranscript={text => setOpens((prev) => ({ ...prev, [qid]: text }))}
+                onFinalTranscript={text => setOpens((prev) => ({ ...prev, [qid]: text }))}
+                disabled={submitting}
+              />
+            ) : undefined}
           />
 
           {errorMsg && <div style={{ color: "var(--terracota, #b85a3e)", fontSize: 13 }}>{errorMsg}</div>}
