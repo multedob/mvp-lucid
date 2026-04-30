@@ -378,7 +378,11 @@ async function handlePlan(
     .eq("ipe_cycle_id", ipe_cycle_id);
 
   const semPills = !scorings || scorings.length === 0;
-  const plan = buildExecutionPlan((scorings ?? []) as PillScoring[], semPills);
+  const coveredLines = await getCoveredLinesByCompletedPills(supabase, ipe_cycle_id);
+  const plan = filterPlanByCompletedPills(
+    buildExecutionPlan((scorings ?? []) as PillScoring[], semPills),
+    coveredLines
+  );
 
   // Persistir questionnaire_state
   const stateId = crypto.randomUUID();
@@ -463,9 +467,10 @@ async function handleNextBlock(
                   questionnaire_state_id: state.id }, 200);
   }
 
-  const plan = state.execution_plan as ExecutionPlan;
   const flags = (state.flags ?? {}) as QuestionnaireFlags;
   const resultados = (state.resultados_por_bloco ?? {}) as Record<string, ResultadoBloco>;
+  const coveredLines = await getCoveredLinesByCompletedPills(supabase, ipe_cycle_id);
+  let plan = filterPlanByCompletedPills(state.execution_plan as ExecutionPlan, coveredLines, resultados);
   let orcamento_global = state.orcamento_global_restante ?? plan.orcamento_global_inicial;
   let orcamento_d3 = state.orcamento_d3_restante ?? plan.orcamento_d3_inicial;
   let contador_d3 = state.contador_d3_blocos ?? 0;
