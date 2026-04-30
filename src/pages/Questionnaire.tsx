@@ -42,7 +42,8 @@ const Header = forwardRef<HTMLDivElement>((_, ref) => {
   return (
     <>
       <div ref={ref} className="r-header">
-        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span> · questionário</span>
+        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
+        <span className="r-header-section">questionário</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
