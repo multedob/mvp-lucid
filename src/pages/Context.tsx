@@ -375,6 +375,14 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   const activeCount = invites.filter(i => i.status === "pending" || i.status === "submitted").length;
   const submittedCount = invites.filter(i => i.status === "submitted").length;
 
+  if (!loadingScreenDone) {
+    return <LoadingScreen
+      phrases={["buscando perspectivas...", "organizando...", "pronto."]}
+      loadComplete={!loading}
+      onDone={() => setLoadingScreenDone(true)}
+    />;
+  }
+
   return (
     <div className="r-screen">
       <div className="r-header">
