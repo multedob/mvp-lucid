@@ -616,12 +616,17 @@ export default function ThirdParty() {
   }
 
   // ─── FINALIZING ───────────────────────────────────────────
-  if (phase === "finalizing") {
+  if (phase === "finalizing" || (phase === "done" && !finalizeLoadingDone)) {
     return (
-      <div className="r-screen" style={{ alignItems: "center", justifyContent: "center", display: "flex", flexDirection: "column", gap: 20 }}>
-        <span className="r-pulse" />
-        <div className="r-sub" style={{ textAlign: "center" }}>processando suas respostas...</div>
-      </div>
+      <LoadingScreen
+        phrases={[
+          "lendo o que você trouxe...",
+          "enxergando o que tem por trás...",
+          "pronto.",
+        ]}
+        loadComplete={phase === "done"}
+        onDone={() => setFinalizeLoadingDone(true)}
+      />
     );
   }
 
