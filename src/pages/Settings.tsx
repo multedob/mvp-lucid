@@ -95,10 +95,10 @@ export default function Settings() {
       <div style={{ flex: 1, padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 0 }}>
 
         {[
-          { label: "Política de Privacidade", action: () => navigate("/privacy-policy") },
-          { label: "Termos de Uso",            action: () => navigate("/terms-of-use") },
+          { label: "política de privacidade", action: () => navigate("/privacy-policy") },
+          { label: "termos de uso",            action: () => navigate("/terms-of-use") },
           { label: "sistema",                  action: () => navigate("/como-funciona") },
-          { label: "Sair",                     action: handleSignOut },
+          { label: "sair",                     action: handleSignOut },
         ].map((item, i) => (
           <div key={i}>
             <div
@@ -123,12 +123,12 @@ export default function Settings() {
 
         {[
           {
-            label: exporting ? "baixando..." : "Baixar meus dados",
+            label: exporting ? "baixando..." : "baixar meus dados",
             color: "var(--r-sub)",
             action: exporting ? undefined : handleDownloadData,
           },
           {
-            label: deleting ? "apagando..." : "Apagar conta",
+            label: deleting ? "apagando..." : "apagar conta",
             color: "var(--r-accent)",
             action: deleting ? undefined : handleDeleteAccount,
           },
