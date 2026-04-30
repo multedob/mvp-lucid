@@ -433,7 +433,16 @@ export default function Questionnaire() {
   // Render
   // ─────────────────────────────────────
 
-  if (phase === 'loading') return <QuestionnaireLoadingScreen />
+  // Loading screen sobreposta enquanto phase==='loading' OU enquanto a animação ainda não terminou
+  const showLoadingOverlay = phase === 'loading' || !loadingScreenDone
+  const loadingOverlay = showLoadingOverlay ? (
+    <QuestionnaireLoadingScreen
+      loadComplete={phase !== 'loading'}
+      onDone={() => setLoadingScreenDone(true)}
+    />
+  ) : null
+
+  if (phase === 'loading') return <>{loadingOverlay}</>
 
   if (phase === 'transition') return (
     <div className="r-screen" style={{ justifyContent: 'center', alignItems: 'center' }}>
