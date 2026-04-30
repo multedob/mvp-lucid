@@ -10,7 +10,7 @@ export default function Privacy() {
   return (
     <div className="r-screen">
       <div className="r-header">
-        <span className="r-header-label">rdwth · privacidade</span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span> · privacidade</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />

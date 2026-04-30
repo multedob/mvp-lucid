@@ -14,6 +14,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getToday } from "@/lib/api";
 import { AnimatedWordmark } from "@/components/AnimatedWordmark";
+import { AudioRecorder } from "@/components/AudioRecorder";
+import { AutoResizeTextarea } from "@/components/AutoResizeTextarea";
 
 // LP do rdwth — atualizar quando estiver pronta
 const RDWTH_LP_URL = "/";
@@ -306,7 +308,7 @@ export default function ThirdParty() {
   const Header = ({ subtitle }: { subtitle?: string }) => (
     <>
       <div className="r-header">
-        <span className="r-header-label">rdwth{subtitle ? ` · ${subtitle}` : ""}</span>
+        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>{subtitle ? ` · ${subtitle}` : ""}</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
@@ -464,13 +466,28 @@ export default function ThirdParty() {
         <div className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
           <div className="r-sub" style={{ fontStyle: "italic" }}>{replaceName(currentQ.stem)}</div>
           <div className="r-question">{replaceName(currentQ.episode_prompt)}</div>
-          <textarea
+          <AutoResizeTextarea
             className="r-textarea"
             style={{ minHeight: 80, maxWidth: 600, marginLeft: "auto", marginRight: "auto", width: "100%", borderBottom: "0.5px solid var(--r-ghost)" }}
             value={episodes[qid] ?? ""}
             onChange={(e) => setEpisodes((prev) => ({ ...prev, [qid]: e.target.value }))}
             placeholder="conta a situação aqui (mínimo 30 caracteres)"
+            maxRows={5}
           />
+          {data?.invite_id && (
+            <div style={{ maxWidth: 600, marginLeft: "auto", marginRight: "auto", width: "100%" }}>
+              <AudioRecorder
+                userId={data.invite_id}
+                cycleId={token ?? "third-party"}
+                pillId={qid}
+                moment="third-party"
+                language="pt-BR"
+                onLiveTranscript={text => setEpisodes((prev) => ({ ...prev, [qid]: text }))}
+                onFinalTranscript={text => setEpisodes((prev) => ({ ...prev, [qid]: text }))}
+                disabled={submitting}
+              />
+            </div>
+          )}
 
           <div className="r-sub" style={{ marginTop: 16 }}>{replaceName(currentQ.scale_label)}</div>
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "8px 0", maxWidth: 600, marginLeft: "auto", marginRight: "auto", width: "100%" }}>
@@ -492,12 +509,13 @@ export default function ThirdParty() {
 
           <div className="r-sub" style={{ marginTop: 16 }}>{replaceName(currentQ.open_prompt)}</div>
           <div className="r-input-wrap">
-            <input
-              type="text"
+            <AutoResizeTextarea
               className="r-textarea"
               value={opens[qid] ?? ""}
               onChange={(e) => setOpens((prev) => ({ ...prev, [qid]: e.target.value }))}
               placeholder="uma frase"
+              rows={1}
+              maxRows={5}
             />
           </div>
 

@@ -32,7 +32,7 @@ import { forwardRef, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunction } from "@/lib/api";
 
-type Moment = "m2" | "m4" | "reed";
+type Moment = "m2" | "m4" | "reed" | "questionnaire" | "third-party";
 
 // ─── Cost-protection caps ───────────────────────────────────
 const MAX_DURATION_MS = 5 * 60 * 1000;   // 5 minutes hard stop
@@ -239,21 +239,8 @@ export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(({
   // ─── Rendering ───
   const isRecording = state === "recording";
   const isProcessing = state === "processing";
-  const seconds = Math.floor(elapsedMs / 1000);
-  const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
-  const ss = String(seconds % 60).padStart(2, "0");
-
   // Last-30s warning: switch label to countdown to the cap.
   const isNearLimit = isRecording && elapsedMs >= WARN_THRESHOLD_MS;
-  const remainingSec = Math.max(0, Math.ceil((MAX_DURATION_MS - elapsedMs) / 1000));
-
-  const buttonLabel = isRecording
-    ? isNearLimit
-      ? `para em ${remainingSec}s`
-      : `recording ${mm}:${ss}`
-    : isProcessing
-      ? "ajustando…"
-      : "gravar";
 
   // Color shifts to a warning hue near the limit.
   const accentColor = isNearLimit
@@ -267,37 +254,23 @@ export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(({
         onClick={isRecording ? stopRecording : startRecording}
         disabled={disabled || isProcessing || state === "error"}
         aria-label={isRecording ? "parar gravação" : "começar gravação"}
+        title={isRecording ? "parar gravação" : "falar resposta"}
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          padding: "4px 10px",
-          borderRadius: 999,
-          border: `1px solid ${isRecording ? accentColor : "var(--r-ghost, #ccc)"}`,
+          width: 6,
+          height: 6,
+          padding: 0,
+          borderRadius: "50%",
+          border: isRecording ? "none" : "0.5px solid var(--r-dim)",
           background: isRecording ? accentColor : "transparent",
-          color: isRecording ? "white" : "var(--r-muted, #666)",
-          fontFamily: "var(--r-font-sys, system-ui)",
-          fontSize: 11,
-          fontWeight: 400,
-          letterSpacing: "0.04em",
-          cursor: disabled || isProcessing ? "not-allowed" : "pointer",
+          cursor: disabled || isProcessing ? "default" : "pointer",
           opacity: isProcessing ? 0.6 : 1,
-          transition: "all 0.15s ease",
+          flexShrink: 0,
+          transition: "all 0.2s",
+          outline: isRecording ? `2px solid ${accentColor}` : "none",
+          outlineOffset: "3px",
+          animation: isRecording ? `audio-pulse ${isNearLimit ? "0.5s" : "1s"} ease-in-out infinite` : "none",
         }}
-      >
-        <span
-          style={{
-            width: 6,
-            height: 6,
-            borderRadius: "50%",
-            background: isRecording ? "white" : "var(--r-muted, #666)",
-            animation: isRecording
-              ? `audio-pulse ${isNearLimit ? "0.5s" : "1s"} ease-in-out infinite`
-              : "none",
-          }}
-        />
-        {buttonLabel}
-      </button>
+      />
       {errorMsg && state === "error" && (
         <span style={{ fontSize: 10, color: "var(--r-accent, #c8553d)", opacity: 0.8 }}>
           {errorMsg.length > 40 ? errorMsg.slice(0, 40) + "…" : errorMsg}

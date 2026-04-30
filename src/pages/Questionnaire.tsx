@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { callEdgeFunction, getCurrentUserVersion, getToday } from '@/lib/api'
 import { triggerDeepReadingRefresh } from '@/lib/deepReading'
 import { QUESTIONS, getQuestionText, type BlockId } from '@/data/questions'
+import { AudioRecorder } from '@/components/AudioRecorder'
 
 // ─────────────────────────────────────────
 // Types
@@ -64,10 +65,12 @@ const Footer = forwardRef<HTMLDivElement, QFooterProps>(({
   onEthics,
   disabled = false,
 }, ref) => {
+  const navigate = useNavigate()
   return (
     <>
       <div className="r-line" />
       <div ref={ref} className="r-footer">
+        <span onClick={() => navigate(-1)} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
         {onFallback && fallbackLabel && (
           <span className="r-footer-action" onClick={onFallback}>
             {fallbackLabel}
@@ -88,7 +91,7 @@ const Footer = forwardRef<HTMLDivElement, QFooterProps>(({
         )}
         {onEthics && (
           <span className="r-footer-ethics" onClick={onEthics}>
-            i'd rather not
+            prefiro não
           </span>
         )}
       </div>
@@ -102,12 +105,18 @@ interface QTextareaProps {
   onChange: (v: string) => void
   disabled?: boolean
   onCmdEnter?: () => void
+  userId?: string | null
+  cycleId?: string | null
+  pillId?: string
 }
 const InvisibleTextarea = forwardRef<HTMLDivElement, QTextareaProps>(({
   value,
   onChange,
   disabled = false,
   onCmdEnter,
+  userId,
+  cycleId,
+  pillId = 'questionnaire',
 }, fwdRef) => {
   const ref = useRef<HTMLTextAreaElement>(null)
   const valueRef = useRef(value)
@@ -198,23 +207,19 @@ const InvisibleTextarea = forwardRef<HTMLDivElement, QTextareaProps>(({
         </div>
       )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
-        {hasSpeech && (
-          <div
-            onClick={disabled ? undefined : toggleMic}
-            title={listening ? 'parar gravação' : 'falar resposta'}
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              border: listening ? 'none' : '0.5px solid var(--r-dim)',
-              background: listening ? 'var(--r-accent)' : 'transparent',
-              cursor: disabled ? 'default' : 'pointer',
-              flexShrink: 0,
-              transition: 'all 0.2s',
-              outline: listening ? '2px solid var(--r-accent)' : 'none',
-              outlineOffset: '3px',
-            }}
+        {userId && cycleId ? (
+          <AudioRecorder
+            userId={userId}
+            cycleId={cycleId}
+            pillId={pillId}
+            moment="questionnaire"
+            language="pt-BR"
+            onLiveTranscript={onChange}
+            onFinalTranscript={onChange}
+            disabled={disabled}
           />
+        ) : hasSpeech && (
+          <div onClick={disabled ? undefined : toggleMic} title={listening ? 'parar gravação' : 'falar resposta'} style={{ width: 6, height: 6, borderRadius: '50%', border: listening ? 'none' : '0.5px solid var(--r-dim)', background: listening ? 'var(--r-accent)' : 'transparent', cursor: disabled ? 'default' : 'pointer', flexShrink: 0, transition: 'all 0.2s', outline: listening ? '2px solid var(--r-accent)' : 'none', outlineOffset: '3px' }} />
         )}
         <div className={`r-send-dot${value.trim().length >= 2 ? ' active' : ''}`} />
       </div>
@@ -232,6 +237,7 @@ export default function Questionnaire() {
   const [phase, setPhase] = useState<Phase>('loading')
   const [cycleId, setCycleId] = useState<string | null>(null)
   const [stateId, setStateId] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
 
   const [currentBlock, setCurrentBlock] = useState<string | null>(null)
   const [currentVariant, setCurrentVariant] = useState<string | null>(null)
@@ -256,6 +262,7 @@ export default function Questionnaire() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { navigate('/auth'); return }
+      setUserId(session.user.id)
 
       const { data: cycle } = await supabase
         .from('ipe_cycles')
@@ -535,6 +542,9 @@ export default function Questionnaire() {
           onChange={setAnswer}
           disabled={submitting}
           onCmdEnter={() => handleSubmit()}
+          userId={userId}
+          cycleId={cycleId}
+          pillId={currentBlock ?? 'questionnaire'}
         />
       </div>
 
