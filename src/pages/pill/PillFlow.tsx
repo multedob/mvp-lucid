@@ -202,12 +202,13 @@ const HEADER_LABEL: Record<Moment, string> = {
 // ─── Subcomponents ─────────────────────────────────────────────────
 
 const Header = forwardRef<HTMLDivElement, { moment: Moment }>(({ moment }, ref) => {
+  const navigate = useNavigate();
   const counter = HEADER_LABEL[moment];
   return (
     <>
       <div ref={ref} className="r-header">
         <span className="r-header-label">
-          {counter ? `rdwth · pills · ${counter}` : "rdwth · pills"}
+          <span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>{counter ? ` · pills · ${counter}` : " · pills"}
         </span>
         <span className="r-header-date">{getToday()}</span>
       </div>
