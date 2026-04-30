@@ -266,6 +266,7 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   const [invites, setInvites] = useState<ThirdPartyInvite[]>([]);
   const [responses, setResponses] = useState<Record<string, ThirdPartyResponse[]>>({});
   const [loading, setLoading] = useState(true);
+  const [loadingScreenDone, setLoadingScreenDone] = useState(false);
   const [creating, setCreating] = useState(false);
   const [selectedPronoun, setSelectedPronoun] = useState<"ela" | "ele" | "elu">("ela");
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
