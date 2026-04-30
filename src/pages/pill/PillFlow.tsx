@@ -222,31 +222,30 @@ interface FooterProps {
   onBack?: () => void;
   onContinue?: () => void;
   continueLabel?: string;
-  showEthics?: boolean;
-  onEthics?: () => void;
+  recorder?: React.ReactNode;
   disabled?: boolean;
 }
 const Footer = forwardRef<HTMLDivElement, FooterProps>(({
   onBack, onContinue, continueLabel = "continuar",
-  showEthics = true, onEthics, disabled = false,
+  recorder, disabled = false,
 }, ref) => {
   return (
     <>
       <div className="r-line" />
       <div ref={ref} className="r-footer">
         {onBack && <span className="r-footer-back" onClick={onBack}>‹</span>}
-        {onContinue && (
-          <span
-            className="r-footer-action"
-            onClick={disabled ? undefined : onContinue}
-            style={{ opacity: disabled ? 0.3 : 1, cursor: disabled ? "default" : "pointer" }}
-          >
-            {continueLabel}
-          </span>
-        )}
-        {showEthics && onEthics && (
-          <span className="r-footer-ethics" onClick={onEthics}>prefiro não responder</span>
-        )}
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 14 }}>
+          {recorder}
+          {onContinue && (
+            <span
+              className="r-footer-action"
+              onClick={disabled ? undefined : onContinue}
+              style={{ opacity: disabled ? 0.3 : 1, cursor: disabled ? "default" : "pointer" }}
+            >
+              {continueLabel}
+            </span>
+          )}
+        </div>
       </div>
     </>
   );
@@ -266,7 +265,6 @@ const InvisibleTextarea = forwardRef<HTMLDivElement, {
         disabled={disabled}
         readOnly={disabled}
       />
-      {!disabled && <div className={`r-send-dot${value.trim() ? " active" : ""}`} />}
     </div>
   );
 });
