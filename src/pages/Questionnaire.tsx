@@ -10,6 +10,7 @@ import { triggerDeepReadingRefresh } from '@/lib/deepReading'
 import { QUESTIONS, getQuestionText, type BlockId } from '@/data/questions'
 import { AudioRecorder } from '@/components/AudioRecorder'
 import { fetchQuestionnaireProgress } from '@/lib/questionnaireProgress'
+import { QuestionnaireLoadingScreen } from '@/components/QuestionnaireLoadingScreen'
 
 // ─────────────────────────────────────────
 // Types
@@ -430,11 +431,7 @@ export default function Questionnaire() {
   // Render
   // ─────────────────────────────────────
 
-  if (phase === 'loading') return (
-    <div className="r-screen" style={{ justifyContent: 'center', alignItems: 'center' }}>
-      <span className="r-header-label">carregando</span>
-    </div>
-  )
+  if (phase === 'loading') return <QuestionnaireLoadingScreen />
 
   if (phase === 'transition') return (
     <div className="r-screen" style={{ justifyContent: 'center', alignItems: 'center' }}>
