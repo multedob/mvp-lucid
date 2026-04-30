@@ -8,7 +8,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const DEPLOY_FINGERPRINT = "w20.2-create-invite-v2-pronoun-alphabeta";
 const MAX_INVITES_PER_CYCLE = 8;
-const APP_BASE_URL = "https://mvp-lucid.lovable.app";
+const APP_BASE_URL = "https://rdwth.com";
 const VALID_PRONOUNS = ["ela", "ele", "elu"] as const;
 
 const CORS_HEADERS = {
