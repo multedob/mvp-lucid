@@ -1,8 +1,10 @@
 // src/components/NavBottom.tsx
 // Shared bottom navigation for all pages
-// Layout: [reed] ........ [pills · questionário · contexto · sistema] ........ [○ settings]
+// Mobile: 6 elementos equidistantes, mesma baseline (space-between)
+// Desktop: [reed] ... [pills · questionário · contexto · sistema] ... [○]
 
 import { useNavigate } from 'react-router-dom'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 type ActivePage = 'reed' | 'pills' | 'questionnaire' | 'context' | 'system' | 'home' | 'settings' | 'none'
 
@@ -12,7 +14,7 @@ interface NavBottomProps {
 
 export default function NavBottom({ active = 'none' }: NavBottomProps) {
   const navigate = useNavigate()
-  const itemGap = 'clamp(8px, 3vw, 24px)'
+  const isMobile = useIsMobile()
   const fontSize = 'clamp(9px, 2.6vw, 11px)'
 
   const renderItem = (label: string, slug: ActivePage, path: string) => (
@@ -28,9 +30,34 @@ export default function NavBottom({ active = 'none' }: NavBottomProps) {
         cursor: 'pointer',
         whiteSpace: 'nowrap',
         flexShrink: 0,
+        lineHeight: 1,
       }}
     >
       {label}
+    </span>
+  )
+
+  const settingsDot = (
+    <span
+      key="settings"
+      onClick={() => navigate('/settings')}
+      aria-label="ajustes"
+      role="button"
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        flexShrink: 0,
+        // touch target sem afetar layout visual
+        padding: 8,
+        margin: -8,
+      }}
+    >
+      <span
+        className={`r-send-dot${active === 'settings' ? ' active' : ''}`}
+        style={{ display: 'block' }}
+      />
     </span>
   )
 
@@ -41,6 +68,30 @@ export default function NavBottom({ active = 'none' }: NavBottomProps) {
     { label: 'sistema',       slug: 'system' as ActivePage,        path: '/como-funciona' },
   ]
 
+  // ─── MOBILE: 6 elementos equidistantes, mesma baseline ───
+  if (isMobile) {
+    return (
+      <>
+        <div className="r-line" />
+        <div style={{
+          height: 56,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 12px',
+          flexShrink: 0,
+          minWidth: 0,
+        }}>
+          {renderItem('reed', 'reed', '/reed')}
+          {centerItems.map(({ label, slug, path }) => renderItem(label, slug, path))}
+          {settingsDot}
+        </div>
+      </>
+    )
+  }
+
+  // ─── DESKTOP: layout 3-zonas (inalterado) ───
+  const itemGap = 'clamp(8px, 3vw, 24px)'
   return (
     <>
       <div className="r-line" />
@@ -54,12 +105,10 @@ export default function NavBottom({ active = 'none' }: NavBottomProps) {
         flexShrink: 0,
         minWidth: 0,
       }}>
-        {/* ESQUERDA: reed */}
-        <div style={{ flexShrink: 0 }}>
+        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
           {renderItem('reed', 'reed', '/reed')}
         </div>
 
-        {/* CENTRO: pills · questionário · contexto · sistema */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -72,24 +121,9 @@ export default function NavBottom({ active = 'none' }: NavBottomProps) {
           {centerItems.map(({ label, slug, path }) => renderItem(label, slug, path))}
         </div>
 
-        {/* DIREITA: ○ ajustes — mesmo tamanho/cor do r-send-dot */}
-        <div
-          onClick={() => navigate('/settings')}
-          aria-label="ajustes"
-          role="button"
-          style={{
-            width: 6,
-            height: 6,
-            borderRadius: '50%',
-            border: `1px solid ${active === 'settings' ? 'var(--r-accent)' : 'var(--r-ghost)'}`,
-            background: active === 'settings' ? 'var(--r-accent)' : 'transparent',
-            cursor: 'pointer',
-            flexShrink: 0,
-            boxSizing: 'content-box',
-            padding: 10,
-            margin: -10,
-          }}
-        />
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          {settingsDot}
+        </div>
       </div>
     </>
   )
