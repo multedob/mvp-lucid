@@ -1,6 +1,6 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, type TextareaHTMLAttributes } from "react";
 
-type AutoResizeTextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> & {
+type AutoResizeTextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement> & {
   maxRows?: number;
 };
 
