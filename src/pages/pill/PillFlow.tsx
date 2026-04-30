@@ -1,5 +1,5 @@
 // src/pages/pill/PillFlow.tsx
-import { useState, useEffect, useRef, useCallback, forwardRef } from "react";
+import { useState, useEffect, useRef, useCallback, forwardRef, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunction, getToday } from "@/lib/api";
@@ -222,31 +222,30 @@ interface FooterProps {
   onBack?: () => void;
   onContinue?: () => void;
   continueLabel?: string;
-  showEthics?: boolean;
-  onEthics?: () => void;
+  recorder?: ReactNode;
   disabled?: boolean;
 }
 const Footer = forwardRef<HTMLDivElement, FooterProps>(({
   onBack, onContinue, continueLabel = "continuar",
-  showEthics = true, onEthics, disabled = false,
+  recorder, disabled = false,
 }, ref) => {
   return (
     <>
       <div className="r-line" />
       <div ref={ref} className="r-footer">
         {onBack && <span className="r-footer-back" onClick={onBack}>‹</span>}
-        {onContinue && (
-          <span
-            className="r-footer-action"
-            onClick={disabled ? undefined : onContinue}
-            style={{ opacity: disabled ? 0.3 : 1, cursor: disabled ? "default" : "pointer" }}
-          >
-            {continueLabel}
-          </span>
-        )}
-        {showEthics && onEthics && (
-          <span className="r-footer-ethics" onClick={onEthics}>prefiro não responder</span>
-        )}
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 14 }}>
+          {recorder}
+          {onContinue && (
+            <span
+              className="r-footer-action"
+              onClick={disabled ? undefined : onContinue}
+              style={{ opacity: disabled ? 0.3 : 1, cursor: disabled ? "default" : "pointer" }}
+            >
+              {continueLabel}
+            </span>
+          )}
+        </div>
       </div>
     </>
   );
@@ -266,7 +265,6 @@ const InvisibleTextarea = forwardRef<HTMLDivElement, {
         disabled={disabled}
         readOnly={disabled}
       />
-      {!disabled && <div className={`r-send-dot${value.trim() ? " active" : ""}`} />}
     </div>
   );
 });
@@ -496,18 +494,6 @@ export default function PillFlow() {
     return { ...s, moment: order[Math.min(idx + 1, order.length - 1)] };
   });
 
-  const handleEthics = async (apiMoment: "M1"|"M2"|"M3"|"M4") => {
-    try {
-      await callEdgeFunction("ipe-pill-session", {
-        ipe_cycle_id: state.ipeCycleId, pill_id: state.pillId,
-        moment: apiMoment, payload: {}, protecao_etica: true,
-      });
-    } catch (err) {
-      console.error("[PillFlow] handleEthics failed:", err);
-    }
-    advance();
-  };
-
   const submitM1 = async () => {
     if (!state.ipeCycleId || state.loading) return;
     setState(s => ({ ...s, loading: true }));
@@ -727,7 +713,6 @@ export default function PillFlow() {
       </div>
       <Footer onBack={() => navigate("/home")} onContinue={submitM1}
         continueLabel={state.loading ? "..." : "começar"}
-        showEthics onEthics={() => handleEthics("M1")}
         disabled={state.loading || !state.ipeCycleId} />
     </div>
   );
@@ -739,20 +724,18 @@ export default function PillFlow() {
       <div className="r-scroll" style={{ padding: "28px 24px 16px" }}>
         <div className="r-narrative" style={{ whiteSpace: "pre-line", marginBottom: 24 }}>{m2Text}</div>
         <InvisibleTextarea value={state.m2Input} onChange={v => setState(s => ({ ...s, m2Input: v }))} disabled={state.reviewMode} />
-        {!state.reviewMode && state.userId && state.ipeCycleId && (
-          <div style={{ marginTop: 8 }}>
-            <AudioRecorder userId={state.userId} cycleId={state.ipeCycleId} pillId={state.pillId} moment="m2" language={state.audioLocale}
-              onLiveTranscript={text => setState(s => ({ ...s, m2Input: text, m2TranscriptionLive: text }))}
-              onFinalTranscript={text => setState(s => ({ ...s, m2Input: text, m2TranscriptionFinal: text }))}
-              onAudioStored={info => setState(s => ({ ...s, m2AudioPath: info.path, m2AudioDurationMs: info.durationMs }))}
-              disabled={state.loading} />
-          </div>
-        )}
       </div>
       <Footer onBack={() => setState(s => ({ ...s, moment: state.reviewMode ? "M5" : "M1" }))}
         onContinue={state.reviewMode ? () => advance("M3_1") : submitM2}
         continueLabel={state.loading ? "..." : "continuar"}
-        showEthics={!state.reviewMode} onEthics={() => handleEthics("M2")} disabled={state.loading} />
+        recorder={!state.reviewMode && state.userId && state.ipeCycleId ? (
+          <AudioRecorder userId={state.userId} cycleId={state.ipeCycleId} pillId={state.pillId} moment="m2" language={state.audioLocale}
+            onLiveTranscript={text => setState(s => ({ ...s, m2Input: text, m2TranscriptionLive: text }))}
+            onFinalTranscript={text => setState(s => ({ ...s, m2Input: text, m2TranscriptionFinal: text }))}
+            onAudioStored={info => setState(s => ({ ...s, m2AudioPath: info.path, m2AudioDurationMs: info.durationMs }))}
+            disabled={state.loading} />
+        ) : undefined}
+        disabled={state.loading} />
     </div>
   );
 
@@ -783,7 +766,7 @@ export default function PillFlow() {
         )}
       </div>
       <Footer onBack={() => setState(s => ({ ...s, moment: "M2" }))}
-        onContinue={() => advance("M3_2")} showEthics={!state.reviewMode} onEthics={() => advance("M3_2")}
+        onContinue={() => advance("M3_2")}
         disabled={state.reviewMode ? false : (state.m3_1_posicao === null || !state.m3_1_duasPalavras.trim() || !state.m3_1_situacaoOposta.trim())} />
     </div>
   );
@@ -828,7 +811,7 @@ export default function PillFlow() {
           <div style={{ height: 16 }} />
         </div>
         <Footer onBack={() => setState(s => ({ ...s, moment: "M3_1" }))}
-          onContinue={() => advance("M3_3")} showEthics={!state.reviewMode} onEthics={() => advance("M3_3")}
+          onContinue={() => advance("M3_3")}
           disabled={state.reviewMode ? false : (!state.m3_2_opcao || !state.m3_2_abreMao.trim())} />
       </div>
     );
@@ -856,7 +839,6 @@ export default function PillFlow() {
       <Footer onBack={() => setState(s => ({ ...s, moment: "M3_2" }))}
         onContinue={state.reviewMode ? () => advance("M4") : submitM3}
         continueLabel={state.loading ? "..." : "continuar"}
-        showEthics={!state.reviewMode} onEthics={() => handleEthics("M3")}
         disabled={state.loading || (!state.reviewMode && (!state.m3_3_narrativa.trim() || !state.m3_3_condicao.trim()))} />
     </div>
   );
@@ -872,15 +854,6 @@ export default function PillFlow() {
         <div className="r-sub">{m4Content.instruction}</div>
         <div style={{ marginTop: 10 }}>
           <InvisibleTextarea value={state.m4Input} onChange={v => setState(s => ({ ...s, m4Input: v }))} disabled={state.reviewMode} />
-          {!state.reviewMode && state.userId && state.ipeCycleId && (
-            <div style={{ marginTop: 8 }}>
-              <AudioRecorder userId={state.userId} cycleId={state.ipeCycleId} pillId={state.pillId} moment="m4" language={state.audioLocale}
-                onLiveTranscript={text => setState(s => ({ ...s, m4Input: text, m4TranscriptionLive: text }))}
-                onFinalTranscript={text => setState(s => ({ ...s, m4Input: text, m4TranscriptionFinal: text }))}
-                onAudioStored={info => setState(s => ({ ...s, m4AudioPath: info.path, m4AudioDurationMs: info.durationMs }))}
-                disabled={state.loading} />
-            </div>
-          )}
         </div>
         {/* Wave 12 — erro inline do eco com retry barato */}
         {state.ecoFailed && !state.loading && (
@@ -911,7 +884,14 @@ export default function PillFlow() {
           : state.ecoFailed ? "tentar de novo"
           : "continuar"
         }
-        showEthics={!state.reviewMode} onEthics={() => handleEthics("M4")} disabled={state.loading} />
+        recorder={!state.reviewMode && state.userId && state.ipeCycleId ? (
+          <AudioRecorder userId={state.userId} cycleId={state.ipeCycleId} pillId={state.pillId} moment="m4" language={state.audioLocale}
+            onLiveTranscript={text => setState(s => ({ ...s, m4Input: text, m4TranscriptionLive: text }))}
+            onFinalTranscript={text => setState(s => ({ ...s, m4Input: text, m4TranscriptionFinal: text }))}
+            onAudioStored={info => setState(s => ({ ...s, m4AudioPath: info.path, m4AudioDurationMs: info.durationMs }))}
+            disabled={state.loading} />
+        ) : undefined}
+        disabled={state.loading} />
     </div>
   );
 
@@ -970,7 +950,6 @@ export default function PillFlow() {
           ? () => setState(s => ({ ...s, moment: "M2" }))
           : () => navigate("/pills")}
         continueLabel={state.reviewMode ? "ler respostas" : "continuar"}
-        showEthics={false}
       />
     </div>
   );

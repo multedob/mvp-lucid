@@ -518,18 +518,6 @@ export default function Reed() {
       <div className="r-line" />
       <div style={{ padding: '14px 24px 12px', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, borderBottom: '0.5px solid var(--r-ghost)', paddingBottom: 8 }}>
-          {userId && cycleId && (
-            <AudioRecorder
-              userId={userId}
-              cycleId={cycleId}
-              pillId="reed"
-              moment="reed"
-              language="pt-BR"
-              onLiveTranscript={text => setInput(text)}
-              onFinalTranscript={text => setInput(text)}
-              disabled={sending || loading}
-            />
-          )}
           <AutoResizeTextarea
             ref={inputRef}
             value={input}
@@ -556,6 +544,18 @@ export default function Reed() {
               padding: 0,
             }}
           />
+          {userId && cycleId && (
+            <AudioRecorder
+              userId={userId}
+              cycleId={cycleId}
+              pillId="reed"
+              moment="reed"
+              language="pt-BR"
+              onLiveTranscript={text => setInput(text)}
+              onFinalTranscript={text => setInput(text)}
+              disabled={sending || loading}
+            />
+          )}
           <div
             onClick={handleSend}
             style={{
