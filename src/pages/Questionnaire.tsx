@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { callEdgeFunction, getCurrentUserVersion, getToday } from '@/lib/api'
 import { triggerDeepReadingRefresh } from '@/lib/deepReading'
 import { QUESTIONS, getQuestionText, type BlockId } from '@/data/questions'
+import { AudioRecorder } from '@/components/AudioRecorder'
 
 // ─────────────────────────────────────────
 // Types
@@ -104,12 +105,18 @@ interface QTextareaProps {
   onChange: (v: string) => void
   disabled?: boolean
   onCmdEnter?: () => void
+  userId?: string | null
+  cycleId?: string | null
+  pillId?: string
 }
 const InvisibleTextarea = forwardRef<HTMLDivElement, QTextareaProps>(({
   value,
   onChange,
   disabled = false,
   onCmdEnter,
+  userId,
+  cycleId,
+  pillId = 'questionnaire',
 }, fwdRef) => {
   const ref = useRef<HTMLTextAreaElement>(null)
   const valueRef = useRef(value)
@@ -200,23 +207,19 @@ const InvisibleTextarea = forwardRef<HTMLDivElement, QTextareaProps>(({
         </div>
       )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
-        {hasSpeech && (
-          <div
-            onClick={disabled ? undefined : toggleMic}
-            title={listening ? 'parar gravação' : 'falar resposta'}
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              border: listening ? 'none' : '0.5px solid var(--r-dim)',
-              background: listening ? 'var(--r-accent)' : 'transparent',
-              cursor: disabled ? 'default' : 'pointer',
-              flexShrink: 0,
-              transition: 'all 0.2s',
-              outline: listening ? '2px solid var(--r-accent)' : 'none',
-              outlineOffset: '3px',
-            }}
+        {userId && cycleId ? (
+          <AudioRecorder
+            userId={userId}
+            cycleId={cycleId}
+            pillId={pillId}
+            moment="questionnaire"
+            language="pt-BR"
+            onLiveTranscript={onChange}
+            onFinalTranscript={onChange}
+            disabled={disabled}
           />
+        ) : hasSpeech && (
+          <div onClick={disabled ? undefined : toggleMic} title={listening ? 'parar gravação' : 'falar resposta'} style={{ width: 6, height: 6, borderRadius: '50%', border: listening ? 'none' : '0.5px solid var(--r-dim)', background: listening ? 'var(--r-accent)' : 'transparent', cursor: disabled ? 'default' : 'pointer', flexShrink: 0, transition: 'all 0.2s', outline: listening ? '2px solid var(--r-accent)' : 'none', outlineOffset: '3px' }} />
         )}
         <div className={`r-send-dot${value.trim().length >= 2 ? ' active' : ''}`} />
       </div>
