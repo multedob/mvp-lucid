@@ -425,7 +425,7 @@ export default function Reed() {
       {/* Header */}
       <div className="r-header">
         <span className="r-header-label" onClick={() => navigate('/home')} style={{ cursor: 'pointer' }}>rdwth</span>
-        <span className="r-header-label" style={{ cursor: 'default' }}>{' '}· reed</span>
+        <span className="r-header-section">reed</span>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
