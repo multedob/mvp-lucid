@@ -713,7 +713,6 @@ export default function PillFlow() {
       </div>
       <Footer onBack={() => navigate("/home")} onContinue={submitM1}
         continueLabel={state.loading ? "..." : "começar"}
-        showEthics onEthics={() => handleEthics("M1")}
         disabled={state.loading || !state.ipeCycleId} />
     </div>
   );
@@ -725,20 +724,18 @@ export default function PillFlow() {
       <div className="r-scroll" style={{ padding: "28px 24px 16px" }}>
         <div className="r-narrative" style={{ whiteSpace: "pre-line", marginBottom: 24 }}>{m2Text}</div>
         <InvisibleTextarea value={state.m2Input} onChange={v => setState(s => ({ ...s, m2Input: v }))} disabled={state.reviewMode} />
-        {!state.reviewMode && state.userId && state.ipeCycleId && (
-          <div style={{ marginTop: 8 }}>
-            <AudioRecorder userId={state.userId} cycleId={state.ipeCycleId} pillId={state.pillId} moment="m2" language={state.audioLocale}
-              onLiveTranscript={text => setState(s => ({ ...s, m2Input: text, m2TranscriptionLive: text }))}
-              onFinalTranscript={text => setState(s => ({ ...s, m2Input: text, m2TranscriptionFinal: text }))}
-              onAudioStored={info => setState(s => ({ ...s, m2AudioPath: info.path, m2AudioDurationMs: info.durationMs }))}
-              disabled={state.loading} />
-          </div>
-        )}
       </div>
       <Footer onBack={() => setState(s => ({ ...s, moment: state.reviewMode ? "M5" : "M1" }))}
         onContinue={state.reviewMode ? () => advance("M3_1") : submitM2}
         continueLabel={state.loading ? "..." : "continuar"}
-        showEthics={!state.reviewMode} onEthics={() => handleEthics("M2")} disabled={state.loading} />
+        recorder={!state.reviewMode && state.userId && state.ipeCycleId ? (
+          <AudioRecorder userId={state.userId} cycleId={state.ipeCycleId} pillId={state.pillId} moment="m2" language={state.audioLocale}
+            onLiveTranscript={text => setState(s => ({ ...s, m2Input: text, m2TranscriptionLive: text }))}
+            onFinalTranscript={text => setState(s => ({ ...s, m2Input: text, m2TranscriptionFinal: text }))}
+            onAudioStored={info => setState(s => ({ ...s, m2AudioPath: info.path, m2AudioDurationMs: info.durationMs }))}
+            disabled={state.loading} />
+        ) : undefined}
+        disabled={state.loading} />
     </div>
   );
 
@@ -769,7 +766,7 @@ export default function PillFlow() {
         )}
       </div>
       <Footer onBack={() => setState(s => ({ ...s, moment: "M2" }))}
-        onContinue={() => advance("M3_2")} showEthics={!state.reviewMode} onEthics={() => advance("M3_2")}
+        onContinue={() => advance("M3_2")}
         disabled={state.reviewMode ? false : (state.m3_1_posicao === null || !state.m3_1_duasPalavras.trim() || !state.m3_1_situacaoOposta.trim())} />
     </div>
   );
