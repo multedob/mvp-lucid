@@ -134,7 +134,7 @@ body {
 .r-header {
   padding: 18px 24px 14px;
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
   flex-shrink: 0;
   position: relative;
@@ -148,13 +148,24 @@ body {
   letter-spacing: 0.08em;
 }
 
+.r-header-section {
+  font-family: var(--r-font-sys);
+  font-weight: 300;
+  font-size: 10px;
+  color: var(--r-muted);
+  letter-spacing: 0.08em;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 .r-header-date {
   font-family: var(--r-font-sys);
   font-size: 9px;
   color: var(--r-ghost);
   letter-spacing: 0.06em;
-  position: absolute;
-  right: 24px;
 }
 
 /* ─── footer ────────────────────────────────────────────────────── */
