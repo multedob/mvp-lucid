@@ -1,5 +1,5 @@
 // src/pages/pill/PillFlow.tsx
-import { useState, useEffect, useRef, useCallback, forwardRef } from "react";
+import { useState, useEffect, useRef, useCallback, forwardRef, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunction, getToday } from "@/lib/api";
@@ -222,7 +222,7 @@ interface FooterProps {
   onBack?: () => void;
   onContinue?: () => void;
   continueLabel?: string;
-  recorder?: React.ReactNode;
+  recorder?: ReactNode;
   disabled?: boolean;
 }
 const Footer = forwardRef<HTMLDivElement, FooterProps>(({
@@ -493,18 +493,6 @@ export default function PillFlow() {
     const idx = order.indexOf(s.moment);
     return { ...s, moment: order[Math.min(idx + 1, order.length - 1)] };
   });
-
-  const handleEthics = async (apiMoment: "M1"|"M2"|"M3"|"M4") => {
-    try {
-      await callEdgeFunction("ipe-pill-session", {
-        ipe_cycle_id: state.ipeCycleId, pill_id: state.pillId,
-        moment: apiMoment, payload: {}, protecao_etica: true,
-      });
-    } catch (err) {
-      console.error("[PillFlow] handleEthics failed:", err);
-    }
-    advance();
-  };
 
   const submitM1 = async () => {
     if (!state.ipeCycleId || state.loading) return;
