@@ -32,7 +32,7 @@ import { forwardRef, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunction } from "@/lib/api";
 
-type Moment = "m2" | "m4";
+type Moment = "m2" | "m4" | "reed";
 
 // ─── Cost-protection caps ───────────────────────────────────
 const MAX_DURATION_MS = 5 * 60 * 1000;   // 5 minutes hard stop
