@@ -1,5 +1,5 @@
 // src/pages/pill/PillFlow.tsx
-import { useState, useEffect, useRef, useCallback, forwardRef, type ReactNode } from "react";
+import { useState, useEffect, useRef, useCallback, forwardRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunction, getToday } from "@/lib/api";
@@ -222,12 +222,11 @@ interface FooterProps {
   onBack?: () => void;
   onContinue?: () => void;
   continueLabel?: string;
-  recorder?: ReactNode;
   disabled?: boolean;
 }
 const Footer = forwardRef<HTMLDivElement, FooterProps>(({
   onBack, onContinue, continueLabel = "continuar",
-  recorder, disabled = false,
+  disabled = false,
 }, ref) => {
   return (
     <>
@@ -235,7 +234,6 @@ const Footer = forwardRef<HTMLDivElement, FooterProps>(({
       <div ref={ref} className="r-footer">
         {onBack && <span className="r-footer-back" onClick={onBack}>‹</span>}
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 14 }}>
-          {recorder}
           {onContinue && (
             <span
               className="r-footer-action"
@@ -254,7 +252,8 @@ Footer.displayName = "Footer";
 
 const InvisibleTextarea = forwardRef<HTMLDivElement, {
   value: string; onChange: (v: string) => void; placeholder?: string; disabled?: boolean;
-}>(({ value, onChange, placeholder = "escreva aqui", disabled = false }, fwdRef) => {
+  recorder?: React.ReactNode; onSend?: () => void; sendActive?: boolean;
+}>(({ value, onChange, placeholder = "escreva aqui", disabled = false, recorder, onSend, sendActive = false }, fwdRef) => {
   return (
     <div ref={fwdRef} className={`r-input-wrap${disabled ? " disabled" : ""}`}>
       <AutoResizeTextarea
@@ -265,6 +264,17 @@ const InvisibleTextarea = forwardRef<HTMLDivElement, {
         disabled={disabled}
         readOnly={disabled}
       />
+      {recorder}
+      {onSend && (
+        <button
+          type="button"
+          className={`r-send-dot${sendActive ? " active" : ""}`}
+          onClick={sendActive ? onSend : undefined}
+          disabled={!sendActive}
+          aria-label="enviar"
+          style={{ cursor: sendActive ? "pointer" : "default" }}
+        />
+      )}
     </div>
   );
 });
@@ -723,19 +733,22 @@ export default function PillFlow() {
       <Header moment="M2" />
       <div className="r-scroll" style={{ padding: "28px 24px 16px" }}>
         <div className="r-narrative" style={{ whiteSpace: "pre-line", marginBottom: 24 }}>{m2Text}</div>
-        <InvisibleTextarea value={state.m2Input} onChange={v => setState(s => ({ ...s, m2Input: v }))} disabled={state.reviewMode} />
+        <InvisibleTextarea
+          value={state.m2Input}
+          onChange={v => setState(s => ({ ...s, m2Input: v }))}
+          disabled={state.reviewMode}
+          onSend={state.reviewMode ? () => advance("M3_1") : submitM2}
+          sendActive={state.reviewMode || (!state.loading && !!state.m2Input.trim())}
+          recorder={!state.reviewMode && state.userId && state.ipeCycleId ? (
+            <AudioRecorder userId={state.userId} cycleId={state.ipeCycleId} pillId={state.pillId} moment="m2" language={state.audioLocale}
+              onLiveTranscript={text => setState(s => ({ ...s, m2Input: text, m2TranscriptionLive: text }))}
+              onFinalTranscript={text => setState(s => ({ ...s, m2Input: text, m2TranscriptionFinal: text }))}
+              onAudioStored={info => setState(s => ({ ...s, m2AudioPath: info.path, m2AudioDurationMs: info.durationMs }))}
+              disabled={state.loading} />
+          ) : undefined}
+        />
       </div>
-      <Footer onBack={() => setState(s => ({ ...s, moment: state.reviewMode ? "M5" : "M1" }))}
-        onContinue={state.reviewMode ? () => advance("M3_1") : submitM2}
-        continueLabel={state.loading ? "..." : "continuar"}
-        recorder={!state.reviewMode && state.userId && state.ipeCycleId ? (
-          <AudioRecorder userId={state.userId} cycleId={state.ipeCycleId} pillId={state.pillId} moment="m2" language={state.audioLocale}
-            onLiveTranscript={text => setState(s => ({ ...s, m2Input: text, m2TranscriptionLive: text }))}
-            onFinalTranscript={text => setState(s => ({ ...s, m2Input: text, m2TranscriptionFinal: text }))}
-            onAudioStored={info => setState(s => ({ ...s, m2AudioPath: info.path, m2AudioDurationMs: info.durationMs }))}
-            disabled={state.loading} />
-        ) : undefined}
-        disabled={state.loading} />
+      <Footer onBack={() => setState(s => ({ ...s, moment: state.reviewMode ? "M5" : "M1" }))} />
     </div>
   );
 
@@ -853,7 +866,20 @@ export default function PillFlow() {
         <div className="r-question">{m4Content.question}</div>
         <div className="r-sub">{m4Content.instruction}</div>
         <div style={{ marginTop: 10 }}>
-          <InvisibleTextarea value={state.m4Input} onChange={v => setState(s => ({ ...s, m4Input: v }))} disabled={state.reviewMode} />
+          <InvisibleTextarea
+            value={state.m4Input}
+            onChange={v => setState(s => ({ ...s, m4Input: v }))}
+            disabled={state.reviewMode}
+            onSend={state.reviewMode ? () => setState(s => ({ ...s, moment: "M5" })) : submitM4}
+            sendActive={state.reviewMode || (!state.loading && !!state.m4Input.trim())}
+            recorder={!state.reviewMode && state.userId && state.ipeCycleId ? (
+              <AudioRecorder userId={state.userId} cycleId={state.ipeCycleId} pillId={state.pillId} moment="m4" language={state.audioLocale}
+                onLiveTranscript={text => setState(s => ({ ...s, m4Input: text, m4TranscriptionLive: text }))}
+                onFinalTranscript={text => setState(s => ({ ...s, m4Input: text, m4TranscriptionFinal: text }))}
+                onAudioStored={info => setState(s => ({ ...s, m4AudioPath: info.path, m4AudioDurationMs: info.durationMs }))}
+                disabled={state.loading} />
+            ) : undefined}
+          />
         </div>
         {/* Wave 12 — erro inline do eco com retry barato */}
         {state.ecoFailed && !state.loading && (
@@ -876,22 +902,7 @@ export default function PillFlow() {
           </div>
         )}
       </div>
-      <Footer onBack={() => setState(s => ({ ...s, moment: "M3_3" }))}
-        onContinue={state.reviewMode ? () => setState(s => ({ ...s, moment: "M5" })) : submitM4}
-        continueLabel={
-          state.loading ? "..."
-          : state.reviewMode ? "voltar ao eco"
-          : state.ecoFailed ? "tentar de novo"
-          : "continuar"
-        }
-        recorder={!state.reviewMode && state.userId && state.ipeCycleId ? (
-          <AudioRecorder userId={state.userId} cycleId={state.ipeCycleId} pillId={state.pillId} moment="m4" language={state.audioLocale}
-            onLiveTranscript={text => setState(s => ({ ...s, m4Input: text, m4TranscriptionLive: text }))}
-            onFinalTranscript={text => setState(s => ({ ...s, m4Input: text, m4TranscriptionFinal: text }))}
-            onAudioStored={info => setState(s => ({ ...s, m4AudioPath: info.path, m4AudioDurationMs: info.durationMs }))}
-            disabled={state.loading} />
-        ) : undefined}
-        disabled={state.loading} />
+      <Footer onBack={() => setState(s => ({ ...s, moment: "M3_3" }))} />
     </div>
   );
 
