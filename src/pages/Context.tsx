@@ -716,6 +716,14 @@ export default function Context() {
     />;
   }
 
+  // Loading inicial — overlay com identidade rdwth
+  if (loading) {
+    return <LoadingScreen
+      phrases={["buscando seu ciclo...", "compondo a leitura...", "pronto."]}
+      loadComplete={false}
+    />;
+  }
+
   // Subviews
   if (showDeep && cycles[selectedIdx]) return <ContextDeep cycle={cycles[selectedIdx]} onBack={() => setShowDeep(false)} userName={userName} />;
   if (showCycle && cycles[selectedIdx]) return <ContextCycle cycle={cycles[selectedIdx]} onBack={() => setShowCycle(false)} userName={userName} />;
