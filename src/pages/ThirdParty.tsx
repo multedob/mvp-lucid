@@ -123,6 +123,7 @@ export default function ThirdParty() {
   const [revealIdentity, setRevealIdentity] = useState<boolean | null>(null);
   const [miniInsight, setMiniInsight] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [finalizeLoadingDone, setFinalizeLoadingDone] = useState(false);
 
   const validatedRef = useRef(false);
 
