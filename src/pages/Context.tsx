@@ -568,7 +568,6 @@ export default function Context() {
   const [cycles, setCycles] = useState<CycleData[]>([]);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [showDeep, setShowDeep] = useState(false);
-  const [showSystem, setShowSystem] = useState(false);
   const [showCycle, setShowCycle] = useState(false);
   const [showThirdParty, setShowThirdParty] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -712,7 +711,6 @@ export default function Context() {
   }
 
   // Subviews
-  if (showSystem) return <ContextSystem onBack={() => setShowSystem(false)} />;
   if (showDeep && cycles[selectedIdx]) return <ContextDeep cycle={cycles[selectedIdx]} onBack={() => setShowDeep(false)} userName={userName} />;
   if (showCycle && cycles[selectedIdx]) return <ContextCycle cycle={cycles[selectedIdx]} onBack={() => setShowCycle(false)} userName={userName} />;
   if (showThirdParty && cycles[selectedIdx]) {
@@ -835,18 +833,6 @@ export default function Context() {
             </div>
           </div>
 
-          <div style={{ height: 1, background: "var(--r-ghost)", opacity: 0.4, marginBottom: 16 }} />
-
-          {/* Como o rdwth funciona */}
-          <div
-            onClick={() => setShowSystem(true)}
-            style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
-          >
-            <div style={{ width: 1, height: 12, background: "var(--r-ghost)", flexShrink: 0 }} />
-            <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-muted)", letterSpacing: "0.06em" }}>
-              como o rdwth funciona
-            </span>
-          </div>
         </div>
       </div>
 
