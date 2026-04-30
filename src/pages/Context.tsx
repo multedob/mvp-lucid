@@ -835,18 +835,6 @@ export default function Context() {
             </div>
           </div>
 
-          <div style={{ height: 1, background: "var(--r-ghost)", opacity: 0.4, marginBottom: 16 }} />
-
-          {/* Como o rdwth funciona */}
-          <div
-            onClick={() => setShowSystem(true)}
-            style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
-          >
-            <div style={{ width: 1, height: 12, background: "var(--r-ghost)", flexShrink: 0 }} />
-            <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-muted)", letterSpacing: "0.06em" }}>
-              como o rdwth funciona
-            </span>
-          </div>
         </div>
       </div>
 
