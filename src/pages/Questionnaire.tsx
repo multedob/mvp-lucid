@@ -9,6 +9,7 @@ import { callEdgeFunction, getCurrentUserVersion, getToday } from '@/lib/api'
 import { triggerDeepReadingRefresh } from '@/lib/deepReading'
 import { QUESTIONS, getQuestionText, type BlockId } from '@/data/questions'
 import { AudioRecorder } from '@/components/AudioRecorder'
+import { fetchQuestionnaireProgress } from '@/lib/questionnaireProgress'
 
 // ─────────────────────────────────────────
 // Types
@@ -171,6 +172,7 @@ export default function Questionnaire() {
   const [startTime, setStartTime] = useState<number>(Date.now())
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [remainingQuestions, setRemainingQuestions] = useState<number | null>(null)
 
   // Rotation variants: loaded once after /plan, used for principal question text
   const [rotationVariants, setRotationVariants] = useState<
@@ -199,6 +201,7 @@ export default function Questionnaire() {
 
       if (!cycle) { navigate('/home'); return }
       setCycleId(cycle.id)
+      refreshProgress(cycle.id)
 
       const planRes = await callEdgeFunction('ipe-questionnaire-engine/plan', {
         ipe_cycle_id: cycle.id,
@@ -244,6 +247,7 @@ export default function Questionnaire() {
         'ipe-questionnaire-engine/next-block',
         body
       )
+      refreshProgress(cid)
 
       // Wave 14 — fire-and-forget: regen do deep reading após bloco completado.
       // Só dispara se houve blockResponse (i.e. um bloco foi efetivamente submitido).
@@ -274,6 +278,15 @@ export default function Questionnaire() {
       }
     } catch (e) {
       setError('erro ao carregar próxima pergunta.')
+    }
+  }
+
+  async function refreshProgress(cid: string) {
+    try {
+      const progress = await fetchQuestionnaireProgress(cid)
+      setRemainingQuestions(progress.remaining)
+    } catch (err) {
+      console.warn('[Questionnaire] Progress unavailable:', err)
     }
   }
 
@@ -439,6 +452,12 @@ export default function Questionnaire() {
     <div className="r-screen">
 
       <Header />
+
+      <div style={{ padding: '10px 24px 0', flexShrink: 0 }}>
+        <span style={{ fontFamily: 'var(--r-font-sys)', fontWeight: 300, fontSize: 11, color: 'var(--r-muted)', letterSpacing: '0.04em' }}>
+          {remainingQuestions ?? 16} de 16 perguntas restantes
+        </span>
+      </div>
 
       {/* Pergunta */}
       <div className="r-scroll" style={{ padding: '24px 24px 0' }}>
