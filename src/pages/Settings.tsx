@@ -123,12 +123,12 @@ export default function Settings() {
 
         {[
           {
-            label: exporting ? "baixando..." : "Baixar meus dados",
+            label: exporting ? "baixando..." : "baixar meus dados",
             color: "var(--r-sub)",
             action: exporting ? undefined : handleDownloadData,
           },
           {
-            label: deleting ? "apagando..." : "Apagar conta",
+            label: deleting ? "apagando..." : "apagar conta",
             color: "var(--r-accent)",
             action: deleting ? undefined : handleDeleteAccount,
           },
