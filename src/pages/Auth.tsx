@@ -88,7 +88,7 @@ export default function Auth() {
         <span
           className="r-header-label"
           style={{ cursor: "pointer" }}
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/home")}
         >
           rdwth
         </span>
