@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { callEdgeFunction, getCurrentUserVersion, getToday } from '@/lib/api'
 import NavBottom from '@/components/NavBottom'
 import { RevealText } from '@/components/RevealText'
+import { AudioRecorder } from '@/components/AudioRecorder'
 
 interface Message { role: 'user' | 'reed'; text: string }
 interface CanonicalILs { d1: number[]; d2: number[]; d3: number[]; d4: number[] }
@@ -76,6 +77,7 @@ export default function Reed() {
   const [canonicalILs, setCanonicalILs] = useState<CanonicalILs | null>(null)
   const [pillContext, setPillContext] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => { init() }, [])
   // Scroll behavior:
@@ -95,6 +97,7 @@ export default function Reed() {
   async function init() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
+      setUserId(session?.user?.id ?? null)
       let cycleQuery = (supabase.from('ipe_cycles') as any)
         .select('id, cycle_number, status')
         .in('status', ['complete', 'questionnaire', 'pills'])
@@ -514,6 +517,18 @@ export default function Reed() {
       <div className="r-line" />
       <div style={{ padding: '14px 24px 12px', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, borderBottom: '0.5px solid var(--r-ghost)', paddingBottom: 8 }}>
+          {userId && cycleId && (
+            <AudioRecorder
+              userId={userId}
+              cycleId={cycleId}
+              pillId="reed"
+              moment="reed"
+              language="pt-BR"
+              onLiveTranscript={text => setInput(text)}
+              onFinalTranscript={text => setInput(text)}
+              disabled={sending || loading}
+            />
+          )}
           <textarea
             ref={inputRef}
             value={input}
@@ -525,7 +540,7 @@ export default function Reed() {
             onKeyDown={e => {
               if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
             }}
-            placeholder="anything"
+            placeholder="qualquer coisa..."
             rows={1}
             disabled={sending || loading}
             style={{
