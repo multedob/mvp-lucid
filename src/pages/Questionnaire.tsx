@@ -68,6 +68,7 @@ const Footer = forwardRef<HTMLDivElement, QFooterProps>(({
     <>
       <div className="r-line" />
       <div ref={ref} className="r-footer">
+        <span onClick={() => navigate(-1)} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
         {onFallback && fallbackLabel && (
           <span className="r-footer-action" onClick={onFallback}>
             {fallbackLabel}
@@ -88,7 +89,7 @@ const Footer = forwardRef<HTMLDivElement, QFooterProps>(({
         )}
         {onEthics && (
           <span className="r-footer-ethics" onClick={onEthics}>
-            i'd rather not
+            prefiro não
           </span>
         )}
       </div>
