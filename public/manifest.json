@@ -1,0 +1,20 @@
+{
+  "name": "rdwth — read with insight",
+  "short_name": "rdwth",
+  "description": "Sistema de auto-conhecimento estrutural.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a1816",
+  "theme_color": "#1a1816",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
