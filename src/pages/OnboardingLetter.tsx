@@ -4,7 +4,7 @@
 // Após "começar" → /onboarding (coleta de nome)
 
 import { useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { getToday } from "@/lib/api";
 
 type LetterKey = "r" | "d" | "w" | "t" | "h";
@@ -282,6 +282,25 @@ export default function OnboardingLetter() {
         >
           ver com mais precisão<br />
           o que já está ali.
+        </div>
+
+        {/* Link: ler manifesto completo */}
+        <div style={{ marginTop: 8, marginBottom: 32 }}>
+          <Link
+            to="/sobre"
+            style={{
+              fontFamily: "var(--r-font-sys)",
+              fontWeight: 300,
+              fontSize: 10,
+              color: "var(--r-muted)",
+              letterSpacing: "0.06em",
+              textDecoration: "none",
+              borderBottom: "0.5px solid var(--r-ghost)",
+              paddingBottom: 1,
+            }}
+          >
+            ler manifesto completo →
+          </Link>
         </div>
 
       </div>
