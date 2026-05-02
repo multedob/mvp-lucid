@@ -13,6 +13,7 @@ import { useUserName } from "@/hooks/useUserName";
 import NavBottom from "@/components/NavBottom";
 import { fetchQuestionnaireProgress } from "@/lib/questionnaireProgress";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { track } from "@/lib/analytics";
 
 const SUPABASE_URL = "https://tomtximafvrhmuchjyqt.supabase.co";
 const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRvbXR4aW1hZnZyaG11Y2hqeXF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MjE4MzYsImV4cCI6MjA4NzI5NzgzNn0.4e7TbCSrL8fecsgKCHDBEerXO8ePd5-5QeaC6czEkzo";
@@ -330,6 +331,7 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
       const d = await r.json();
       if (!r.ok) { setErrorMsg(d.error ?? "erro"); return; }
       setCreatedUrl(d.url);
+      track("third_party_invite_created", { pronoun: selectedPronoun });
       // Copia automaticamente
       try { await navigator.clipboard.writeText(d.url); } catch {}
       await loadAll();
@@ -339,6 +341,7 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   };
 
   const revokeInvite = async (inviteId: string) => {
+    track("third_party_invite_revoked");
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
@@ -598,12 +601,14 @@ export default function Context() {
   }, []);
 
   const dismissOnbContext = () => {
+    track("context_onboarding_dismissed", { which: "context" });
     try { localStorage.setItem(ONBOARDING_CONTEXT_SEEN, "true"); } catch {}
     setShowOnbContext(false);
   };
 
   // Click em "terceiros": abre onboarding na primeira vez, depois vai direto
   const handleOpenThirdParty = () => {
+    track("context_third_party_panel_opened");
     try {
       if (!localStorage.getItem(ONBOARDING_THIRD_PARTY_SEEN)) {
         setShowOnbThirdParty(true);
@@ -614,6 +619,7 @@ export default function Context() {
   };
 
   const dismissOnbThirdParty = () => {
+    track("context_onboarding_dismissed", { which: "third_party" });
     try { localStorage.setItem(ONBOARDING_THIRD_PARTY_SEEN, "true"); } catch {}
     setShowOnbThirdParty(false);
     setShowThirdParty(true);
@@ -809,7 +815,7 @@ export default function Context() {
 
             {/* Deep reading */}
             <div
-              onClick={() => setShowDeep(true)}
+              onClick={() => { track("context_deep_reading_opened"); setShowDeep(true); }}
               style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
             >
               <div style={{ width: 1, height: 12, background: "var(--r-accent)", flexShrink: 0 }} />
@@ -837,7 +843,7 @@ export default function Context() {
                 {cycles.map((c, i) => (
                   <span
                     key={c.id}
-                    onClick={() => setSelectedIdx(i)}
+                    onClick={() => { track("context_cycle_clicked", { cycle_number: c.cycleNumber }); setSelectedIdx(i); }}
                     style={{
                       fontFamily: "var(--r-font-sys)",
                       fontWeight: selectedIdx === i ? 400 : 300,
