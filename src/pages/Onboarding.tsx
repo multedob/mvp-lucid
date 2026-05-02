@@ -6,13 +6,15 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useSubmitting } from "@/hooks/useSubmitting";
 import { getToday } from "@/lib/api";
 
 export default function Onboarding() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
+  const [submitting, wrap] = useSubmitting();
 
-  const handleContinue = async () => {
+  const handleContinue = wrap(async () => {
     if (!name.trim()) return;
     const trimmed = name.trim();
 
@@ -29,7 +31,7 @@ export default function Onboarding() {
     }
 
     navigate("/home");
-  };
+  });
 
   return (
     <div className="r-screen">
@@ -73,9 +75,9 @@ export default function Onboarding() {
           onClick={handleContinue}
           style={{
             display: "flex", alignItems: "center", gap: 10,
-            cursor: name.trim() ? "pointer" : "default",
-            opacity: name.trim() ? 1 : 0.25, transition: "opacity 0.2s",
-            pointerEvents: name.trim() ? "auto" : "none",
+            cursor: (name.trim() && !submitting) ? "pointer" : "default",
+            opacity: (name.trim() && !submitting) ? 1 : 0.25, transition: "opacity 0.2s",
+            pointerEvents: (name.trim() && !submitting) ? "auto" : "none",
           }}
         >
           <div style={{ width: 1, height: 14, background: "var(--r-accent)", flexShrink: 0 }} />
