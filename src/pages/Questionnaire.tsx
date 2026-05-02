@@ -477,12 +477,10 @@ export default function Questionnaire() {
       </div>
 
       {/* Empty state message — primeira visita ao questionnaire */}
-      <div style={{ padding: '8px 24px 0', flexShrink: 0 }}>
-        <EmptyStateMessage
-          text="responda no seu ritmo. pode pausar e voltar."
-          contextKey="questionnaire_first_visit"
-        />
-      </div>
+      <EmptyStateMessage
+        text="responda no seu ritmo. pode pausar e voltar."
+        contextKey="questionnaire_first_visit"
+      />
 
       {/* Pergunta */}
       <div className="r-scroll" style={{ padding: '24px 24px 0' }}>

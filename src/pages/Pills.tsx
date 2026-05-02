@@ -77,14 +77,16 @@ export default function Pills() {
       </div>
       <div className="r-line" />
 
+      {/* Empty canvas message — topo */}
+      {!loading && pillsDone.size === 0 && (
+        <EmptyStateMessage
+          text="seis pills. comece pela primeira."
+          contextKey="pills_first_visit"
+        />
+      )}
+
       {/* Pill list */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 24px", gap: 32 }}>
-        {!loading && pillsDone.size === 0 && (
-          <EmptyStateMessage
-            text="seis pills. comece pela primeira."
-            contextKey="pills_first_visit"
-          />
-        )}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 24px" }}>
         {!loading && (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {PILL_ORDER.map(pill => {

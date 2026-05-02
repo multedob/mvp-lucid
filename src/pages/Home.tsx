@@ -75,7 +75,7 @@ export default function Home() {
           </p>
         )}
         <EmptyStateMessage
-          text="comece pela primeira pill →"
+          text="comece pela primeira pill"
           contextKey="home_first_visit"
         />
       </div>
