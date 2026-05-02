@@ -38,7 +38,7 @@ export default function Consent() {
           letterSpacing: "-0.01em", lineHeight: 1.3, color: "var(--r-text)",
           marginBottom: 24,
         }}>
-          antes de começar.
+          como tratamos seus dados.
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
