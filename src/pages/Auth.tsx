@@ -1,16 +1,23 @@
 // src/pages/Auth.tsx
+// Mode (signin/signup) detectado via URL:
+//   /signin → mode signin (default)
+//   /signup → mode signup
+//   /auth   → alias, redireciona pra /signin (configurado em App.tsx)
+
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getToday } from "@/lib/api";
 import { track } from "@/lib/analytics";
 
 export default function Auth() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const mode: "signin" | "signup" = location.pathname === "/signup" ? "signup" : "signin";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ageConfirmed, setAgeConfirmed] = useState(false);
@@ -273,12 +280,13 @@ export default function Auth() {
               </span>
             </div>
 
-            <span
-              onClick={() => { setMode(m => m === "signin" ? "signup" : "signin"); setError(null); setMessage(null); }}
-              style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 9, color: "var(--r-muted)", letterSpacing: "0.04em", cursor: "pointer" }}
+            <Link
+              to={mode === "signin" ? "/signup" : "/signin"}
+              onClick={() => { setError(null); setMessage(null); }}
+              style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 9, color: "var(--r-muted)", letterSpacing: "0.04em", textDecoration: "none" }}
             >
               {mode === "signin" ? "sem conta? cadastrar" : "já tem conta? entrar"}
-            </span>
+            </Link>
           </div>
         </form>
 

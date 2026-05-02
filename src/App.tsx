@@ -166,7 +166,9 @@ const App = () => (
         <AuthIdentifier />
         <Routes>
           <Route path="/" element={<RootRedirect />} />
-          <Route path="/auth" element={<Auth />} />
+          <Route path="/auth" element={<Navigate to="/signin" replace />} />
+          <Route path="/signin" element={<Auth />} />
+          <Route path="/signup" element={<Auth />} />
           <Route path="/age" element={<AgeCheck />} />
           <Route path="/consent" element={<Consent />} />
           <Route path="/letter" element={<OnboardingLetter />} />
