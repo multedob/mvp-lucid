@@ -75,6 +75,7 @@ export default function Onboarding() {
             display: "flex", alignItems: "center", gap: 10,
             cursor: name.trim() ? "pointer" : "default",
             opacity: name.trim() ? 1 : 0.25, transition: "opacity 0.2s",
+            pointerEvents: name.trim() ? "auto" : "none",
           }}
         >
           <div style={{ width: 1, height: 14, background: "var(--r-accent)", flexShrink: 0 }} />

@@ -136,7 +136,7 @@ export default function Pills() {
                   letterSpacing: "0.08em",
                   color: "var(--r-text)",
                 }}>
-                  begin questionnaire
+                  continuar para o questionário
                 </span>
               </div>
             )}

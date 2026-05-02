@@ -262,33 +262,9 @@ export default function OnboardingLetter() {
             letterSpacing: "0.03em",
           }}
         >
-          Tornamos padrões visíveis.<br />
-          Tornamos a complexidade legível.
-          <br /><br />
-          Por trás de cada escolha, conflito, impulso ou repetição,<br />
-          existe uma estrutura em ação.
-          <br /><br />
-          rdwth foi criado para tornar essa estrutura legível —<br />
-          sem reduzir uma pessoa a um tipo,<br />
-          transformar diferença em hierarquia,<br />
-          ou confundir padrão com identidade.
-          <br /><br />
-          Não oferecemos respostas prontas.<br />
-          Oferecemos leitura.
-          <br /><br />
-          O tipo de leitura que coloca tensões em foco,<br />
-          organiza a complexidade,<br />
-          e devolve algo raro:
-          <br /><br />
-          uma visão mais clara do que está moldando<br />
-          a experiência de alguém,<br />
-          mantendo a responsabilidade nas mãos dela.
-          <br /><br />
-          Sem diagnóstico.<br />
-          Sem prescrição.<br />
-          Sem conclusões fixas.
-          <br /><br />
-          Só uma proposição simples e radical:
+          rdwth não diagnostica.<br />
+          não prescreve.<br />
+          não conclui.
         </div>
 
         {/* Proposição — destaque */}
