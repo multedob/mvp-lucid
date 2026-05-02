@@ -86,6 +86,26 @@ export default function Onboarding() {
             continuar
           </span>
         </div>
+
+        {/* Decidir depois — pula coleta de nome */}
+        <div
+          onClick={() => {
+            localStorage.setItem("rdwth_user_name_deferred", "1");
+            navigate("/home");
+          }}
+          style={{
+            display: "flex", alignItems: "center", gap: 10,
+            cursor: "pointer", marginTop: 24,
+          }}
+        >
+          <div style={{ width: 1, height: 12, background: "var(--r-ghost)", flexShrink: 0 }} />
+          <span style={{
+            fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11,
+            color: "var(--r-muted)", letterSpacing: "0.06em",
+          }}>
+            decidir depois →
+          </span>
+        </div>
       </div>
 
       <div className="r-line" />
