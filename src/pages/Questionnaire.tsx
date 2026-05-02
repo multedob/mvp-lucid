@@ -11,6 +11,7 @@ import { QUESTIONS, getQuestionText, type BlockId } from '@/data/questions'
 import { AudioRecorder } from '@/components/AudioRecorder'
 import { fetchQuestionnaireProgress } from '@/lib/questionnaireProgress'
 import { QuestionnaireLoadingScreen } from '@/components/QuestionnaireLoadingScreen'
+import EmptyStateMessage from '@/components/EmptyStateMessage'
 
 // ─────────────────────────────────────────
 // Types
@@ -473,6 +474,14 @@ export default function Questionnaire() {
         <span style={{ fontFamily: 'var(--r-font-sys)', fontWeight: 300, fontSize: 11, color: 'var(--r-muted)', letterSpacing: '0.04em' }}>
           {remainingQuestions ?? 16} de 16 perguntas restantes
         </span>
+      </div>
+
+      {/* Empty state message — primeira visita ao questionnaire */}
+      <div style={{ padding: '8px 24px 0', flexShrink: 0 }}>
+        <EmptyStateMessage
+          text="responda no seu ritmo. pode pausar e voltar."
+          contextKey="questionnaire_first_visit"
+        />
       </div>
 
       {/* Pergunta */}
