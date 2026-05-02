@@ -20,10 +20,9 @@ import Settings from "./pages/Settings";
 import Questionnaire from "./pages/Questionnaire";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
-import Sobre from "./pages/Sobre";
 import ThirdParty from "./pages/ThirdParty";
 import NotFound from "./pages/NotFound";
-import { trackPageView } from "./lib/analytics";
+import { trackPageView, identifyUser, resetUser } from "./lib/analytics";
 
 const queryClient = new QueryClient();
 
@@ -142,6 +141,21 @@ function PageViewTracker() {
   return null;
 }
 
+// ─── AuthIdentifier — identify/reset PostHog ao mudar sessão ──────
+function AuthIdentifier() {
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session?.user) {
+        identifyUser(session.user.id, { email: session.user.email });
+      } else if (event === "SIGNED_OUT") {
+        resetUser();
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+  return null;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -149,6 +163,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <PageViewTracker />
+        <AuthIdentifier />
         <Routes>
           <Route path="/" element={<RootRedirect />} />
           <Route path="/auth" element={<Auth />} />
@@ -168,7 +183,6 @@ const App = () => (
           <Route path="/privacy-policy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/terms-of-use" element={<Terms />} />
-          <Route path="/sobre" element={<Sobre />} />
           {/* W20.2 — Third-party questionnaire (público, sem auth do app) */}
           <Route path="/third-party/:token" element={<ThirdParty />} />
           <Route path="/test" element={<Navigate to="/home" replace />} />

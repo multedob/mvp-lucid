@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunction, getToday } from "@/lib/api";
+import { track } from "@/lib/analytics";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -22,14 +23,15 @@ export default function Settings() {
     );
     if (!second) return;
 
+    track("account_delete_started");
     setDeleting(true);
     try {
       await callEdgeFunction("delete-account", {});
+      track("account_deleted");
     } catch (err) {
       console.error("Delete account error:", err);
-      // Even if the edge function fails partially, sign out locally
+      track("account_delete_failed", { reason: String(err) });
     }
-    // Clear all local data and redirect
     localStorage.clear();
     await supabase.auth.signOut();
     setDeleting(false);
@@ -43,7 +45,6 @@ export default function Settings() {
       if (!session?.user?.id) { setExporting(false); return; }
       const uid = session.user.id;
 
-      // Fetch all user data
       const [cyclesRes, pillsRes, qStateRes, hagoRes] = await Promise.all([
         (supabase.from("ipe_cycles") as any).select("*").eq("user_id", uid),
         (supabase.from("pill_responses") as any).select("*").order("created_at", { ascending: true }),
@@ -60,7 +61,6 @@ export default function Settings() {
         conversations: hagoRes.data ?? [],
       };
 
-      // Download as JSON file
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -70,14 +70,22 @@ export default function Settings() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+
+      track("data_export_completed", {
+        cycles_count: exportData.ipe_cycles.length,
+        pills_count: exportData.pill_responses.length,
+        conversations_count: exportData.conversations.length,
+      });
     } catch (err) {
       console.error("Export error:", err);
+      track("data_export_failed", { reason: String(err) });
       alert("Algo deu errado ao exportar seus dados. Tente novamente.");
     }
     setExporting(false);
   };
 
   const handleSignOut = async () => {
+    track("signout");
     await supabase.auth.signOut();
     localStorage.removeItem("rdwth_letter_seen");
     navigate("/auth");

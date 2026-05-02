@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getToday } from "@/lib/api";
+import { track } from "@/lib/analytics";
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -19,13 +20,18 @@ export default function Auth() {
       setError("confirme que você tem 16 anos ou mais.");
       return;
     }
+    track(mode === "signup" ? "signup_started" : "signin_started", { method: "google" });
     setLoading(true);
     setError(null);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/home` },
     });
-    if (error) { setError(error.message); setLoading(false); }
+    if (error) {
+      track(mode === "signup" ? "signup_failed" : "signin_failed", { method: "google", reason: error.message });
+      setError(error.message);
+      setLoading(false);
+    }
   };
 
   const handleForgotPassword = async () => {
@@ -33,6 +39,7 @@ export default function Auth() {
       setError("digite seu email primeiro.");
       return;
     }
+    track("password_reset_requested");
     setLoading(true);
     setError(null);
     setMessage(null);
@@ -51,9 +58,14 @@ export default function Auth() {
     setMessage(null);
 
     if (mode === "signin") {
+      track("signin_started", { method: "email" });
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       setLoading(false);
-      if (error) return setError(error.message);
+      if (error) {
+        track("signin_failed", { method: "email", reason: error.message });
+        return setError(error.message);
+      }
+      track("signin_completed", { method: "email" });
       navigate("/home", { replace: true });
     } else {
       // Age gate — required for signup
@@ -61,6 +73,7 @@ export default function Auth() {
         setLoading(false);
         return setError("confirme que você tem 16 anos ou mais.");
       }
+      track("signup_started", { method: "email" });
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -70,11 +83,16 @@ export default function Auth() {
         },
       });
       setLoading(false);
-      if (error) return setError(error.message);
+      if (error) {
+        track("signup_failed", { method: "email", reason: error.message });
+        return setError(error.message);
+      }
       // Se email confirmation está desligado, session vem preenchida → login direto
       if (data.session) {
+        track("signup_completed", { method: "email" });
         navigate("/", { replace: true });
       } else {
+        track("signup_email_verification_pending", { method: "email" });
         setMessage("verifique seu email para confirmar sua conta.");
       }
     }
