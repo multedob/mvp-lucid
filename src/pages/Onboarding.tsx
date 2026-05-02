@@ -1,9 +1,10 @@
 // src/pages/Onboarding.tsx
 // Coleta do primeiro nome — fluxo de onboarding
 // Persiste nome em localStorage + Supabase user_metadata
+// Pré-popula com primeiro nome do Google quando OAuth (A18)
 // continuar → /home
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSubmitting } from "@/hooks/useSubmitting";
@@ -14,6 +15,32 @@ export default function Onboarding() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [submitting, wrap] = useSubmitting();
+
+  // ─── Pré-popular com nome do Google quando OAuth (A18) ─────────
+  useEffect(() => {
+    async function prefillFromOAuth() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const provider = session.user.app_metadata?.provider;
+      if (provider !== "google") return;
+
+      const meta = session.user.user_metadata as Record<string, unknown> | undefined;
+      const givenName = meta?.given_name as string | undefined;
+      const fullName = meta?.full_name as string | undefined;
+      const fallbackName = meta?.name as string | undefined;
+
+      let prefill: string | undefined = givenName;
+      if (!prefill && fullName) prefill = fullName.split(" ")[0];
+      if (!prefill && fallbackName) prefill = fallbackName.split(" ")[0];
+
+      if (prefill) {
+        setName(prefill);
+        track("name_prefilled_from_oauth", { provider: "google" });
+      }
+    }
+    prefillFromOAuth();
+  }, []);
 
   const handleContinue = wrap(async () => {
     if (!name.trim()) return;
