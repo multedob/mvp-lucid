@@ -195,7 +195,10 @@ export default function OnboardingLetter() {
 
       {/* Header */}
       <div className="r-header">
-        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span onClick={() => navigate(-1)} style={{ cursor: "pointer", fontFamily: "var(--r-font-sys)", fontSize: 13, fontWeight: 300, color: "var(--r-muted)" }} aria-label="voltar" role="button">‹</span>
+          <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
+        </div>
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
