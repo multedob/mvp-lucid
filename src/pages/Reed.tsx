@@ -12,6 +12,7 @@ import NavBottom from '@/components/NavBottom'
 import { RevealText } from '@/components/RevealText'
 import { AudioRecorder } from '@/components/AudioRecorder'
 import { AutoResizeTextarea } from '@/components/AutoResizeTextarea'
+import { track } from '@/lib/analytics'
 
 interface Message { role: 'user' | 'reed'; text: string }
 interface CanonicalILs { d1: number[]; d2: number[]; d3: number[]; d4: number[] }
@@ -192,6 +193,7 @@ export default function Reed() {
       // AI content moderation: detect and handle failed/empty/placeholder responses
       if (text && text !== '[linguistic layer unavailable]') {
         setMessages(prev => [...prev, { role: 'reed', text }])
+        track("reed_response_received", { text_length: text.length })
       } else {
         setMessages(prev => [...prev, { role: 'reed', text: 'algo não funcionou do meu lado. tenta de novo — às vezes eu preciso de uma segunda chance pra pensar direito.' }])
       }
@@ -211,6 +213,7 @@ export default function Reed() {
       }
 
       // All retries exhausted
+      track("reed_send_failed", { reason: message });
       setError('reed não conseguiu responder. verifica tua conexão e tenta de novo.')
     }
   }
@@ -406,6 +409,7 @@ export default function Reed() {
     setSending(true)
     setError(null)
     setMessages(prev => prev[prev.length - 1]?.text === userText ? prev : [...prev, { role: 'user', text: userText }])
+    track("reed_message_sent", { length: userText.length, has_pill_context: !!pillContext });
     await sendToReed(cycleId, baseVersion, canonicalILs, userText)
     setSending(false)
     setTimeout(() => inputRef.current?.focus(), 100)
