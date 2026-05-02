@@ -1,8 +1,8 @@
 // src/components/EmptyStateMessage.tsx
 // Mensagem do empty canvas (AFC ONB-2)
-// Voz/tipografia conforme AFC ONB-1
-// Dismiss persistente em localStorage (será trocado por Supabase quando Trilha A entregar B-S4.1 backend)
-// Integração opcional com HighlightTarget para mensagens tipo 2 (onboarding diferido)
+// voice="system" → prefixo "> " + cursor "█" pisca 2x e para
+// voice="founders" → sem prefixo, sem cursor, cor de acento
+// Alinhamento à esquerda, topo da tela. Dismiss persistente em localStorage.
 
 import { useEffect, useState } from "react";
 import HighlightTarget from "./HighlightTarget";
@@ -22,6 +22,29 @@ interface EmptyStateMessageProps {
 }
 
 const DISMISS_PREFIX = "rdwth_emptystate_dismissed_";
+const STYLE_ID = "rdwth-emptystate-styles";
+
+const styles = `
+@keyframes rdwth-cursor-blink {
+  0%, 50% { opacity: 1; }
+  50.01%, 100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes rdwth-cursor-blink {
+    0%, 100% { opacity: 1; }
+  }
+}
+`;
+
+function injectStyles() {
+  if (typeof document === "undefined") return;
+  if (document.getElementById(STYLE_ID)) return;
+  const styleEl = document.createElement("style");
+  styleEl.id = STYLE_ID;
+  styleEl.textContent = styles;
+  document.head.appendChild(styleEl);
+}
 
 export default function EmptyStateMessage({
   text,
@@ -42,6 +65,7 @@ export default function EmptyStateMessage({
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    injectStyles();
     if (dismissed) return;
     const t = setTimeout(() => setVisible(true), 100);
     return () => clearTimeout(t);
@@ -77,13 +101,11 @@ export default function EmptyStateMessage({
         aria-describedby={highlightTargetId}
         aria-label={dismissible ? "tocar para fechar" : undefined}
         style={{
-          padding: "16px 24px",
-          textAlign: "center",
+          padding: "12px 24px 20px",
+          textAlign: "left",
           cursor: dismissible ? "pointer" : "default",
           opacity: visible ? 1 : 0,
           transition: "opacity 300ms ease-out",
-          maxWidth: 320,
-          margin: "0 auto",
           userSelect: "none",
         }}
       >
@@ -98,7 +120,24 @@ export default function EmptyStateMessage({
             whiteSpace: "pre-wrap",
           }}
         >
-          {text}
+          {isSystem ? (
+            <>
+              <span aria-hidden="true">{"> "}</span>
+              {text}
+              <span
+                aria-hidden="true"
+                style={{
+                  display: "inline-block",
+                  marginLeft: 2,
+                  animation: "rdwth-cursor-blink 0.6s steps(2) 2 forwards",
+                }}
+              >
+                █
+              </span>
+            </>
+          ) : (
+            text
+          )}
         </div>
         {signature && (
           <div
