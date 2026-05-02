@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 const ABOUT = [
   "rdwth oferece leituras reflexivas estruturais baseadas nas suas respostas.",
   "Não é diagnóstico clínico.",
-  "Não substitui profissionais habilitados.",
+  "Não substitui psicólogos, psiquiatras ou outros profissionais de saúde.",
   "Não determina identidade nem valor humano.",
   "Nenhuma configuração estrutural implica superioridade.",
 ];
