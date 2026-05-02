@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { getToday } from "@/lib/api";
 import { useUserName } from "@/hooks/useUserName";
 import NavBottom from "@/components/NavBottom";
+import EmptyStateMessage from "@/components/EmptyStateMessage";
 
 function getGreeting(name: string | null): string | null {
   const hour = new Date().getHours();
@@ -47,13 +48,15 @@ export default function Home() {
       </div>
       <div className="r-line" />
 
-      {/* Centro — saudação personalizada */}
+      {/* Centro — saudação personalizada + empty canvas message */}
       <div style={{
         flex: 1,
         display: "flex",
+        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
         padding: "0 24px",
+        gap: 32,
       }}>
         {greeting && (
           <p style={{
@@ -71,6 +74,10 @@ export default function Home() {
             {greeting}
           </p>
         )}
+        <EmptyStateMessage
+          text="comece pela primeira pill →"
+          contextKey="home_first_visit"
+        />
       </div>
 
       <NavBottom active="home" />
