@@ -12,6 +12,7 @@ import { AudioRecorder } from '@/components/AudioRecorder'
 import { fetchQuestionnaireProgress } from '@/lib/questionnaireProgress'
 import { QuestionnaireLoadingScreen } from '@/components/QuestionnaireLoadingScreen'
 import EmptyStateMessage from '@/components/EmptyStateMessage'
+import { track } from '@/lib/analytics'
 
 // ─────────────────────────────────────────
 // Types
@@ -179,7 +180,7 @@ export default function Questionnaire() {
   const [loadingScreenDone, setLoadingScreenDone] = useState(false)
 
   // Rotation variants: loaded once after /plan, used for principal question text
-  const [rotationVariants, setRotationVariants] = useState<
+  const [rotationVariants, setRotationVariants] = useState
     Record<string, { variation_key: string; content: { principal: string; hint?: string | null } }>
   >({})
 
@@ -205,7 +206,16 @@ export default function Questionnaire() {
 
       if (!cycle) { navigate('/home'); return }
       setCycleId(cycle.id)
-      refreshProgress(cycle.id)
+
+      // Fetch progress sincronamente pra distinguir started vs resumed
+      let initialRemaining: number | null = null
+      try {
+        const progress = await fetchQuestionnaireProgress(cycle.id)
+        initialRemaining = progress.remaining
+        setRemainingQuestions(progress.remaining)
+      } catch (err) {
+        console.warn('[Questionnaire] Progress unavailable:', err)
+      }
 
       const planRes = await callEdgeFunction('ipe-questionnaire-engine/plan', {
         ipe_cycle_id: cycle.id,
@@ -233,8 +243,17 @@ export default function Questionnaire() {
         // Fallback: rotationVariants stays empty → questions.ts used as-is
       }
 
+      // Track início do questionário (ou resume se já tinha progresso)
+      const isResume = initialRemaining !== null && initialRemaining < 16
+      track('questionnaire_started', {
+        cycle_id: cycle.id,
+        is_resume: isResume,
+        remaining_questions: initialRemaining,
+      })
+
       await fetchNextBlock(cycle.id, null)
     } catch (e) {
+      track('questionnaire_init_failed', { reason: String(e) })
       setError('algo deu errado ao iniciar. tenta de novo.')
     }
   }
@@ -256,10 +275,17 @@ export default function Questionnaire() {
       // Wave 14 — fire-and-forget: regen do deep reading após bloco completado.
       // Só dispara se houve blockResponse (i.e. um bloco foi efetivamente submitido).
       if (blockResponse) {
+        const br = blockResponse as Record<string, unknown>
+        track('questionnaire_block_completed', {
+          block_id: br.block_id,
+          time_seconds: br.tempo_resposta_segundos,
+          variant_used: !!br.variante_resposta,
+        })
         triggerDeepReadingRefresh(cid)
       }
 
       if (res.done) {
+        track('questionnaire_completed', { cycle_id: cid })
         setPhase('done')
         await callLucidEngine(cid)
         return
