@@ -108,7 +108,7 @@ export default function Splash() {
       el.style.fontFamily = fd.f;
       el.style.fontWeight = String(fd.w);
       if (fd.sz) {
-        el.style.fontSize = `calc(clamp(100px, 18vw, 200px) * ${fd.sz})`;
+        el.style.fontSize = `calc(clamp(52px, 9.5vw, 112px) * ${fd.sz})`;
         el.style.paddingBottom = "0.06em";
       } else {
         el.style.fontSize = "";
@@ -269,13 +269,15 @@ export default function Splash() {
 
       {/* wordmark animado — ancorado no rodapé */}
       <div style={{ padding: "20px 24px 20px", flexShrink: 0 }}>
-        {/* Letras rdwth */}
+        {/* Letras rdwth — fontSizeAdjust no pai normaliza altura visual entre fontes */}
         <div style={{
           display: "flex",
           alignItems: "flex-end",
           gap: 0,
           lineHeight: 1,
           marginBottom: 10,
+          fontSize: "clamp(52px, 9.5vw, 112px)",
+          fontSizeAdjust: 0.5,
         }}>
           {(["r","d","w","t","h"] as LetterKey[]).map(letter => (
             <span
@@ -283,7 +285,6 @@ export default function Splash() {
               ref={el => { lettersRef.current[letter] = el; }}
               style={{
                 display: "inline-block",
-                fontSize: "clamp(52px, 9.5vw, 112px)",
                 color: "var(--r-text)",
                 lineHeight: 1,
               }}
