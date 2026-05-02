@@ -76,6 +76,18 @@ export default function Onboarding() {
         justifyContent: "center", padding: "28px 24px",
       }}>
         <div style={{
+          fontFamily: "var(--r-font-system)",
+          fontSize: 13,
+          lineHeight: 1.6,
+          color: "var(--r-text-muted)",
+          marginBottom: 16,
+          textAlign: "left",
+        }}>
+          reed é a voz do rdwth.<br />
+          nas pills, no questionário, na conversa.
+        </div>
+
+        <div style={{
           fontFamily: "var(--r-font-ed)", fontWeight: 800, fontSize: 16,
           lineHeight: 1.6, color: "var(--r-text)", marginBottom: 20,
         }}>
