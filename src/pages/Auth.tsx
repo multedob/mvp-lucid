@@ -290,13 +290,6 @@ export default function Auth() {
           </div>
         </form>
 
-        {/* legal */}
-        <div style={{ marginTop: 20, fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 8, color: "var(--r-ghost)", letterSpacing: "0.06em", lineHeight: 1.8 }}>
-          ao continuar você concorda com nossos{" "}
-          <span onClick={() => navigate("/terms-of-use")} style={{ textDecoration: "underline", cursor: "pointer" }}>termos</span>
-          {" "}e{" "}
-          <span onClick={() => navigate("/privacy-policy")} style={{ textDecoration: "underline", cursor: "pointer" }}>política de privacidade</span>.
-        </div>
 
       </div>
 
