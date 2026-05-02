@@ -17,6 +17,7 @@ import { AnimatedWordmark } from "@/components/AnimatedWordmark";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { AudioRecorder } from "@/components/AudioRecorder";
 import { AutoResizeTextarea } from "@/components/AutoResizeTextarea";
+import { track } from "@/lib/analytics";
 
 // LP do rdwth — atualizar quando estiver pronta
 const RDWTH_LP_URL = "/";
@@ -136,6 +137,7 @@ export default function ThirdParty() {
       try {
         const res: ValidateResponse = await callEdge("third-party-validate-link", { token });
         setData(res);
+        track("third_party_link_visited", { has_existing_responses: res.existing_responses.length > 0 });
         // Pré-popula state se houver respostas anteriores
         if (res.responder?.email) setEmail(res.responder.email);
         if (res.responder?.name) setName(res.responder.name);
@@ -159,6 +161,7 @@ export default function ThirdParty() {
         setPhase(res.responder?.email ? "calibration" : "onboarding");
       } catch (err: any) {
         const msg = err?.message ?? String(err);
+        track("third_party_link_error", { reason: msg.includes("revoked") ? "revoked" : msg.includes("submitted") ? "already_submitted" : "invalid" });
         if (msg.includes("revoked")) setPhase("revoked");
         else if (msg.includes("submitted")) setPhase("submitted");
         else { setErrorMsg(msg); setPhase("error"); }
@@ -228,6 +231,7 @@ export default function ThirdParty() {
     setSubmitting(true);
     try {
       await submitOne(qid, { scale_value: scale, episode_text: ep, open_text: op });
+      track("third_party_question_completed", { question_id: qid, scale_value: scale });
       if (isLastQuestion) setPhase("reveal");
       else setCurrentQIdx((i) => i + 1);
     } catch (err: any) { setErrorMsg(err?.message ?? "erro ao salvar"); }
@@ -249,6 +253,7 @@ export default function ThirdParty() {
     setPhase("finalizing");
     try {
       const res = await callEdge("third-party-finalize", { token, reveal_identity: revealIdentity });
+      track("third_party_finalized", { reveal_identity: revealIdentity });
       setMiniInsight(res.insight_text || "obrigado pelo tempo.");
       setPhase("done");
     } catch (err: any) {
