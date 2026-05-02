@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getToday } from "@/lib/api";
 import NavBottom from "@/components/NavBottom";
+import EmptyStateMessage from "@/components/EmptyStateMessage";
 
 type PillId = "PI" | "PII" | "PIII" | "PIV" | "PV" | "PVI";
 
@@ -77,7 +78,13 @@ export default function Pills() {
       <div className="r-line" />
 
       {/* Pill list */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 24px" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 24px", gap: 32 }}>
+        {!loading && pillsDone.size === 0 && (
+          <EmptyStateMessage
+            text="seis pills. comece pela primeira."
+            contextKey="pills_first_visit"
+          />
+        )}
         {!loading && (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {PILL_ORDER.map(pill => {
