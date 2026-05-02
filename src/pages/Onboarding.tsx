@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSubmitting } from "@/hooks/useSubmitting";
 import { getToday } from "@/lib/api";
+import { track } from "@/lib/analytics";
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -17,6 +18,8 @@ export default function Onboarding() {
   const handleContinue = wrap(async () => {
     if (!name.trim()) return;
     const trimmed = name.trim();
+
+    track("name_provided", { length: trimmed.length });
 
     // Persist locally (immediate availability across the app)
     localStorage.setItem("rdwth_user_name", trimmed);
@@ -92,6 +95,7 @@ export default function Onboarding() {
         {/* Decidir depois — pula coleta de nome */}
         <div
           onClick={() => {
+            track("name_deferred");
             localStorage.setItem("rdwth_user_name_deferred", "1");
             navigate("/home");
           }}

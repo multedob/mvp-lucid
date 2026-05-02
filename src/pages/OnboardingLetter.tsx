@@ -6,6 +6,7 @@
 import { useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getToday } from "@/lib/api";
+import { track } from "@/lib/analytics";
 
 type LetterKey = "r" | "d" | "w" | "t" | "h";
 interface FontDef { f: string; w: number; sz?: number }
@@ -162,6 +163,7 @@ export default function OnboardingLetter() {
   }, []);
 
   const handleBegin = () => {
+    track("letter_completed");
     localStorage.setItem("rdwth_letter_seen", "1");
     navigate("/onboarding");
   };
@@ -283,6 +285,7 @@ export default function OnboardingLetter() {
         <div style={{ marginTop: 8, marginBottom: 32 }}>
           <Link
             to="/sobre"
+            onClick={() => track("letter_manifesto_clicked")}
             style={{
               fontFamily: "var(--r-font-sys)",
               fontWeight: 300,

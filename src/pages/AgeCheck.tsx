@@ -4,6 +4,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { track } from "@/lib/analytics";
 
 export default function AgeCheck() {
   const navigate = useNavigate();
@@ -59,6 +60,7 @@ export default function AgeCheck() {
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div
             onClick={() => {
+              track("age_confirmed");
               localStorage.setItem("rdwth_age_confirmed", "1");
               navigate("/consent");
             }}
@@ -74,7 +76,10 @@ export default function AgeCheck() {
           </div>
 
           <div
-            onClick={() => setBlocked(true)}
+            onClick={() => {
+              track("age_below_threshold");
+              setBlocked(true);
+            }}
             style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
           >
             <div style={{ width: 1, height: 12, background: "var(--r-ghost)", flexShrink: 0 }} />

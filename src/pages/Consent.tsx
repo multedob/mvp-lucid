@@ -4,6 +4,7 @@
 
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { track } from "@/lib/analytics";
 
 const ABOUT = [
   "rdwth oferece leituras reflexivas estruturais baseadas nas suas respostas.",
@@ -94,7 +95,7 @@ export default function Consent() {
             <Link
               to="/privacy"
               target="_blank"
-              onClick={e => e.stopPropagation()}
+              onClick={e => { e.stopPropagation(); track("consent_privacy_link_clicked"); }}
               style={{ color: "var(--r-accent)", borderBottom: "1px solid var(--r-accent)", paddingBottom: 1, textDecoration: "none" }}
             >
               Política de Privacidade
@@ -103,7 +104,7 @@ export default function Consent() {
             <Link
               to="/terms"
               target="_blank"
-              onClick={e => e.stopPropagation()}
+              onClick={e => { e.stopPropagation(); track("consent_terms_link_clicked"); }}
               style={{ color: "var(--r-accent)", borderBottom: "1px solid var(--r-accent)", paddingBottom: 1, textDecoration: "none" }}
             >
               Termos de Uso
@@ -115,6 +116,7 @@ export default function Consent() {
         <div
           onClick={() => {
             if (!accepted) return;
+            track("consent_given");
             localStorage.setItem("rdwth_consent_given", "1");
             navigate("/letter");
           }}
