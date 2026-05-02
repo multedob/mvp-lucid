@@ -17,6 +17,8 @@ const DATA = [
   "Coletamos o que você compartilha conosco.",
   "Geramos leituras estruturais a partir das suas respostas.",
   "Guardamos seu histórico se você escolher continuar.",
+  "As conversas com Reed são processadas pela Anthropic (Claude).",
+  "Seus dados são armazenados no Supabase. Servidores em [região a confirmar].",
   "Você pode apagar seus dados a qualquer momento.",
   "Você pode solicitar uma cópia dos seus dados a qualquer momento.",
 ];
