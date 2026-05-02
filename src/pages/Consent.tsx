@@ -3,7 +3,7 @@
 // Checkbox → habilita "continuar" → seta flag + /letter
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const ABOUT = [
   "rdwth oferece leituras reflexivas estruturais baseadas nas suas respostas.",
@@ -89,13 +89,23 @@ export default function Consent() {
             color: "var(--r-text)", letterSpacing: "0.04em", lineHeight: 1.6,
           }}>
             concordo com a{" "}
-            <span style={{ color: "var(--r-accent)", borderBottom: "1px solid var(--r-accent)", paddingBottom: 1 }}>
+            <Link
+              to="/privacy"
+              target="_blank"
+              onClick={e => e.stopPropagation()}
+              style={{ color: "var(--r-accent)", borderBottom: "1px solid var(--r-accent)", paddingBottom: 1, textDecoration: "none" }}
+            >
               Política de Privacidade
-            </span>
+            </Link>
             {" "}e os{" "}
-            <span style={{ color: "var(--r-accent)", borderBottom: "1px solid var(--r-accent)", paddingBottom: 1 }}>
+            <Link
+              to="/terms"
+              target="_blank"
+              onClick={e => e.stopPropagation()}
+              style={{ color: "var(--r-accent)", borderBottom: "1px solid var(--r-accent)", paddingBottom: 1, textDecoration: "none" }}
+            >
               Termos de Uso
-            </span>.
+            </Link>.
           </span>
         </div>
 
