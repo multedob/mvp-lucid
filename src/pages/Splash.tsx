@@ -1,6 +1,6 @@
 // src/pages/Splash.tsx
-// Tela de abertura — animação rdwth com morphing de fontes
-// Auto-avança para /auth após 4s. Clique antecipa.
+// Tela de abertura — animação rdwth com morphing de fontes (Barlow + IBM Plex Mono)
+// Sessão ativa: skip imediato. Sem sessão: 2.5s, depois /auth. Clique antecipa.
 
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
@@ -11,72 +11,40 @@ type LetterKey = "r" | "d" | "w" | "t" | "h";
 interface FontDef { f: string; w: number; sz?: number }
 
 const FONT_URL =
-  "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@700" +
-  "&family=Bodoni+Moda:opsz,wght@6..96,900" +
-  "&family=Press+Start+2P" +
-  "&family=Saira+Condensed:wght@900" +
-  "&family=Gloock" +
-  "&family=Rozha+One" +
-  "&family=Cormorant+Garamond:wght@700" +
-  "&family=Teko:wght@700" +
-  "&family=DM+Mono:wght@700" +
-  "&family=Abril+Fatface" +
-  "&family=Graduate" +
-  "&family=Alfa+Slab+One" +
-  "&family=Big+Shoulders+Display:wght@900" +
-  "&family=Literata:opsz,wght@7..72,900" +
-  "&family=Epilogue:wght@900" +
-  "&family=Space+Mono:wght@700" +
-  "&family=Playfair+Display:wght@900" +
-  "&family=Fraunces:opsz,wght@9..144,900" +
-  "&family=Barlow:wght@700" +
+  "https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;700;800" +
+  "&family=IBM+Plex+Mono:wght@300;400;700" +
   "&display=swap";
 
 const FONT_POOLS: Record<LetterKey, FontDef[]> = {
   r: [
-    { f: "'IBM Plex Mono', monospace",   w: 700 },
-    { f: "'Press Start 2P', monospace",   w: 400 },
-    { f: "'Rozha One', serif",            w: 400 },
-    { f: "'Graduate', serif",             w: 400 },
-    { f: "'Epilogue', sans-serif",        w: 900 },
-    { f: "'Fraunces', serif",             w: 900 },
-    { f: "'Space Mono', monospace",       w: 700 },
+    { f: "'IBM Plex Mono', monospace", w: 700 },
+    { f: "'Barlow', sans-serif",       w: 800 },
+    { f: "'IBM Plex Mono', monospace", w: 300 },
+    { f: "'Barlow', sans-serif",       w: 400 },
   ],
   d: [
-    { f: "'Bodoni Moda', serif",          w: 900 },
-    { f: "'Gloock', serif",               w: 400 },
-    { f: "'Playfair Display', serif",     w: 900 },
-    { f: "'Cormorant Garamond', serif",   w: 700 },
-    { f: "'Abril Fatface', serif",        w: 400 },
-    { f: "'DM Mono', monospace",          w: 700 },
-    { f: "'Literata', serif",             w: 900 },
+    { f: "'Barlow', sans-serif",       w: 800 },
+    { f: "'IBM Plex Mono', monospace", w: 700 },
+    { f: "'Barlow', sans-serif",       w: 300 },
+    { f: "'IBM Plex Mono', monospace", w: 400 },
   ],
   w: [
-    { f: "'Press Start 2P', monospace",         w: 400, sz: 0.72 },
-    { f: "'Teko', sans-serif",                  w: 700 },
-    { f: "'Saira Condensed', sans-serif",       w: 900 },
-    { f: "'Big Shoulders Display', sans-serif", w: 900 },
-    { f: "'IBM Plex Mono', monospace",          w: 700 },
-    { f: "'Epilogue', sans-serif",              w: 900 },
-    { f: "'Space Mono', monospace",             w: 700, sz: 0.85 },
+    { f: "'IBM Plex Mono', monospace", w: 700 },
+    { f: "'Barlow', sans-serif",       w: 800 },
+    { f: "'IBM Plex Mono', monospace", w: 400 },
+    { f: "'Barlow', sans-serif",       w: 700 },
   ],
   t: [
-    { f: "'Saira Condensed', sans-serif", w: 900 },
-    { f: "'Bodoni Moda', serif",          w: 900 },
-    { f: "'IBM Plex Mono', monospace",    w: 700 },
-    { f: "'Teko', sans-serif",            w: 700 },
-    { f: "'Gloock', serif",               w: 400 },
-    { f: "'Fraunces', serif",             w: 900 },
-    { f: "'DM Mono', monospace",          w: 700 },
+    { f: "'Barlow', sans-serif",       w: 800 },
+    { f: "'IBM Plex Mono', monospace", w: 700 },
+    { f: "'Barlow', sans-serif",       w: 400 },
+    { f: "'IBM Plex Mono', monospace", w: 300 },
   ],
   h: [
-    { f: "'Gloock', serif",                     w: 400 },
-    { f: "'Alfa Slab One', serif",              w: 400 },
-    { f: "'Big Shoulders Display', sans-serif", w: 900 },
-    { f: "'Abril Fatface', serif",              w: 400 },
-    { f: "'Cormorant Garamond', serif",         w: 700 },
-    { f: "'Press Start 2P', monospace",         w: 400, sz: 0.72 },
-    { f: "'Playfair Display', serif",           w: 900 },
+    { f: "'IBM Plex Mono', monospace", w: 700 },
+    { f: "'Barlow', sans-serif",       w: 800 },
+    { f: "'IBM Plex Mono', monospace", w: 400 },
+    { f: "'Barlow', sans-serif",       w: 300 },
   ],
 };
 
@@ -103,12 +71,31 @@ export default function Splash() {
   }, []);
 
   // ── Timer de auto-avanço ─────────────────────────────────────────
+  // Sessão ativa: skip splash imediato (vai pro RootRedirect que decide)
+  // Sem sessão: mostra splash por 2.5s, depois /auth
   useEffect(() => {
-    const t = setTimeout(async () => {
+    const SPLASH_MS = 2500;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let cancelled = false;
+
+    (async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      navigate(session ? "/" : "/auth", { replace: true });
-    }, 4000);
-    return () => clearTimeout(t);
+      if (cancelled) return;
+
+      if (session) {
+        navigate("/", { replace: true });
+        return;
+      }
+
+      timeoutId = setTimeout(() => {
+        if (!cancelled) navigate("/auth", { replace: true });
+      }, SPLASH_MS);
+    })();
+
+    return () => {
+      cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [navigate]);
 
   // ── Animação de morphing ─────────────────────────────────────────
