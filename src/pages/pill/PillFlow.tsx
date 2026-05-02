@@ -8,6 +8,7 @@ import { AudioRecorder } from "@/components/AudioRecorder";
 import { EcoLoadingScreen } from "@/components/EcoLoadingScreen";
 import { triggerDeepReadingRefresh } from "@/lib/deepReading";
 import { AutoResizeTextarea } from "@/components/AutoResizeTextarea";
+import { track } from "@/lib/analytics";
 
 // ─── Types ────────────────────────────────────────────────────────
 type PillId = "PI" | "PII" | "PIII" | "PIV" | "PV" | "PVI";
@@ -478,6 +479,7 @@ export default function PillFlow() {
             reviewMode: true,
             moment: "M5" as Moment,
           };
+          track("pill_review_opened", { pill_id: pillId });
         }
         // Se respostas existem mas eco NÃO → continua flow normal (M1) com state pré-preenchido.
         // Usuário clica continuar a partir do M1, vê seus textos, e o submit M4 final dispara ipe-eco.
@@ -517,6 +519,7 @@ export default function PillFlow() {
         variation_key: state.variationKey,
       });
       setState(s => ({ ...s, pillResponseId: r.pill_response_id, moment: "M2", loading: false }));
+      track("pill_started", { pill_id: state.pillId, variation_key: state.variationKey });
     } catch (err) {
       console.error("[PillFlow] submitM1 failed:", err);
       const msg = err instanceof Error ? err.message : String(err);
@@ -624,6 +627,7 @@ export default function PillFlow() {
       if (!ecoText && ecoLines.length === 0) {
         throw new Error("eco vazio (texto e linhas ausentes)");
       }
+      track("pill_completed", { pill_id: state.pillId, operator_hint: ecoOperatorHint, has_microtitle: !!ecoMicrotitle, lines_count: ecoLines.length });
 
       setState(s => ({
         ...s,
@@ -637,6 +641,7 @@ export default function PillFlow() {
     } catch (ecoErr) {
       console.error("[PillFlow] ipe-eco failed:", ecoErr);
       const msg = ecoErr instanceof Error ? ecoErr.message : String(ecoErr);
+      track("pill_eco_failed", { pill_id: state.pillId, reason: msg });
       setState(s => ({ ...s, loading: false, generatingEco: false, ecoFailed: true, ecoErrorMsg: msg }));
     }
   };

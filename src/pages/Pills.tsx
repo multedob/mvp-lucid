@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getToday } from "@/lib/api";
 import NavBottom from "@/components/NavBottom";
 import EmptyStateMessage from "@/components/EmptyStateMessage";
+import { track } from "@/lib/analytics";
 
 type PillId = "PI" | "PII" | "PIII" | "PIV" | "PV" | "PVI";
 
@@ -94,7 +95,10 @@ export default function Pills() {
               return (
                 <div
                   key={pill}
-                  onClick={() => navigate(`/pill/${pill}`)}
+                  onClick={() => {
+                    track("pill_clicked_from_list", { pill_id: pill, is_review: done });
+                    navigate(`/pill/${pill}`);
+                  }}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -134,7 +138,10 @@ export default function Pills() {
 
             {allDone && (
               <div
-                onClick={() => navigate("/questionnaire")}
+                onClick={() => {
+                  track("pills_continue_to_questionnaire");
+                  navigate("/questionnaire");
+                }}
                 style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginTop: 12 }}
               >
                 <div style={{ width: 1, height: 14, background: "var(--r-accent)", flexShrink: 0 }} />
