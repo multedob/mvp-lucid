@@ -74,6 +74,7 @@ const START_OFFSETS: Record<LetterKey, number> = { r: 0, d: 400, w: 200, t: 700,
 const MORPH_IDS = ["morph-ltr-0","morph-ltr-1","morph-ltr-2","morph-ltr-3","morph-ltr-4","morph-ltr-5","morph-ltr-6",null];
 const STEP_MS = 28;
 const BASE_SIZE = 36; // px
+const WORDMARK_HEIGHT = BASE_SIZE * 1.5; // 54px — espaço seguro pra ascenders/descenders das fontes rotacionadas
 
 export default function OnboardingLetter() {
   const navigate = useNavigate();
@@ -206,22 +207,16 @@ export default function OnboardingLetter() {
         style={{ padding: "28px 24px 24px", display: "flex", flexDirection: "column", gap: 0 }}
       >
 
-        {/* Wordmark animado + tagline */}
+        {/* Wordmark animado + tagline — height fixa pra evitar layout shift quando fontes rotacionam */}
         <div style={{ marginBottom: 32 }}>
           <div style={{
             display: "flex",
             alignItems: "flex-end",
             lineHeight: 1,
             marginBottom: 6,
+            height: WORDMARK_HEIGHT,
+            overflow: "visible",
           }}>
-            <span style={{
-              fontFamily: "'IBM Plex Mono', monospace",
-              fontWeight: 700,
-              fontSize: BASE_SIZE,
-              color: "var(--r-text)",
-              lineHeight: 1,
-              letterSpacing: "-0.01em",
-            }}></span>
             {(["r","d","w","t","h"] as LetterKey[]).map(letter => (
               <span
                 key={letter}
