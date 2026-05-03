@@ -20,19 +20,14 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [ageConfirmed, setAgeConfirmed] = useState(false);
 
   const handleGoogleSignIn = async () => {
-    if (mode === "signup" && !ageConfirmed) {
-      setError("confirme que você tem 16 anos ou mais.");
-      return;
-    }
     track(mode === "signup" ? "signup_started" : "signin_started", { method: "google" });
     setLoading(true);
     setError(null);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/home` },
+      options: { redirectTo: `${window.location.origin}/` },
     });
     if (error) {
       track(mode === "signup" ? "signup_failed" : "signin_failed", { method: "google", reason: error.message });
@@ -73,20 +68,15 @@ export default function Auth() {
         return setError(error.message);
       }
       track("signin_completed", { method: "email" });
-      navigate("/home", { replace: true });
+      navigate("/", { replace: true });
     } else {
-      // Age gate — required for signup
-      if (!ageConfirmed) {
-        setLoading(false);
-        return setError("confirme que você tem 16 anos ou mais.");
-      }
+      // Age gate é feito em /age (AgeCheck.tsx) após signup, antes de qualquer conteúdo.
       track("signup_started", { method: "email" });
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/home`,
-          data: { age_confirmed: true, age_confirmed_at: new Date().toISOString() },
+          emailRedirectTo: `${window.location.origin}/`,
         },
       });
       setLoading(false);
@@ -206,37 +196,6 @@ export default function Auth() {
               style={{ fontSize: 13 }}
             />
           </div>
-
-          {/* age gate — signup only */}
-          {mode === "signup" && (
-            <div
-              onClick={() => setAgeConfirmed(a => !a)}
-              style={{
-                display: "flex", alignItems: "center", gap: 10,
-                cursor: "pointer", paddingTop: 2,
-              }}
-            >
-              <div style={{
-                width: 14, height: 14, borderRadius: 2, flexShrink: 0,
-                border: `1px solid ${ageConfirmed ? "var(--r-telha)" : "var(--r-ghost)"}`,
-                background: ageConfirmed ? "var(--r-telha)" : "transparent",
-                transition: "all 0.15s",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                {ageConfirmed && (
-                  <svg width="10" height="10" viewBox="0 0 16 16" fill="none">
-                    <path d="M3 8L7 12L13 4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                )}
-              </div>
-              <span style={{
-                fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10,
-                color: "var(--r-sub)", letterSpacing: "0.04em",
-              }}>
-                confirmo que tenho 16 anos ou mais
-              </span>
-            </div>
-          )}
 
           {/* esqueci a senha — só no signin */}
           {mode === "signin" && (
