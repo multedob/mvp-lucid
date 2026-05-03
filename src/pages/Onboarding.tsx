@@ -76,10 +76,10 @@ export default function Onboarding() {
         justifyContent: "center", padding: "28px 24px",
       }}>
         <div style={{
-          fontFamily: "var(--r-font-system)",
+          fontFamily: "var(--r-font-sys)",
           fontSize: 13,
           lineHeight: 1.6,
-          color: "var(--r-text-muted)",
+          color: "var(--r-voice-sys)",
           marginBottom: 16,
           textAlign: "left",
         }}>
