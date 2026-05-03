@@ -122,7 +122,6 @@ export default function Reed() {
       setUserId(session?.user?.id ?? null)
       let cycleQuery = (supabase.from('ipe_cycles') as any)
         .select('id, cycle_number, status')
-        .in('status', ['complete', 'questionnaire', 'pills'])
         .order('cycle_number', { ascending: false })
         .limit(1)
       if (session?.user?.id) cycleQuery = cycleQuery.eq('user_id', session.user.id)
@@ -528,7 +527,7 @@ export default function Reed() {
 
             return (
               <div key={i} style={{ paddingLeft: 0 }}>
-                <p style={reedStyle}>{msg.text}</p>
+                <p style={reedStyle}>{msg.text}{sending && i === messages.length - 1 && <span className="r-typing-cursor">▌</span>}</p>
               </div>
             )
           }
@@ -610,6 +609,16 @@ export default function Reed() {
       <NavBottom active="reed" />
 
       <style>{`
+        @keyframes rdwth-cursor-blink {
+          0%, 50% { opacity: 1; }
+          51%, 100% { opacity: 0; }
+        }
+        .r-typing-cursor {
+          display: inline-block;
+          animation: rdwth-cursor-blink 1s step-end infinite;
+          color: var(--r-accent);
+          margin-left: 2px;
+        }
         @keyframes rdwth-pulse {
           0%, 80%, 100% { opacity: 0.25; transform: scale(0.8); }
           40% { opacity: 0.8; transform: scale(1.1); }
