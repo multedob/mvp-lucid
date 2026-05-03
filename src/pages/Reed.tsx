@@ -126,20 +126,35 @@ export default function Reed() {
         .limit(1)
       if (session?.user?.id) cycleQuery = cycleQuery.eq('user_id', session.user.id)
       const { data: cycle } = await cycleQuery.maybeSingle()
-      if (!cycle) { navigate('/home'); return }
-      setCycleId(cycle.id)
+      let activeCycle = cycle
+      if (!activeCycle && session?.user?.id) {
+        const { data: lastCycle } = await (supabase.from('ipe_cycles') as any)
+          .select('cycle_number')
+          .eq('user_id', session.user.id)
+          .order('cycle_number', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        const nextNum = (lastCycle?.cycle_number ?? 0) + 1
+        const { data: newCycle } = await (supabase.from('ipe_cycles') as any)
+          .insert({ user_id: session.user.id, status: 'pills', cycle_number: nextNum, pills_completed: [] })
+          .select('id, cycle_number, status')
+          .single()
+        activeCycle = newCycle
+      }
+      if (!activeCycle) { navigate('/home'); return }
+      setCycleId(activeCycle.id)
       setBaseVersion(await getCurrentUserVersion())
 
       const { data: qState } = await (supabase.from('questionnaire_state') as any)
         .select('resultados_por_bloco')
-        .eq('ipe_cycle_id', cycle.id)
+        .eq('ipe_cycle_id', activeCycle.id)
         .maybeSingle()
       const resultados = (qState?.resultados_por_bloco ?? {}) as Record<string, { il_canonico: number | null }>
       setCanonicalILs(extractILs(resultados))
 
       const { data: pillRows } = await (supabase.from('pill_responses') as any)
         .select('pill_id, m2_resposta, m4_resposta, eco_text')
-        .eq('ipe_cycle_id', cycle.id)
+        .eq('ipe_cycle_id', activeCycle.id)
         .not('completed_at', 'is', null)
         .order('pill_id', { ascending: true })
       if (pillRows && pillRows.length > 0) {
@@ -155,7 +170,7 @@ export default function Reed() {
       const { data: cycleHistory } = await (supabase as any)
         .from('cycles')
         .select('user_text, llm_response, created_at')
-        .eq('ipe_cycle_id', cycle.id)
+        .eq('ipe_cycle_id', activeCycle.id)
         .order('created_at', { ascending: true })
       if (cycleHistory && cycleHistory.length > 0) {
         const history: Message[] = cycleHistory
