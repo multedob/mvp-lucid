@@ -1,22 +1,24 @@
 // src/pages/Reed.tsx
-// Reed — conversational companion inside rdwth
-// v3.7 — welcome message, pill context, questionnaire nav, rdwth link
-// Header: "rdwth · reed" | data
-// Nav bottom: pills | questionnaire | context | reed (ativo) | settings dot
+// Reed v4.0 — A24 streaming SSE
+// - Welcome com typewriter L→R inline (substitui RevealText)
+// - Mensagens streamadas: append incremental de tokens
+// - AbortController pra cancel mid-stream
 
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { callEdgeFunction, getCurrentUserVersion, getToday } from '@/lib/api'
 import NavBottom from '@/components/NavBottom'
-import { RevealText } from '@/components/RevealText'
 import { AudioRecorder } from '@/components/AudioRecorder'
 import { AutoResizeTextarea } from '@/components/AutoResizeTextarea'
 import { track } from '@/lib/analytics'
 
-interface Message { role: 'user' | 'reed'; text: string }
+interface Message { role: 'user' | 'reed'; text: string; isWelcome?: boolean }
 interface CanonicalILs { d1: number[]; d2: number[]; d3: number[]; d4: number[] }
 interface PillContext { pill_id: string; m2_text: string; m4_percepcao: string; eco_text: string }
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
 function extractILs(resultados: Record<string, { il_canonico: number | null }>): CanonicalILs {
   const get = (id: string) => resultados[id]?.il_canonico ?? 4.0
@@ -26,14 +28,6 @@ function extractILs(resultados: Record<string, { il_canonico: number | null }>):
     d3: [get('L3.3'), get('L3.1'), get('L3.2'), get('L3.4')],
     d4: [get('L4.1'), get('L4.2'), get('L4.3'), get('L4.4')],
   }
-}
-
-function extractResponseText(data: unknown): string {
-  if (!data || typeof data !== 'object') return ''
-  const d = data as Record<string, unknown>
-  if (typeof d.llm_response === 'string') return d.llm_response
-  if (typeof d.response_text === 'string') return d.response_text
-  return ''
 }
 
 function buildPillContextString(pills: PillContext[]): string {
@@ -63,14 +57,39 @@ você pode começar me contando o que te trouxe aqui, ou me perguntar qualquer c
 
 (escreva no idioma que sentir mais natural — eu acompanho.)`
 
+// Typewriter inline — texto aparece L→R, char por char
+function Typewriter({ text, charDelayMs = 18, onDone }: { text: string; charDelayMs?: number; onDone?: () => void }) {
+  const [shown, setShown] = useState('')
+  const doneRef = useRef(false)
+
+  useEffect(() => {
+    setShown('')
+    doneRef.current = false
+    let i = 0
+    const interval = window.setInterval(() => {
+      i++
+      setShown(text.slice(0, i))
+      if (i >= text.length) {
+        window.clearInterval(interval)
+        if (!doneRef.current) {
+          doneRef.current = true
+          onDone?.()
+        }
+      }
+    }, charDelayMs)
+    return () => window.clearInterval(interval)
+  }, [text, charDelayMs, onDone])
+
+  return <>{shown}<span style={{ opacity: shown.length < text.length ? 0.5 : 0 }}>▌</span></>
+}
+
 export default function Reed() {
   const navigate = useNavigate()
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const abortRef = useRef<AbortController | null>(null)
+
   const [messages, setMessages] = useState<Message[]>([])
-  // Index below this count = historical messages (no reveal animation).
-  // Messages at or above this index are "new" (animate with RevealText).
-  const historicalCountRef = useRef(0)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
@@ -82,10 +101,11 @@ export default function Reed() {
   const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => { init() }, [])
-  // Scroll behavior:
-  //   - Initial load: stay at top so user reads from the beginning of the
-  //     conversation (welcome message or oldest history).
-  //   - New messages added during session: auto-scroll to bottom.
+
+  // Cleanup abort ao desmontar
+  useEffect(() => () => { abortRef.current?.abort() }, [])
+
+  // Scroll: inicial fica top, novas mensagens scroll bottom
   const didInitialRenderRef = useRef(false)
   useEffect(() => {
     if (messages.length === 0) return
@@ -111,7 +131,6 @@ export default function Reed() {
       setCycleId(cycle.id)
       setBaseVersion(await getCurrentUserVersion())
 
-      // Fetch questionnaire ILs
       const { data: qState } = await (supabase.from('questionnaire_state') as any)
         .select('resultados_por_bloco')
         .eq('ipe_cycle_id', cycle.id)
@@ -119,7 +138,6 @@ export default function Reed() {
       const resultados = (qState?.resultados_por_bloco ?? {}) as Record<string, { il_canonico: number | null }>
       setCanonicalILs(extractILs(resultados))
 
-      // Fetch pill responses — text data for Reed context
       const { data: pillRows } = await (supabase.from('pill_responses') as any)
         .select('pill_id, m2_resposta, m4_resposta, eco_text')
         .eq('ipe_cycle_id', cycle.id)
@@ -135,7 +153,6 @@ export default function Reed() {
         setPillContext(buildPillContextString(pillData))
       }
 
-      // Fetch conversation history
       const { data: cycleHistory } = await (supabase as any)
         .from('cycles')
         .select('user_text, llm_response, created_at')
@@ -148,12 +165,9 @@ export default function Reed() {
             { role: 'reed' as const, text: i.llm_response ?? '' },
           ])
           .filter((m: Message) => m.text)
-        historicalCountRef.current = history.length
         setMessages(history)
       } else {
-        // First visit — welcome message is "new" (index 0 >= historicalCount 0), so it animates
-        historicalCountRef.current = 0
-        setMessages([{ role: 'reed', text: WELCOME_MESSAGE }])
+        setMessages([{ role: 'reed', text: WELCOME_MESSAGE, isWelcome: true }])
       }
       setLoading(false)
       setTimeout(() => inputRef.current?.focus(), 200)
@@ -163,62 +177,133 @@ export default function Reed() {
     }
   }
 
-  async function sendToReed(cid: string, baseVer: number, ils: CanonicalILs, userText: string, attempt = 0): Promise<void> {
-    const MAX_RETRIES = 2
-    const BACKOFF_MS = [0, 1500, 3000]
+  // A24 — streaming SSE. Substitui sendToReed antiga.
+  async function sendToReedStream(cid: string, baseVer: number, ils: CanonicalILs, userText: string): Promise<void> {
+    abortRef.current?.abort()
+    const ac = new AbortController()
+    abortRef.current = ac
 
+    const startTime = Date.now()
+    let firstTokenAt: number | null = null
+
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) { setError('sessão expirou'); return }
+
+    // Adiciona placeholder vazio pra mensagem reed (vai sendo preenchida)
+    setMessages(prev => [...prev, { role: 'reed', text: '' }])
+
+    const payload: Record<string, unknown> = {
+      ipe_cycle_id: cid,
+      base_version: baseVer,
+      raw_input: { d1: ils.d1, d2: ils.d2, d3: ils.d3, d4: ils.d4, user_text: userText },
+      stream: true,
+    }
+    const storedName = localStorage.getItem('rdwth_user_name')
+    if (storedName) payload.user_name = storedName
+    if (pillContext) payload.pill_context = pillContext
+
+    let fullText = ''
     try {
-      if (attempt > 0) {
-        await new Promise(r => setTimeout(r, BACKOFF_MS[attempt] ?? 3000))
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/lucid-engine`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': SUPABASE_ANON_KEY,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+        signal: ac.signal,
+      })
+
+      if (!response.ok) {
+        const errText = await response.text().catch(() => '')
+        // Trata version conflict — refresh + retry uma vez
+        if (response.status === 409 && errText.includes('VERSION_CONFLICT')) {
+          const freshVersion = await getCurrentUserVersion()
+          setBaseVersion(freshVersion)
+          // Remove placeholder atual e tenta de novo
+          setMessages(prev => prev.slice(0, -1))
+          return sendToReedStream(cid, freshVersion, ils, userText)
+        }
+        throw new Error(`HTTP ${response.status}: ${errText.slice(0, 200)}`)
       }
 
-      const payload: Record<string, unknown> = {
-        ipe_cycle_id: cid,
-        base_version: baseVer,
-        raw_input: { d1: ils.d1, d2: ils.d2, d3: ils.d3, d4: ils.d4, user_text: userText },
+      if (!response.body) throw new Error('no response body')
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+
+        // Split events por \n\n
+        const events = buffer.split('\n\n')
+        buffer = events.pop() ?? ''
+
+        for (const event of events) {
+          const line = event.trim()
+          if (!line.startsWith('data: ')) continue
+          let parsed: any
+          try {
+            parsed = JSON.parse(line.slice(6))
+          } catch { continue }
+
+          if (parsed.type === 'metadata') {
+            if (typeof parsed.current_version === 'number') setBaseVersion(parsed.current_version)
+          } else if (parsed.type === 'token' && typeof parsed.text === 'string') {
+            if (firstTokenAt === null) {
+              firstTokenAt = Date.now()
+              track('reed_response_first_token', { latency_ms: firstTokenAt - startTime })
+            }
+            fullText += parsed.text
+            setMessages(prev => {
+              const next = prev.slice()
+              const last = next[next.length - 1]
+              if (last?.role === 'reed') {
+                next[next.length - 1] = { ...last, text: fullText }
+              }
+              return next
+            })
+          } else if (parsed.type === 'done') {
+            track('reed_response_received', {
+              text_length: fullText.length,
+              streamed: true,
+              total_ms: Date.now() - startTime,
+              first_token_ms: firstTokenAt ? firstTokenAt - startTime : null,
+            })
+          } else if (parsed.type === 'error') {
+            track('reed_send_failed', { reason: parsed.message ?? 'stream error' })
+            throw new Error(parsed.message ?? 'stream error')
+          }
+        }
       }
-      // Pass user name from onboarding so Reed addresses the person correctly
-      const storedName = localStorage.getItem('rdwth_user_name')
-      if (storedName) {
-        payload.user_name = storedName
-      }
-      // Pass pill text context if available
-      if (pillContext) {
-        payload.pill_context = pillContext
-      }
-      const data = await callEdgeFunction<Record<string, unknown>>('lucid-engine', payload)
-      const nextVersion = data.current_version
-      if (typeof nextVersion === 'number') setBaseVersion(nextVersion)
-      const text = extractResponseText(data)
-      // AI content moderation: detect and handle failed/empty/placeholder responses
-      if (text && text !== '[linguistic layer unavailable]') {
-        setMessages(prev => [...prev, { role: 'reed', text }])
-        track("reed_response_received", { text_length: text.length })
-      } else {
-        setMessages(prev => [...prev, { role: 'reed', text: 'algo não funcionou do meu lado. tenta de novo — às vezes eu preciso de uma segunda chance pra pensar direito.' }])
+
+      // Filtro pós-stream: se nada veio, mostra fallback
+      if (!fullText.trim()) {
+        setMessages(prev => {
+          const next = prev.slice()
+          const last = next[next.length - 1]
+          if (last?.role === 'reed' && !last.text) {
+            next[next.length - 1] = { ...last, text: 'algo não funcionou do meu lado. tenta de novo — às vezes eu preciso de uma segunda chance pra pensar direito.' }
+          }
+          return next
+        })
       }
     } catch (err) {
+      if ((err as any).name === 'AbortError') return
       const message = err instanceof Error ? err.message : String(err)
-
-      // Version conflict — refresh version and retry once
-      if (message.includes('VERSION_CONFLICT') && attempt === 0) {
-        const freshVersion = await getCurrentUserVersion()
-        setBaseVersion(freshVersion)
-        return sendToReed(cid, freshVersion, ils, userText, 1)
-      }
-
-      // Network/timeout errors — retry with backoff
-      if (attempt < MAX_RETRIES && (message.includes('fetch') || message.includes('network') || message.includes('timeout') || message.includes('Failed'))) {
-        return sendToReed(cid, baseVer, ils, userText, attempt + 1)
-      }
-
-      // All retries exhausted
-      track("reed_send_failed", { reason: message });
+      track('reed_send_failed', { reason: message })
       setError('reed não conseguiu responder. verifica tua conexão e tenta de novo.')
+      // Remove placeholder vazio se nada veio
+      if (!fullText) {
+        setMessages(prev => prev.slice(0, -1))
+      }
     }
   }
 
-  // ─── Export conversation as CSV download ───
   function exportConversation(msgs: Message[]): void {
     const now = new Date()
     const ts = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`
@@ -229,7 +314,7 @@ export default function Reed() {
         const escaped = m.text.replace(/"/g, '""').replace(/\n/g, ' | ')
         return `${i + 1},${m.role},"${escaped}",""`
       })
-    const csv = '\uFEFF' + [header, ...rows].join('\n') // BOM for Excel UTF-8
+    const csv = '\uFEFF' + [header, ...rows].join('\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -239,7 +324,6 @@ export default function Reed() {
     URL.revokeObjectURL(url)
   }
 
-  // ─── Dev commands (/command) — invisible to regular users ───
   async function handleDevCommand(cmd: string): Promise<boolean> {
     const parts = cmd.trim().split(/\s+/)
     const command = parts[0]?.toLowerCase()
@@ -256,31 +340,22 @@ export default function Reed() {
         setMessages(prev => [...prev, { role: 'reed', text: `[sys] nome atualizado para "${args}". reed vai usar a partir da próxima mensagem.` }])
         return true
       }
-
       case '/export': {
         if (messages.length === 0) { setMessages(prev => [...prev, { role: 'reed', text: '[sys] nenhuma mensagem para exportar.' }]); return true }
         exportConversation(messages)
-        setMessages(prev => [...prev, { role: 'reed', text: `[sys] conversa exportada (${messages.filter(m => !m.text.startsWith('[sys]')).length} mensagens). coluna "notas" livre pra anotações.` }])
+        setMessages(prev => [...prev, { role: 'reed', text: `[sys] conversa exportada (${messages.filter(m => !m.text.startsWith('[sys]')).length} mensagens).` }])
         return true
       }
-
       case '/reset': {
         if (!cycleId) { setMessages(prev => [...prev, { role: 'reed', text: '[sys] nenhum ciclo ativo.' }]); return true }
-        // Auto-export before clearing
-        if (messages.filter(m => !m.text.startsWith('[sys]')).length > 0) {
-          exportConversation(messages)
-        }
+        if (messages.filter(m => !m.text.startsWith('[sys]')).length > 0) exportConversation(messages)
         try {
           const { data: { session } } = await supabase.auth.getSession()
           if (!session?.user?.id) { setMessages(prev => [...prev, { role: 'reed', text: '[sys] sem sessão autenticada.' }]); return true }
-
           const log: string[] = ['[sys] reset (conversa exportada automaticamente)']
-
-          // 1. Delete HAGO conversation cycles for current IPE cycle
           const { data: hagoCycles, error: selErr } = await (supabase as any).from('cycles').select('id').eq('ipe_cycle_id', cycleId)
-          if (selErr) {
-            log.push(`cycles select error: ${selErr.message}`)
-          } else if (hagoCycles?.length) {
+          if (selErr) log.push(`cycles select error: ${selErr.message}`)
+          else if (hagoCycles?.length) {
             const ids = hagoCycles.map((c: any) => c.id)
             const { error: e1 } = await (supabase as any).from('structural_snapshots').delete().in('cycle_id', ids)
             if (e1) log.push(`snapshots: ${e1.message}`)
@@ -291,18 +366,8 @@ export default function Reed() {
             const { error: e4 } = await (supabase as any).from('cycles').delete().eq('ipe_cycle_id', cycleId)
             if (e4) log.push(`cycles delete: ${e4.message}`)
             else log.push(`${ids.length} ciclo(s) HAGO deletados`)
-          } else {
-            log.push('nenhum ciclo HAGO encontrado (tabela cycles vazia ou RLS bloqueando)')
-          }
-
-          // 2. Clear local conversation regardless of DB result
-          const hadErrors = log.some(l => l.includes('error') || l.includes('Error'))
-          if (hadErrors) {
-            log.push('conversa local limpa, mas houve erros no banco.')
-          } else {
-            log.push('histórico limpo. reed recomeça do zero.')
-          }
-
+          } else log.push('nenhum ciclo HAGO encontrado')
+          log.push('histórico limpo. reed recomeça do zero.')
           setMessages([{ role: 'reed', text: log.join('\n') }])
           setBaseVersion(await getCurrentUserVersion())
         } catch (err) {
@@ -310,7 +375,6 @@ export default function Reed() {
         }
         return true
       }
-
       case '/debug': {
         const name = localStorage.getItem('rdwth_user_name') || '(nenhum)'
         const info = [
@@ -328,7 +392,6 @@ export default function Reed() {
         setMessages(prev => [...prev, { role: 'reed', text: info }])
         return true
       }
-
       case '/status': {
         try {
           const { data: { session } } = await supabase.auth.getSession()
@@ -343,7 +406,6 @@ export default function Reed() {
             `pills completas: ${completedPills.join(', ') || 'nenhuma'}`,
             `pills com eco: ${withEco.join(', ') || 'nenhuma'}`,
             `user: ${session.user.email}`,
-            `metadata: ${JSON.stringify(session.user.user_metadata || {}).slice(0, 200)}`,
           ].join('\n')
           setMessages(prev => [...prev, { role: 'reed', text: info }])
         } catch (err) {
@@ -351,7 +413,6 @@ export default function Reed() {
         }
         return true
       }
-
       case '/feedback': {
         if (!args) { setMessages(prev => [...prev, { role: 'reed', text: '[sys] uso: /feedback <texto>' }]); return true }
         try {
@@ -364,13 +425,11 @@ export default function Reed() {
           })
           setMessages(prev => [...prev, { role: 'reed', text: '[sys] feedback registrado.' }])
         } catch {
-          // Table might not exist yet — log locally
           console.log('[DEV_FEEDBACK]', { cycleId, text: args, timestamp: new Date().toISOString() })
-          setMessages(prev => [...prev, { role: 'reed', text: '[sys] feedback salvo no console (tabela dev_feedback não existe ainda).' }])
+          setMessages(prev => [...prev, { role: 'reed', text: '[sys] feedback salvo no console.' }])
         }
         return true
       }
-
       case '/help': {
         setMessages(prev => [...prev, { role: 'reed', text: [
           '[sys] comandos disponíveis:',
@@ -385,7 +444,6 @@ export default function Reed() {
         ].join('\n') }])
         return true
       }
-
       default:
         return false
     }
@@ -395,13 +453,11 @@ export default function Reed() {
     if (!input.trim() || sending) return
     const userText = input.trim()
 
-    // Check for dev commands before regular flow
     if (userText.startsWith('/')) {
       setInput('')
       setMessages(prev => [...prev, { role: 'user', text: userText }])
       const handled = await handleDevCommand(userText)
       if (handled) return
-      // If not a known command, fall through to regular send
     }
 
     if (!cycleId || !canonicalILs || baseVersion === null) return
@@ -409,8 +465,8 @@ export default function Reed() {
     setSending(true)
     setError(null)
     setMessages(prev => prev[prev.length - 1]?.text === userText ? prev : [...prev, { role: 'user', text: userText }])
-    track("reed_message_sent", { length: userText.length, has_pill_context: !!pillContext });
-    await sendToReed(cycleId, baseVersion, canonicalILs, userText)
+    track('reed_message_sent', { length: userText.length, has_pill_context: !!pillContext })
+    await sendToReedStream(cycleId, baseVersion, canonicalILs, userText)
     setSending(false)
     setTimeout(() => inputRef.current?.focus(), 100)
   }
@@ -426,7 +482,6 @@ export default function Reed() {
   return (
     <div className="r-screen">
 
-      {/* Header */}
       <div className="r-header">
         <span className="r-header-label" onClick={() => navigate('/home')} style={{ cursor: 'pointer' }}>rdwth</span>
         <span className="r-header-section">reed</span>
@@ -434,7 +489,6 @@ export default function Reed() {
       </div>
       <div className="r-line" />
 
-      {/* Mensagens */}
       <div className="r-scroll" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '20px 24px 16px' }}>
         {messages.map((msg, i) => {
           const isSys = msg.role === 'reed' && msg.text.startsWith('[sys]')
@@ -444,14 +498,9 @@ export default function Reed() {
               <div key={i} style={{ paddingLeft: 0 }}>
                 <p style={{
                   fontFamily: "'IBM Plex Mono', var(--r-font-sys), monospace",
-                  fontWeight: 400,
-                  fontSize: 11,
-                  lineHeight: 1.7,
-                  color: 'var(--r-muted)',
-                  letterSpacing: '0.04em',
-                  whiteSpace: 'pre-wrap',
-                  margin: 0,
-                  opacity: 0.75,
+                  fontWeight: 400, fontSize: 11, lineHeight: 1.7,
+                  color: 'var(--r-muted)', letterSpacing: '0.04em',
+                  whiteSpace: 'pre-wrap', margin: 0, opacity: 0.75,
                 }}>
                   {msg.text}
                 </p>
@@ -459,37 +508,38 @@ export default function Reed() {
             )
           }
 
-          return msg.role === 'reed' ? (
-            <div key={i} style={{ paddingLeft: 0 }}>
-              <RevealText
-                as="p"
-                text={msg.text}
-                enabled={i >= historicalCountRef.current}
-                duration={1800}
-                charFadeMs={320}
-                style={{
-                  fontFamily: 'var(--r-font-ed)',
-                  fontWeight: 800,
-                  fontSize: 16,
-                  lineHeight: 1.7,
-                  color: 'var(--r-text)',
-                  letterSpacing: '0.01em',
-                  whiteSpace: 'pre-wrap',
-                  margin: 0,
-                }}
-              />
-            </div>
-          ) : (
+          if (msg.role === 'reed') {
+            const reedStyle: React.CSSProperties = {
+              fontFamily: 'var(--r-font-ed)', fontWeight: 800, fontSize: 16,
+              lineHeight: 1.7, color: 'var(--r-text)', letterSpacing: '0.01em',
+              whiteSpace: 'pre-wrap', margin: 0,
+            }
+
+            // Welcome: typewriter inline. Demais mensagens: render direto.
+            if (msg.isWelcome) {
+              return (
+                <div key={i} style={{ paddingLeft: 0 }}>
+                  <p style={reedStyle}>
+                    <Typewriter text={msg.text} charDelayMs={18} />
+                  </p>
+                </div>
+              )
+            }
+
+            return (
+              <div key={i} style={{ paddingLeft: 0 }}>
+                <p style={reedStyle}>{msg.text}</p>
+              </div>
+            )
+          }
+
+          // role === 'user'
+          return (
             <div key={i} style={{ paddingLeft: 28 }}>
               <p style={{
-                fontFamily: 'var(--r-font-ed)',
-                fontWeight: 300,
-                fontSize: 14,
-                lineHeight: 1.65,
-                color: 'var(--r-sub)',
-                letterSpacing: '0.01em',
-                whiteSpace: 'pre-wrap',
-                margin: 0,
+                fontFamily: 'var(--r-font-ed)', fontWeight: 300, fontSize: 14,
+                lineHeight: 1.65, color: 'var(--r-sub)', letterSpacing: '0.01em',
+                whiteSpace: 'pre-wrap', margin: 0,
               }}>
                 {msg.text}
               </p>
@@ -497,8 +547,7 @@ export default function Reed() {
           )
         })}
 
-        {/* Typing indicator */}
-        {sending && (
+        {sending && messages[messages.length - 1]?.role !== 'reed' && (
           <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
             {[0, 1, 2].map(i => (
               <span key={i} style={{
@@ -518,7 +567,6 @@ export default function Reed() {
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
       <div className="r-line" />
       <div style={{ padding: '14px 24px 12px', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, borderBottom: '0.5px solid var(--r-ghost)', paddingBottom: 8 }}>
@@ -534,27 +582,15 @@ export default function Reed() {
             maxRows={5}
             disabled={sending || loading}
             style={{
-              flex: 1,
-              background: 'transparent',
-              border: 'none',
-              outline: 'none',
-              overflow: 'hidden',
-              fontFamily: 'var(--r-font-ed)',
-              fontWeight: 300,
-              fontSize: 14,
-              color: 'var(--r-text)',
-              letterSpacing: '0.01em',
-              lineHeight: 1.6,
-              padding: 0,
+              flex: 1, background: 'transparent', border: 'none', outline: 'none',
+              overflow: 'hidden', fontFamily: 'var(--r-font-ed)', fontWeight: 300,
+              fontSize: 14, color: 'var(--r-text)', letterSpacing: '0.01em',
+              lineHeight: 1.6, padding: 0,
             }}
           />
           {userId && cycleId && (
             <AudioRecorder
-              userId={userId}
-              cycleId={cycleId}
-              pillId="reed"
-              moment="reed"
-              language="pt-BR"
+              userId={userId} cycleId={cycleId} pillId="reed" moment="reed" language="pt-BR"
               onLiveTranscript={text => setInput(text)}
               onFinalTranscript={text => setInput(text)}
               disabled={sending || loading}

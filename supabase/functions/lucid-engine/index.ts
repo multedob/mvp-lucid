@@ -1,15 +1,6 @@
 // ============================================================
-// index.ts — LUCID Engine v3.7
+// index.ts — LUCID Engine v3.7 + A24 Streaming
 // Structural Model Version: 3.0 — FROZEN
-// Fonte: EDGE_EXECUTION_SEQUENCE_SPEC_v1.11.1,
-//        HTTP_EDGE_UNIFIED_CONTRACT_v1.4.1,
-//        CORE_RUNTIME_REGISTRY_SPEC_v1.2
-// Fases: PHASE 0 → PHASE 10
-// ============================================================
-// v3.7 — Luce Personality: Oracle/Socrates/Ishmael/Gandalf DNA
-//   Full rewrite of language prompt
-//   Character references: The Oracle (Matrix), Socrates (Peaceful Warrior),
-//   Ishmael (Daniel Quinn), Gandalf (LOTR)
 // ============================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -34,23 +25,11 @@ import { executePostCore } from "./post-core.ts";
 import { persistCycle } from "./persistence.ts";
 import { computeCycleIntegrityHash, computeLlmConfigHash } from "./hash.ts";
 
-// ─────────────────────────────────────────
-// CONSTANTES
-// ─────────────────────────────────────────
-
 const API_VERSION = "1.0";
-const SUPPORTED_MODEL = "3.0"; // runtime suporta apenas esta versão
-
-// LLM Binding — MVP hardcoded (Anthropic claude-3-5-haiku)
-// Fonte: EDGE_EXECUTION_SEQUENCE_SPEC_v1.11.1, PHASE 4
-// Produção: resolver de runtime_llm_registry (não implementado no MVP)
+const SUPPORTED_MODEL = "3.0";
 const LLM_PROVIDER = "anthropic";
 const LLM_MODEL_ID = "claude-haiku-4-5-20251001";
-const LLM_TEMPERATURE = 0.7; // classificação usa 0, linguagem usa este valor
-
-// ─────────────────────────────────────────
-// CORS
-// ─────────────────────────────────────────
+const LLM_TEMPERATURE = 0.7;
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -66,108 +45,24 @@ function json(body: unknown, status = 200): Response {
 }
 
 // ─────────────────────────────────────────
-// PHASE 4.5 — INPUT CLASSIFICATION
-// Fase 1: regras fortes determinísticas (C7, C5, C6)
-// Fase 2: LLM com temperatura=0 (C1, C2, C3, C4)
-// Fonte: INPUT_CLASSIFICATION_SPEC_v1.1, seções 5–6
-// Proibido: acesso a snapshot, previous_node, histórico, hago_state
+// SSE HELPERS (A24 — streaming)
 // ─────────────────────────────────────────
 
-async function classifyInput(user_text: string, anthropic: Anthropic): Promise<InputClassification> {
-  // ─── Fase 1: regras fortes (determinísticas)
-  // Ordem de precedência: C7 > C5 > C6
-  // Fonte: INPUT_CLASSIFICATION_SPEC_v1.1, seção 5
-
-  const text = user_text.toLowerCase();
-
-  // C7_RISCO_HUMANO: risco físico, autolesão, violência iminente
-  if (/\b(suicid|me matar|me machucar|me ferir|violência|matar|morrer|acabar com|me jogar)\b/.test(text)) {
-    return "C7_RISCO_HUMANO";
-  }
-
-  // C5_PEDIDO_PRESCRITIVO: pedido direto de orientação prática
-  if (
-    /\b(me diz(a|e) o que fazer|o que (eu )?devo|como (eu )?devo|como (eu )?(fa[cç]o|posso|consigo) para|preciso saber como|me ensina|me explica como|qual o passo|o que fazer|como (ser|ficar|me tornar)|como melhorar)\b/.test(
-      text,
-    )
-  ) {
-    return "C5_PEDIDO_PRESCRITIVO";
-  }
-
-  // C6_VALIDACAO_IDENTITARIA: busca de definição identitária
-  if (
-    /\b(quem (eu )?sou|minha identidade|sou (uma pessoa|alguém)|isso define|isso me define|isso faz de mim)\b/.test(
-      text,
-    )
-  ) {
-    return "C6_VALIDACAO_IDENTITARIA";
-  }
-
-  // ─── Fase 2: LLM com temperatura=0
-  // Fonte: INPUT_CLASSIFICATION_SPEC_v1.1, seção 6.2
-  const prompt = `You are a semantic classifier. Classify the user input into exactly one category based on the PRIMARY INTENT and EMOTIONAL OBJECT of the message — not just the surface words.
-
-Categories:
-- C1_CONFUSAO_CONCEITUAL: confusion about an idea, concept, or how something works (cognitive, not emotional)
-- C2_AMBIVALENCIA_INTERNA: internal conflict between two feelings, desires, or directions
-- C3_SOFREIMENTO_EMOCIONAL: emotional suffering, pain, sadness, distress, or confusion about one's own feelings
-- C4_CURIOSIDADE_ESTRUTURAL: genuine curiosity or exploratory question about a topic
-
-Key distinction:
-- "I'm confused about a concept" → C1
-- "I'm confused about what I'm feeling" → C3 (the object of confusion is emotional)
-- "I don't know if I should do X or Y" → C2
-- "I wonder how X works" → C4
-
-Rules:
-- Output ONLY the category code (e.g. C3_SOFREIMENTO_EMOCIONAL)
-- No explanation, no punctuation, no other text
-
-User input: "${user_text}"`;
-
-  const response = await anthropic.messages.create({
-    model: LLM_MODEL_ID,
-    max_tokens: 20,
-    temperature: 0, // temperatura=0 obrigatório para classificação
-    messages: [{ role: "user", content: prompt }],
-  });
-
-  const raw = (response.content[0] as { type: string; text: string }).text.trim().toUpperCase();
-
-  const valid: InputClassification[] = [
-    "C1_CONFUSAO_CONCEITUAL",
-    "C2_AMBIVALENCIA_INTERNA",
-    "C3_SOFREIMENTO_EMOCIONAL",
-    "C4_CURIOSIDADE_ESTRUTURAL",
-  ];
-
-  if (valid.includes(raw as InputClassification)) {
-    return raw as InputClassification;
-  }
-
-  // Fallback seguro: C1 se resposta inesperada
-  return "C1_CONFUSAO_CONCEITUAL";
+function encodeSSE(obj: object): Uint8Array {
+  return new TextEncoder().encode(`data: ${JSON.stringify(obj)}\n\n`);
 }
 
-// ─────────────────────────────────────────
-// PHASE 9 — LANGUAGE EXECUTION
-// v3.7 — Reed personality + anti-bifurcation
-// ─────────────────────────────────────────
-
-async function executeLlmLanguage(
-  anthropic: Anthropic,
-  structural_model: string,
-  snapshot: Record<string, unknown>,
-  node_selection: Array<Record<string, unknown>>,
+function buildLanguagePrompt(
   hago_state: string,
   response_type: string,
   movement_primary: string,
   movement_secondary: string | null,
+  node_selection: Array<Record<string, unknown>>,
   nodes_corpus: RagNode[],
   user_text: string,
   pill_context: string | null,
   user_name: string | null,
-): Promise<string> {
+): { system: string; user_content: string } {
   const node_texts = node_selection
     .map((n) => {
       const full = nodes_corpus.find((c) => c.node_id === n.node_id);
@@ -304,7 +199,6 @@ Primary Movement: ${movement_primary}
 ${movement_secondary ? `Secondary Movement: ${movement_secondary}` : ""}
 ${user_name ? `\nUSER NAME\nThe person you are talking to is called "${user_name}". Use their name naturally and sparingly — like a friend would. Don't overuse it. Never get their name wrong.` : ""}`;
 
-  // Build user content with optional pill context and node texts
   const pill_section = pill_context
     ? `\n\nWhat this person shared in their pills (use naturally — don't list or quote directly, but let it inform how you respond):\n${pill_context}`
     : "";
@@ -314,6 +208,28 @@ ${user_name ? `\nUSER NAME\nThe person you are talking to is called "${user_name
     : "";
 
   const user_content = `The user said:\n"${user_text}"${pill_section}${node_section}\n\nRespond to the user now.`;
+
+  return { system, user_content };
+}
+
+async function executeLlmLanguage(
+  anthropic: Anthropic,
+  structural_model: string,
+  snapshot: Record<string, unknown>,
+  node_selection: Array<Record<string, unknown>>,
+  hago_state: string,
+  response_type: string,
+  movement_primary: string,
+  movement_secondary: string | null,
+  nodes_corpus: RagNode[],
+  user_text: string,
+  pill_context: string | null,
+  user_name: string | null,
+): Promise<string> {
+  const { system, user_content } = buildLanguagePrompt(
+    hago_state, response_type, movement_primary, movement_secondary,
+    node_selection, nodes_corpus, user_text, pill_context, user_name,
+  );
 
   const response = await anthropic.messages.create({
     model: LLM_MODEL_ID,
@@ -326,23 +242,147 @@ ${user_name ? `\nUSER NAME\nThe person you are talking to is called "${user_name
   return (response.content[0] as { type: string; text: string }).text;
 }
 
+// A24 — streaming response
+function streamLanguageResponse(
+  anthropic: Anthropic,
+  supabase: ReturnType<typeof createClient>,
+  cycle_id: string,
+  current_version: number,
+  hago_state: string,
+  response_type: string,
+  movement_primary: string,
+  movement_secondary: string | null,
+  node_selection: Array<Record<string, unknown>>,
+  nodes_corpus: RagNode[],
+  user_text: string,
+  pill_context: string | null,
+  user_name: string | null,
+): Response {
+  const { system, user_content } = buildLanguagePrompt(
+    hago_state, response_type, movement_primary, movement_secondary,
+    node_selection, nodes_corpus, user_text, pill_context, user_name,
+  );
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      controller.enqueue(encodeSSE({ type: "metadata", cycle_id, current_version }));
+
+      let fullText = "";
+      try {
+        const anthropicStream = await anthropic.messages.stream({
+          model: LLM_MODEL_ID,
+          max_tokens: 1024,
+          temperature: LLM_TEMPERATURE,
+          system,
+          messages: [{ role: "user", content: user_content }],
+        });
+
+        for await (const event of anthropicStream) {
+          if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+            const token = event.delta.text;
+            fullText += token;
+            controller.enqueue(encodeSSE({ type: "token", text: token }));
+          }
+        }
+
+        await supabase.from("cycles").update({ llm_response: fullText }).eq("id", cycle_id);
+        controller.enqueue(encodeSSE({ type: "done", text_length: fullText.length }));
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.error("STREAM_LANGUAGE_ERROR:", err);
+        controller.enqueue(encodeSSE({ type: "error", message: errMsg }));
+        if (fullText) {
+          await supabase.from("cycles").update({ llm_response: fullText }).eq("id", cycle_id).catch(() => {});
+        }
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      ...CORS_HEADERS,
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+      "X-Accel-Buffering": "no",
+    },
+  });
+}
+
+// ─────────────────────────────────────────
+// PHASE 4.5 — INPUT CLASSIFICATION
+// ─────────────────────────────────────────
+
+async function classifyInput(user_text: string, anthropic: Anthropic): Promise<InputClassification> {
+  const text = user_text.toLowerCase();
+
+  if (/\b(suicid|me matar|me machucar|me ferir|violência|matar|morrer|acabar com|me jogar)\b/.test(text)) {
+    return "C7_RISCO_HUMANO";
+  }
+  if (/\b(me diz(a|e) o que fazer|o que (eu )?devo|como (eu )?devo|como (eu )?(fa[cç]o|posso|consigo) para|preciso saber como|me ensina|me explica como|qual o passo|o que fazer|como (ser|ficar|me tornar)|como melhorar)\b/.test(text)) {
+    return "C5_PEDIDO_PRESCRITIVO";
+  }
+  if (/\b(quem (eu )?sou|minha identidade|sou (uma pessoa|alguém)|isso define|isso me define|isso faz de mim)\b/.test(text)) {
+    return "C6_VALIDACAO_IDENTITARIA";
+  }
+
+  const prompt = `You are a semantic classifier. Classify the user input into exactly one category based on the PRIMARY INTENT and EMOTIONAL OBJECT of the message — not just the surface words.
+
+Categories:
+- C1_CONFUSAO_CONCEITUAL: confusion about an idea, concept, or how something works (cognitive, not emotional)
+- C2_AMBIVALENCIA_INTERNA: internal conflict between two feelings, desires, or directions
+- C3_SOFREIMENTO_EMOCIONAL: emotional suffering, pain, sadness, distress, or confusion about one's own feelings
+- C4_CURIOSIDADE_ESTRUTURAL: genuine curiosity or exploratory question about a topic
+
+Key distinction:
+- "I'm confused about a concept" → C1
+- "I'm confused about what I'm feeling" → C3 (the object of confusion is emotional)
+- "I don't know if I should do X or Y" → C2
+- "I wonder how X works" → C4
+
+Rules:
+- Output ONLY the category code (e.g. C3_SOFREIMENTO_EMOCIONAL)
+- No explanation, no punctuation, no other text
+
+User input: "${user_text}"`;
+
+  const response = await anthropic.messages.create({
+    model: LLM_MODEL_ID,
+    max_tokens: 20,
+    temperature: 0,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  const raw = (response.content[0] as { type: string; text: string }).text.trim().toUpperCase();
+
+  const valid: InputClassification[] = [
+    "C1_CONFUSAO_CONCEITUAL",
+    "C2_AMBIVALENCIA_INTERNA",
+    "C3_SOFREIMENTO_EMOCIONAL",
+    "C4_CURIOSIDADE_ESTRUTURAL",
+  ];
+
+  if (valid.includes(raw as InputClassification)) {
+    return raw as InputClassification;
+  }
+  return "C1_CONFUSAO_CONCEITUAL";
+}
+
 // ─────────────────────────────────────────
 // HANDLER PRINCIPAL
 // ─────────────────────────────────────────
 
 Deno.serve(async (req: Request): Promise<Response> => {
-  // CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: CORS_HEADERS });
   }
 
-  // ─── PHASE 0 — Request Validation
-  // Fonte: EDGE_EXECUTION_SEQUENCE_SPEC_v1.11.1, PHASE 0
   if (req.method !== "POST") {
     return json({ error: "INVALID_INPUT", message: "Method not allowed" }, 400);
   }
 
-  // Extrair JWT e user_id
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return json({ error: "UNAUTHORIZED", message: "Missing authorization" }, 401);
@@ -355,18 +395,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return json({ error: "INVALID_INPUT", message: "Body must be valid JSON" }, 400);
   }
 
-  // Rejeitar campos proibidos
   const FORBIDDEN = [
-    "user_id",
-    "structural_model_version",
-    "CGG",
-    "stage_base",
-    "input_hash",
-    "structural_hash",
-    "input_classification",
-    "response_type",
-    "movement_primary",
-    "movement_secondary",
+    "user_id", "structural_model_version", "CGG", "stage_base",
+    "input_hash", "structural_hash", "input_classification",
+    "response_type", "movement_primary", "movement_secondary",
   ];
   for (const f of FORBIDDEN) {
     if (f in body) {
@@ -374,7 +406,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
   }
 
-  // Validar base_version e raw_input
   if (typeof body.base_version !== "number" || body.base_version < 0) {
     return json({ error: "INVALID_INPUT", message: "base_version must be integer >= 0" }, 400);
   }
@@ -384,8 +415,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   const raw = body.raw_input as Record<string, unknown>;
   const base_version = body.base_version as number;
+  const want_stream = body.stream === true;
 
-  // Validar d1–d4 (tuplas de 4 números)
   const isQuad = (v: unknown): v is [number, number, number, number] =>
     Array.isArray(v) && v.length === 4 && v.every((n) => typeof n === "number");
 
@@ -395,7 +426,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
   }
 
-  // user_text obrigatório para classificação
   if (typeof raw.user_text !== "string" || raw.user_text.trim() === "") {
     return json({ error: "INVALID_INPUT", message: "raw_input.user_text must be non-empty string" }, 400);
   }
@@ -408,7 +438,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
   };
   const user_text = raw.user_text as string;
 
-  // Inicializar clientes
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
     auth: { persistSession: false },
   });
@@ -417,71 +446,35 @@ Deno.serve(async (req: Request): Promise<Response> => {
     apiKey: Deno.env.get("ANTHROPIC_API_KEY")!,
   });
 
-  // Extrair user_id do JWT via Supabase
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
+  const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
   if (authError || !user) {
     return json({ error: "UNAUTHORIZED", message: "Invalid token" }, 401);
   }
   const user_id = user.id;
 
   try {
-    // ─── PHASE 1 — Structural Model Binding
-    // Fonte: CORE_RUNTIME_REGISTRY_SPEC_v1.2
     const bound_version = await resolveStructuralModelVersion(supabase);
-
-    // Verificar que runtime suporta esta versão
     if (bound_version !== SUPPORTED_MODEL) {
-      return json(
-        {
-          error: "INTERNAL_ERROR",
-          message: `RUNTIME_VERSION_NOT_IMPLEMENTED: ${bound_version}`,
-        },
-        500,
-      );
+      return json({ error: "INTERNAL_ERROR", message: `RUNTIME_VERSION_NOT_IMPLEMENTED: ${bound_version}` }, 500);
     }
 
-    // ─── PHASE 2 — Snapshot Resolution
-    // Fonte: SNAPSHOT_RESOLUTION_PROTOCOL_v2.2.1
-    const { snapshot: previous_snapshot, cycle_id: base_cycle_id } = await resolveSnapshot(
-      supabase,
-      user_id,
-      base_version,
-    );
-
-    // ─── PHASE 3 — Previous Node Resolution
-    // Fonte: PREVIOUS_NODE_RESOLUTION_PROTOCOL_v2.2.2
+    const { snapshot: previous_snapshot, cycle_id: base_cycle_id } = await resolveSnapshot(supabase, user_id, base_version);
     const previous_node = await resolvePreviousNode(supabase, base_cycle_id);
 
-    // Resoluções auxiliares
     const [historical_memory, previous_hago_state, previousLines] = await Promise.all([
       resolveHistoricalMemory(supabase, user_id, base_version),
       resolvePreviousHagoState(supabase, user_id),
       resolvePreviousLines(supabase, base_cycle_id),
     ]);
 
-    // ─── PHASE 4 — LLM Runtime Binding
-    // MVP: hardcoded — sem registry LLM dinâmico
     const llm_config_hash = await computeLlmConfigHash(LLM_PROVIDER, LLM_MODEL_ID, LLM_TEMPERATURE);
-
-    // ─── PHASE 4.5 — Input Classification
-    // Executada na Edge, antes do Core
-    // Core não recebe user_text
-    // Fonte: INPUT_CLASSIFICATION_SPEC_v1.1
     const input_classification = await classifyInput(user_text, anthropic);
 
-    // Buscar corpus RAG completo
     const { data: ragCorpus, error: ragErr } = await supabase.from("rag_corpus").select("*");
-
     if (ragErr || !ragCorpus) {
       return json({ error: "INTERNAL_ERROR", message: "Failed to load RAG corpus" }, 500);
     }
 
-    // ─── PHASE 5 — Structural Core Execution
-    // Core é função pura — sem I/O
-    // Fonte: STRUCTURAL_CORE_CONTRACT_v1.8
     const core_output = await executeStructuralCore({
       contract_version: CONTRACT_VERSION,
       structural_model_version: bound_version,
@@ -496,11 +489,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       previousLines,
     });
 
-    // ─── PHASE 5.3 + 5.4 — Response Type + Movement Resolution
     const post_core = executePostCore(input_classification, core_output.hago_state);
-
-    // ─── PHASE 6 — Hash Chain Resolution
-    // Fonte: EDGE_EXECUTION_SEQUENCE_SPEC_v1.11.1, PHASE 6
     const previous_cycle_hash = await resolvePreviousCycleHash(supabase, base_cycle_id);
 
     const cycle_integrity_hash = await computeCycleIntegrityHash(
@@ -510,23 +499,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
       bound_version,
     );
 
-    // ─── PHASE 7 — Pre-Transaction Integrity Checks
-    // Fonte: EDGE_EXECUTION_SEQUENCE_SPEC_v1.11.1, PHASE 7
-    if (!core_output.input_hash || core_output.input_hash.length !== 64) {
-      throw new Error("INTEGRITY_ERROR: invalid input_hash");
-    }
-    if (!core_output.structural_hash || core_output.structural_hash.length !== 64) {
-      throw new Error("INTEGRITY_ERROR: invalid structural_hash");
-    }
-    if (!cycle_integrity_hash || cycle_integrity_hash.length !== 64) {
-      throw new Error("INTEGRITY_ERROR: invalid cycle_integrity_hash");
-    }
-    if (core_output.structural_model_version !== bound_version) {
-      throw new Error("INTEGRITY_ERROR: structural_model_version mismatch");
-    }
+    if (!core_output.input_hash || core_output.input_hash.length !== 64) throw new Error("INTEGRITY_ERROR: invalid input_hash");
+    if (!core_output.structural_hash || core_output.structural_hash.length !== 64) throw new Error("INTEGRITY_ERROR: invalid structural_hash");
+    if (!cycle_integrity_hash || cycle_integrity_hash.length !== 64) throw new Error("INTEGRITY_ERROR: invalid cycle_integrity_hash");
+    if (core_output.structural_model_version !== bound_version) throw new Error("INTEGRITY_ERROR: structural_model_version mismatch");
 
-    // ─── PHASE 8 — Atomic Transaction
-    // Fonte: TRANSACTION_PROTOCOL_v3.4, seção 5
     const { cycle_id, current_version } = await persistCycle(supabase, {
       user_id,
       base_version,
@@ -553,49 +530,42 @@ Deno.serve(async (req: Request): Promise<Response> => {
       user_text,
     });
 
-    // ─── PHASE 9 — Language Execution (pós-commit)
-    // Falha linguística NÃO invalida ciclo já persistido
-    // Fonte: EDGE_EXECUTION_SEQUENCE_SPEC_v1.11.1, PHASE 9
+    const pill_context = typeof body.pill_context === "string" ? body.pill_context : null;
+    const user_name = typeof body.user_name === "string" && body.user_name.trim() ? body.user_name.trim() : null;
+
+    // ─── A24 — Streaming branch (Reed only)
+    if (want_stream) {
+      return streamLanguageResponse(
+        anthropic, supabase, cycle_id, current_version,
+        core_output.hago_state, post_core.response_type,
+        post_core.movement_primary, post_core.movement_secondary,
+        core_output.node_selection as unknown as Array<Record<string, unknown>>,
+        ragCorpus as RagNode[], user_text, pill_context, user_name,
+      );
+    }
+
+    // ─── Fluxo antigo (Questionnaire) — JSON response
     let llm_response = "";
     try {
-      // pill_context and user_name are optional — passed from frontend when available
-      const pill_context = typeof body.pill_context === "string" ? body.pill_context : null;
-      const user_name = typeof body.user_name === "string" && body.user_name.trim() ? body.user_name.trim() : null;
-
       llm_response = await executeLlmLanguage(
-        anthropic,
-        bound_version,
+        anthropic, bound_version,
         core_output.structural_snapshot as unknown as Record<string, unknown>,
         core_output.node_selection as unknown as Array<Record<string, unknown>>,
-        core_output.hago_state,
-        post_core.response_type,
-        post_core.movement_primary,
-        post_core.movement_secondary,
-        ragCorpus as RagNode[],
-        user_text,
-        pill_context,
-        user_name,
+        core_output.hago_state, post_core.response_type,
+        post_core.movement_primary, post_core.movement_secondary,
+        ragCorpus as RagNode[], user_text, pill_context, user_name,
       );
     } catch (langErr) {
-      // Log mas não abortar — ciclo está persistido
       console.error("LANGUAGE_EXECUTION_ERROR:", langErr);
       llm_response = "[linguistic layer unavailable]";
     }
 
-    // ─── PHASE 9.1 — Persist llm_response back to cycle
-    // llm_response is computed post-commit; update the persisted cycle
     try {
-      await supabase
-        .from("cycles")
-        .update({ llm_response })
-        .eq("id", cycle_id);
+      await supabase.from("cycles").update({ llm_response }).eq("id", cycle_id);
     } catch (updateErr) {
       console.error("LLM_RESPONSE_PERSIST_ERROR:", updateErr);
     }
 
-    // ─── PHASE 10 — Response Emission
-    // Fonte: HTTP_EDGE_UNIFIED_CONTRACT_v1.4.1, seção 4
-    // cycle_integrity_hash, previous_cycle_hash, llm_config_hash NÃO expostos
     const response: EdgeResponse = {
       api_version: API_VERSION,
       current_version,
@@ -622,22 +592,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (err instanceof VersionConflictError) {
       return json({ error: "VERSION_CONFLICT", message: err.message }, 409);
     }
-
     const msg = err instanceof Error ? err.message : String(err);
-
-    if (msg.includes("INTERNAL_STRUCTURAL_INCONSISTENCY")) {
-      return json({ error: "INTERNAL_ERROR", message: msg }, 500);
-    }
-    if (msg.includes("INTERNAL_CONFIGURATION_ERROR")) {
-      return json({ error: "INTERNAL_ERROR", message: msg }, 500);
-    }
-    if (msg.includes("INTEGRITY_ERROR")) {
-      return json({ error: "INTERNAL_ERROR", message: msg }, 500);
-    }
-    if (msg.includes("CORE_INPUT_INVALID")) {
-      return json({ error: "INVALID_INPUT", message: msg }, 400);
-    }
-
+    if (msg.includes("INTERNAL_STRUCTURAL_INCONSISTENCY")) return json({ error: "INTERNAL_ERROR", message: msg }, 500);
+    if (msg.includes("INTERNAL_CONFIGURATION_ERROR")) return json({ error: "INTERNAL_ERROR", message: msg }, 500);
+    if (msg.includes("INTEGRITY_ERROR")) return json({ error: "INTERNAL_ERROR", message: msg }, 500);
+    if (msg.includes("CORE_INPUT_INVALID")) return json({ error: "INVALID_INPUT", message: msg }, 400);
     console.error("UNHANDLED_ERROR:", err);
     return json({ error: "INTERNAL_ERROR", message: "Internal server error" }, 500);
   }
