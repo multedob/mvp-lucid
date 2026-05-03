@@ -1,6 +1,10 @@
 // src/pages/Home.tsx
-// v2.0 — greeting com nome do usuário
-// Centro: saudação personalizada silenciosa
+// v3.2 — saudação + empty message em cadeia no topo (ONB-7 §1.7)
+// Saudação `> {nome}, {período}.` em IBM Plex Mono cinza terminal, no topo.
+// Empty message `> comece pela primeira pill.` aparece logo abaixo,
+// com delayMs=1100 — espera a saudação digitar antes de começar (cadeia).
+// Clique navega pra /pills (CTA via onAction — Bruno d39c861).
+// Resto do canvas fica vazio (spacer flex 1 — voz sistema sempre no topo).
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -8,18 +12,18 @@ import { getToday } from "@/lib/api";
 import { useUserName } from "@/hooks/useUserName";
 import NavBottom from "@/components/NavBottom";
 import EmptyStateMessage from "@/components/EmptyStateMessage";
+import SystemTerminalLine from "@/components/SystemTerminalLine";
 
 function getGreeting(name: string | null): string | null {
   const hour = new Date().getHours();
 
-  // First visit ever — no name yet
+  // Sem nome ainda — não saúda
   if (!name) return null;
 
-  // Time-aware, minimal, warm
-  if (hour >= 5 && hour < 12) return `bom dia, ${name}.`;
-  if (hour >= 12 && hour < 18) return `oi, ${name}.`;
-  if (hour >= 18 && hour < 23) return `boa noite, ${name}.`;
-  return `${name}.`;
+  // Formato terminal: nome primeiro, período em seguida (ONB-7 §1.7)
+  if (hour >= 5 && hour < 12) return `${name}, bom dia.`;
+  if (hour >= 12 && hour < 18) return `${name}, boa tarde.`;
+  return `${name}, boa noite.`;
 }
 
 export default function Home() {
@@ -48,38 +52,28 @@ export default function Home() {
       </div>
       <div className="r-line" />
 
-      {/* Centro — saudação personalizada + empty canvas message */}
-      <div style={{
-        flex: 1,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "0 24px",
-        gap: 32,
-      }}>
-        {greeting && (
-          <p style={{
-            fontFamily: "var(--r-font-ed)",
-            fontWeight: 300,
-            fontSize: 14,
-            color: "var(--r-muted)",
-            letterSpacing: "0.02em",
-            lineHeight: 1.8,
-            textAlign: "center",
-            margin: 0,
-            opacity: visible ? 1 : 0,
-            transition: "opacity 0.8s ease-in",
-          }}>
-            {greeting}
-          </p>
-        )}
-        <EmptyStateMessage
-          text="comece pela primeira pill"
-          contextKey="home_first_visit"
-          onAction={() => navigate("/pills")}
-        />
-      </div>
+      {/* Saudação voz sistema — topo do canvas */}
+      {greeting && (
+        <div style={{
+          padding: "12px 24px 0",
+          opacity: visible ? 1 : 0,
+          transition: "opacity 0.8s ease-in",
+        }}>
+          <SystemTerminalLine text={greeting} />
+        </div>
+      )}
+
+      {/* Empty canvas — em cadeia logo abaixo da saudação (delayMs espera saudação) */}
+      {/* Clique navega pra /pills (CTA via onAction) */}
+      <EmptyStateMessage
+        text="comece pela primeira pill."
+        contextKey="home_first_visit"
+        delayMs={1100}
+        onAction={() => navigate("/pills")}
+      />
+
+      {/* Spacer — restante do canvas vazio */}
+      <div style={{ flex: 1 }} />
 
       <NavBottom active="home" />
 
