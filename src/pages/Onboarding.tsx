@@ -3,6 +3,17 @@
 // Persiste nome em localStorage (cache) + Supabase user_metadata + marca name_set step
 // Pré-popula com primeiro nome do Google quando OAuth (A18)
 // continuar → /home  |  decidir depois → /home (também marca name_set p/ não loopar)
+//
+// Refactor B-S5.D: trecho de apresentação do Reed migrou pra SystemTerminalLine
+// (voz sistema com prefixo "> " e typewriter). "como Reed deve chamar você?"
+// é voz Reed (Urbanist Bold), continua como está MAS aparece com fade-in
+// delayed (~500ms) — em cadeia com o sistema digitando, não antes nem depois.
+// Voz sistema fala primeiro; Reed entra suavemente enquanto sistema ainda digita.
+// "continuar" e "decidir depois →" são labels de ação, não fala do sistema —
+// mantêm tipografia atual. Saudação topo, voz sistema sempre no topo.
+//
+// Merge 126eb90 (Bruno): markOnboardingStep("name_set") em ambos handlers
+// (continuar e decidir depois) — single source of truth pra fluxo de redirect.
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -11,11 +22,13 @@ import { useSubmitting } from "@/hooks/useSubmitting";
 import { markOnboardingStep } from "@/hooks/useOnboardingState";
 import { getToday } from "@/lib/api";
 import { track } from "@/lib/analytics";
+import SystemTerminalLine from "@/components/SystemTerminalLine";
 
 export default function Onboarding() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [submitting, wrap] = useSubmitting();
+  const [reedReady, setReedReady] = useState(false);
 
   // ─── Pré-popular com nome do Google quando OAuth (A18) ─────────
   useEffect(() => {
@@ -41,6 +54,12 @@ export default function Onboarding() {
       }
     }
     prefillFromOAuth();
+  }, []);
+
+  // ─── Reed pergunta entra em cadeia (~500ms após sistema começar a digitar) ─
+  useEffect(() => {
+    const timer = setTimeout(() => setReedReady(true), 500);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleContinue = wrap(async () => {
@@ -77,23 +96,21 @@ export default function Onboarding() {
 
       <div style={{
         flex: 1, display: "flex", flexDirection: "column",
-        justifyContent: "center", padding: "28px 24px",
+        justifyContent: "flex-start", padding: "12px 24px 0",
       }}>
-        <div style={{
-          fontFamily: "var(--r-font-sys)",
-          fontSize: 13,
-          lineHeight: 1.6,
-          color: "var(--r-voice-sys)",
-          marginBottom: 16,
-          textAlign: "left",
-        }}>
-          reed é a voz do rdwth.<br />
-          nas pills, no questionário, na conversa.
+        {/* Voz sistema — topo */}
+        <div style={{ marginBottom: 24 }}>
+          <SystemTerminalLine
+            text={"reed é a voz do rdwth.\nnas pills, no questionário, na conversa."}
+          />
         </div>
 
+        {/* Reed pergunta — fade-in delayed (em cadeia com sistema digitando) */}
         <div style={{
           fontFamily: "var(--r-font-ed)", fontWeight: 800, fontSize: 16,
           lineHeight: 1.6, color: "var(--r-text)", marginBottom: 20,
+          opacity: reedReady ? 1 : 0,
+          transition: "opacity 800ms ease-in",
         }}>
           como Reed deve chamar você?
         </div>
@@ -101,6 +118,8 @@ export default function Onboarding() {
         <div style={{
           borderBottom: "0.5px solid var(--r-ghost)",
           paddingBottom: 8, marginBottom: 32,
+          opacity: reedReady ? 1 : 0,
+          transition: "opacity 800ms ease-in 100ms",
         }}>
           <input
             value={name}
@@ -122,8 +141,9 @@ export default function Onboarding() {
           style={{
             display: "flex", alignItems: "center", gap: 10,
             cursor: (name.trim() && !submitting) ? "pointer" : "default",
-            opacity: (name.trim() && !submitting) ? 1 : 0.25, transition: "opacity 0.2s",
-            pointerEvents: (name.trim() && !submitting) ? "auto" : "none",
+            opacity: (name.trim() && !submitting && reedReady) ? 1 : 0.25,
+            transition: "opacity 0.3s",
+            pointerEvents: (name.trim() && !submitting && reedReady) ? "auto" : "none",
           }}
         >
           <div style={{ width: 1, height: 14, background: "var(--r-telha)", flexShrink: 0 }} />
@@ -148,6 +168,8 @@ export default function Onboarding() {
           style={{
             display: "flex", alignItems: "center", gap: 10,
             cursor: "pointer", marginTop: 24,
+            opacity: reedReady ? 1 : 0,
+            transition: "opacity 800ms ease-in 200ms",
           }}
         >
           <div style={{ width: 1, height: 12, background: "var(--r-ghost)", flexShrink: 0 }} />

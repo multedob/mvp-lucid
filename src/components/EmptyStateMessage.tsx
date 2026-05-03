@@ -12,6 +12,10 @@
 // Refactor B-S5.D.5: ganha prop delayMs (passado pro SystemTerminalLine quando
 // voice="system") para encadear empty message com saudação ou outro texto que
 // já está digitando — caller controla quando esse aparece em sequência.
+//
+// Merge d39c861 (Bruno): nova prop onAction. Quando provida, clique dispara
+// onAction E marca como visto via localStorage (sem fade-out). Sem onAction,
+// mantém comportamento dismiss padrão.
 
 import { useEffect, useState } from "react";
 import HighlightTarget from "./HighlightTarget";
@@ -27,7 +31,7 @@ interface EmptyStateMessageProps {
   contextKey: string;
   dismissible?: boolean;
   onDismiss?: () => void;
-  /** Quando provided, clique dispara onAction E marca como dispensado. */
+  /** Quando provided, clique dispara onAction E marca como dispensado (não fade). */
   onAction?: () => void;
   highlightTargetId?: string;
   highlightEffect?: HighlightEffect;
@@ -82,7 +86,6 @@ export default function EmptyStateMessage({
   };
 
   const isClickable = !!onAction || dismissible;
-
   const isSystem = voice === "system";
   const signatureColor = isSystem
     ? "var(--r-voice-sys)"
