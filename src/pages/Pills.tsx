@@ -2,6 +2,11 @@
 // Wave 10: Pills completed agora são clicáveis (modo "revisitar")
 // - Pill done: cor terracota sutil + sufixo "revisitar" (sem line-through)
 // - Click leva pra /pill/{id} — PillFlow detecta eco_text e entra em reviewMode
+//
+// Refactor B-S5.D.5: empty message no topo (já estava), copy atualizada
+// pra "escolha uma pill para começar." (mais natural quando user já está em Pills).
+// Lista de pills agora flui do topo (não mais centralizada) — voz sistema
+// e conteúdo sempre no topo da tela (regra ONB-7 §1.7 estendida).
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -81,14 +86,14 @@ export default function Pills() {
       {/* Empty canvas message — topo */}
       {!loading && pillsDone.size === 0 && (
         <EmptyStateMessage
-          text="seis pills. comece pela primeira."
+          text="escolha uma pill para começar."
           contextKey="pills_first_visit"
           onAction={() => navigate("/pill/PI")}
         />
       )}
 
-      {/* Pill list */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 24px" }}>
+      {/* Pill list — alinhada ao topo, não centralizada */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "16px 24px 0" }}>
         {!loading && (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {PILL_ORDER.map(pill => {
