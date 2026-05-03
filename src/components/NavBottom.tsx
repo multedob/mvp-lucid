@@ -25,7 +25,7 @@ export default function NavBottom({ active = 'none' }: NavBottomProps) {
         fontFamily: 'var(--r-font-sys)',
         fontWeight: slug === active ? 400 : 300,
         fontSize,
-        color: slug === active ? 'var(--r-accent)' : 'var(--r-muted)',
+        color: slug === active ? 'var(--r-telha)' : 'var(--r-muted)',
         letterSpacing: '0.06em',
         cursor: 'pointer',
         whiteSpace: 'nowrap',

@@ -574,7 +574,7 @@ export default function Reed() {
         )}
 
         {error && (
-          <p style={{ fontFamily: 'var(--r-font-sys)', fontWeight: 300, fontSize: 11, color: 'var(--r-accent)', opacity: 0.8, margin: 0 }}>
+          <p style={{ fontFamily: 'var(--r-font-sys)', fontWeight: 300, fontSize: 11, color: 'var(--r-telha)', opacity: 0.8, margin: 0 }}>
             {error}
           </p>
         )}
@@ -631,7 +631,7 @@ export default function Reed() {
         .r-typing-cursor {
           display: inline-block;
           animation: rdwth-cursor-blink 1s step-end infinite;
-          color: var(--r-accent);
+          color: var(--r-telha);
           margin-left: 2px;
         }
         @keyframes rdwth-pulse {

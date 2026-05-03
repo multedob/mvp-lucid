@@ -110,7 +110,7 @@ export default function ResetPassword() {
             </div>
 
             {error && (
-              <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 9, color: "var(--r-accent)", letterSpacing: "0.04em" }}>
+              <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 9, color: "var(--r-telha)", letterSpacing: "0.04em" }}>
                 {error}
               </div>
             )}
@@ -135,7 +135,7 @@ export default function ResetPassword() {
                 opacity: loading ? 0.5 : 1,
               }}
             >
-              <span style={{ width: 1, height: 13, background: "var(--r-accent)", flexShrink: 0 }} />
+              <span style={{ width: 1, height: 13, background: "var(--r-telha)", flexShrink: 0 }} />
               <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-text)", letterSpacing: "0.06em" }}>
                 {loading ? "..." : "atualizar senha"}
               </span>

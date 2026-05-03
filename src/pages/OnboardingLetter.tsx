@@ -239,7 +239,7 @@ export default function OnboardingLetter() {
               fontFamily: "var(--r-font-sys)",
               fontWeight: 300,
               fontSize: 10,
-              color: "var(--r-accent)",
+              color: "var(--r-telha)",
               letterSpacing: "0.14em",
               opacity: 0.7,
             }}
@@ -322,7 +322,7 @@ export default function OnboardingLetter() {
             style={{
               width: 1,
               height: 14,
-              background: "var(--r-accent)",
+              background: "var(--r-telha)",
               flexShrink: 0,
             }}
           />

@@ -299,7 +299,7 @@ export default function Splash() {
           fontFamily: "'Barlow', 'IBM Plex Mono', sans-serif",
           fontWeight: 700,
           fontSize: 11,
-          color: "var(--r-accent)",
+          color: "var(--r-telha)",
           letterSpacing: "0.06em",
           lineHeight: 1.8,
         }}>

@@ -237,7 +237,7 @@ export function EcoLoadingScreen({ staticOverride }: EcoLoadingScreenProps) {
           width: 8,
           height: 8,
           borderRadius: "50%",
-          background: "var(--r-voice-founders, var(--r-accent, #b85a3e))",
+          background: "var(--r-voice-founders, var(--r-telha, #b85a3e))",
           animation: "loading-pulse 1.6s ease-in-out infinite",
         }}
       />

@@ -19,14 +19,14 @@ export default function Sobre() {
       <div className="r-line" />
 
       <div className="r-scroll" style={{ flex: 1, padding: "28px 24px" }}>
-        {/* Manifesto completo — voz fundadores: IBM Plex Mono COLORIDO (var(--r-accent)) */}
+        {/* Manifesto completo — voz fundadores: IBM Plex Mono COLORIDO (var(--r-telha)) */}
         <div
           style={{
             fontFamily: "var(--r-font-sys)",
             fontWeight: 300,
             fontSize: 12,
             lineHeight: 1.9,
-            color: "var(--r-accent)",
+            color: "var(--r-telha)",
             letterSpacing: "0.03em",
           }}
         >

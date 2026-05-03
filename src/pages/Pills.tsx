@@ -110,7 +110,7 @@ export default function Pills() {
                   <div style={{
                     width: 1,
                     height: 12,
-                    background: done ? "var(--r-accent)" : "var(--r-muted)",
+                    background: done ? "var(--r-telha)" : "var(--r-muted)",
                     opacity: done ? 0.5 : 1,
                     flexShrink: 0,
                   }} />
@@ -119,7 +119,7 @@ export default function Pills() {
                     fontWeight: 300,
                     fontSize: 11,
                     letterSpacing: "0.06em",
-                    color: done ? "var(--r-accent)" : "var(--r-sub)",
+                    color: done ? "var(--r-telha)" : "var(--r-sub)",
                     opacity: done ? 0.7 : 1,
                   }}>
                     {PILL_TENSAO[pill]}
@@ -144,7 +144,7 @@ export default function Pills() {
                 }}
                 style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginTop: 12 }}
               >
-                <div style={{ width: 1, height: 14, background: "var(--r-accent)", flexShrink: 0 }} />
+                <div style={{ width: 1, height: 14, background: "var(--r-telha)", flexShrink: 0 }} />
                 <span style={{
                   fontFamily: "var(--r-font-sys)",
                   fontWeight: 300,

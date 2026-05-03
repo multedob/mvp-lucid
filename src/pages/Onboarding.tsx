@@ -122,7 +122,7 @@ export default function Onboarding() {
             pointerEvents: (name.trim() && !submitting) ? "auto" : "none",
           }}
         >
-          <div style={{ width: 1, height: 14, background: "var(--r-accent)", flexShrink: 0 }} />
+          <div style={{ width: 1, height: 14, background: "var(--r-telha)", flexShrink: 0 }} />
           <span style={{
             fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 12,
             color: "var(--r-text)", letterSpacing: "0.06em",

@@ -42,7 +42,7 @@ function OnboardingOverlay({ title, blocks, onClose }: {
     }}>
       <style>{`@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
       <div className="r-scroll" style={{ padding: "60px 24px 24px", display: "flex", flexDirection: "column", gap: 24 }}>
-        <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 9, color: "var(--r-accent)", letterSpacing: "0.12em" }}>
+        <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 9, color: "var(--r-telha)", letterSpacing: "0.12em" }}>
           primeira visita
         </div>
         <div style={{ fontFamily: "var(--r-font-ed)", fontWeight: 800, fontSize: 22, lineHeight: 1.4, color: "var(--r-text)", maxWidth: 600, marginLeft: "auto", marginRight: "auto" }}>
@@ -126,7 +126,7 @@ export function ContextSystem({ onBack }: { onBack?: () => void }) {
       <div className="r-line" />
 
       <div className="r-scroll" style={{ padding: "28px 24px 24px", display: "flex", flexDirection: "column", gap: 24 }}>
-        <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 9, color: "var(--r-accent)", letterSpacing: "0.12em" }}>
+        <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 9, color: "var(--r-telha)", letterSpacing: "0.12em" }}>
           Como o rdwth funciona
         </div>
 
@@ -165,7 +165,7 @@ function ContextCycle({ cycle, onBack, userName }: { cycle: CycleData; onBack: (
       <div className="r-line" />
 
       <div className="r-scroll" style={{ padding: "28px 24px 16px", display: "flex", flexDirection: "column", gap: 24 }}>
-        <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 9, color: "var(--r-accent)", letterSpacing: "0.12em" }}>
+        <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 9, color: "var(--r-telha)", letterSpacing: "0.12em" }}>
           {cycle.id} — leitura salva
         </div>
         <div style={{ fontFamily: "var(--r-font-ed)", fontWeight: 800, fontSize: 16, lineHeight: 1.7, color: "var(--r-text)" }}>
@@ -200,7 +200,7 @@ function ContextDeep({ cycle, onBack, userName }: { cycle: CycleData; onBack: ()
       <div className="r-line" />
 
       <div className="r-scroll" style={{ padding: "28px 24px 16px", display: "flex", flexDirection: "column", gap: 24 }}>
-        <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 9, color: "var(--r-accent)", letterSpacing: "0.12em" }}>
+        <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 9, color: "var(--r-telha)", letterSpacing: "0.12em" }}>
           {cycle.id} — leitura profunda
         </div>
         <div style={{ fontFamily: "var(--r-font-ed)", fontWeight: 800, fontSize: 16, lineHeight: 1.7, color: "var(--r-text)" }}>
@@ -818,7 +818,7 @@ export default function Context() {
               onClick={() => { track("context_deep_reading_opened"); setShowDeep(true); }}
               style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
             >
-              <div style={{ width: 1, height: 12, background: "var(--r-accent)", flexShrink: 0 }} />
+              <div style={{ width: 1, height: 12, background: "var(--r-telha)", flexShrink: 0 }} />
               <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-sub)", letterSpacing: "0.06em" }}>
                 leitura profunda
               </span>
@@ -848,9 +848,9 @@ export default function Context() {
                       fontFamily: "var(--r-font-sys)",
                       fontWeight: selectedIdx === i ? 400 : 300,
                       fontSize: 11,
-                      color: selectedIdx === i ? "var(--r-accent)" : "var(--r-sub)",
+                      color: selectedIdx === i ? "var(--r-telha)" : "var(--r-sub)",
                       letterSpacing: "0.06em",
-                      borderBottom: selectedIdx === i ? "1px solid var(--r-accent)" : "1px solid transparent",
+                      borderBottom: selectedIdx === i ? "1px solid var(--r-telha)" : "1px solid transparent",
                       paddingBottom: 2,
                       cursor: "pointer",
                       transition: "all 0.15s",

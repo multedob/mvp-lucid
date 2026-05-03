@@ -245,7 +245,7 @@ export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(({
   // Color shifts to a warning hue near the limit.
   const accentColor = isNearLimit
     ? "var(--r-warn, #d49a3a)"
-    : "var(--r-accent, #c8553d)";
+    : "var(--r-telha, #c8553d)";
 
   return (
     <div ref={fwdRef} style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -272,7 +272,7 @@ export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(({
         }}
       />
       {errorMsg && state === "error" && (
-        <span style={{ fontSize: 10, color: "var(--r-accent, #c8553d)", opacity: 0.8 }}>
+        <span style={{ fontSize: 10, color: "var(--r-telha, #c8553d)", opacity: 0.8 }}>
           {errorMsg.length > 40 ? errorMsg.slice(0, 40) + "…" : errorMsg}
         </span>
       )}
