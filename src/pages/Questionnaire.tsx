@@ -1,6 +1,10 @@
 // src/pages/Questionnaire.tsx
 // Fluxo: /plan → /next-block loop → lucid-engine
 // Design system: rdwth — mesmo padrão visual das Pills (header-label + date, Footer component)
+//
+// Refactor B-S5.D.5: contador "X de 16 perguntas restantes" virou SystemTerminalCounter
+// (copy "perguntas restantes: X", animação backspace+retype só do número).
+// EmptyStateMessage recebe delayMs=700 pra encadear com o contador (igual Context).
 
 import { useState, useEffect, useRef, forwardRef, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -12,6 +16,7 @@ import { AudioRecorder } from '@/components/AudioRecorder'
 import { fetchQuestionnaireProgress } from '@/lib/questionnaireProgress'
 import { QuestionnaireLoadingScreen } from '@/components/QuestionnaireLoadingScreen'
 import EmptyStateMessage from '@/components/EmptyStateMessage'
+import SystemTerminalCounter from '@/components/SystemTerminalCounter'
 import { track } from '@/lib/analytics'
 
 // ─────────────────────────────────────────
@@ -510,16 +515,19 @@ export default function Questionnaire() {
 
       <Header />
 
+      {/* Voz sistema topo: contador + empty message em cadeia */}
       <div style={{ padding: '10px 24px 0', flexShrink: 0 }}>
-        <span style={{ fontFamily: 'var(--r-font-sys)', fontWeight: 300, fontSize: 11, color: 'var(--r-muted)', letterSpacing: '0.04em' }}>
-          {remainingQuestions ?? 16} de 16 perguntas restantes
-        </span>
+        <SystemTerminalCounter
+          prefix="perguntas restantes: "
+          value={remainingQuestions ?? 16}
+        />
       </div>
 
-      {/* Empty state message — primeira visita ao questionnaire */}
+      {/* Empty state message — primeira visita ao questionnaire (espera contador) */}
       <EmptyStateMessage
         text="responda no seu ritmo. pode pausar e voltar."
         contextKey="questionnaire_first_visit"
+        delayMs={700}
       />
 
       {/* Pergunta */}
