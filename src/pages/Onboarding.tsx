@@ -1,13 +1,14 @@
 // src/pages/Onboarding.tsx
 // Coleta do primeiro nome — fluxo de onboarding
-// Persiste nome em localStorage + Supabase user_metadata
+// Persiste nome em localStorage (cache) + Supabase user_metadata + marca name_set step
 // Pré-popula com primeiro nome do Google quando OAuth (A18)
-// continuar → /home
+// continuar → /home  |  decidir depois → /home (também marca name_set p/ não loopar)
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSubmitting } from "@/hooks/useSubmitting";
+import { markOnboardingStep } from "@/hooks/useOnboardingState";
 import { getToday } from "@/lib/api";
 import { track } from "@/lib/analytics";
 
@@ -48,7 +49,7 @@ export default function Onboarding() {
 
     track("name_provided", { length: trimmed.length });
 
-    // Persist locally (immediate availability across the app)
+    // Persist locally (immediate availability across the app — cache)
     localStorage.setItem("rdwth_user_name", trimmed);
 
     // Persist server-side (survives device/browser changes)
@@ -59,6 +60,9 @@ export default function Onboarding() {
     } catch {
       // Non-blocking — localStorage is primary, metadata is backup
     }
+
+    // Mark onboarding step (single source of truth para fluxo de redirect)
+    await markOnboardingStep("name_set");
 
     navigate("/home");
   });
@@ -133,9 +137,12 @@ export default function Onboarding() {
 
         {/* Decidir depois — pula coleta de nome */}
         <div
-          onClick={() => {
+          onClick={async () => {
             track("name_deferred");
             localStorage.setItem("rdwth_user_name_deferred", "1");
+            // A2 — marca name_set mesmo sem nome para evitar loop no RootRedirect.
+            // Step "name_set" significa "passou pela tela de nome", não "tem nome".
+            await markOnboardingStep("name_set");
             navigate("/home");
           }}
           style={{

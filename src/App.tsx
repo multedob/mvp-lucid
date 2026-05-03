@@ -26,6 +26,17 @@ import { trackPageView, identifyUser, resetUser } from "./lib/analytics";
 
 const queryClient = new QueryClient();
 
+// A2 — cleanup one-time de flags antigas de localStorage (substituídas por user_onboarding_state).
+// Roda uma única vez por device (idempotente). Pode ser removido após algumas versões.
+(function cleanupLegacyOnboardingFlags() {
+  if (typeof window === "undefined") return;
+  if (localStorage.getItem("rdwth_a2_cleanup_done") === "1") return;
+  ["rdwth_age_confirmed", "rdwth_consent_given", "rdwth_letter_seen"].forEach(
+    (k) => localStorage.removeItem(k)
+  );
+  localStorage.setItem("rdwth_a2_cleanup_done", "1");
+})();
+
 // ─── ProtectedRoute — verifica sessão Supabase ───────────────────
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const [checking, setChecking] = useState(true);
@@ -44,12 +55,12 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
 }
 
 // ─── RootRedirect — fluxo completo de onboarding + ciclo IPE ─────
-// Ordem de verificação:
+// Ordem de verificação (A2 — source of truth = user_onboarding_state):
 //   1. não autenticado → Splash
-//   2. sem rdwth_age_confirmed → /age
-//   3. sem rdwth_consent_given → /consent
-//   4. sem rdwth_letter_seen   → /letter
-//   5. sem rdwth_user_name     → /onboarding
+//   2. sem age_confirmed_at → /age
+//   3. sem consent_given_at → /consent
+//   4. sem letter_seen_at   → /letter
+//   5. sem name_set_at      → /onboarding
 //   6. com tudo → redireciona por status do ciclo IPE
 function RootRedirect() {
   const [checking, setChecking] = useState(true);
@@ -67,26 +78,32 @@ function RootRedirect() {
 
       setAuthed(true);
 
-      // ── Flags de onboarding ──────────────────────────────────────
-      if (!localStorage.getItem("rdwth_age_confirmed")) {
+      // ── Onboarding state via Supabase (single source of truth) ───
+      const { data: ob } = await (supabase
+        .from("user_onboarding_state") as any)
+        .select("age_confirmed_at, consent_given_at, letter_seen_at, name_set_at")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (!ob?.age_confirmed_at) {
         setRedirectTo("/age");
         setChecking(false);
         return;
       }
 
-      if (!localStorage.getItem("rdwth_consent_given")) {
+      if (!ob?.consent_given_at) {
         setRedirectTo("/consent");
         setChecking(false);
         return;
       }
 
-      if (!localStorage.getItem("rdwth_letter_seen")) {
+      if (!ob?.letter_seen_at) {
         setRedirectTo("/letter");
         setChecking(false);
         return;
       }
 
-      if (!localStorage.getItem("rdwth_user_name")) {
+      if (!ob?.name_set_at) {
         setRedirectTo("/onboarding");
         setChecking(false);
         return;

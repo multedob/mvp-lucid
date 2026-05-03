@@ -87,7 +87,8 @@ export default function Settings() {
   const handleSignOut = async () => {
     track("signout");
     await supabase.auth.signOut();
-    localStorage.removeItem("rdwth_letter_seen");
+    // A2 — onboarding state agora persiste em user_onboarding_state.
+    // Não é necessário (nem desejável) limpar flags de onboarding no signout.
     navigate("/auth");
   };
 

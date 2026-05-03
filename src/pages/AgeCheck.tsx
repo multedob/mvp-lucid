@@ -1,10 +1,11 @@
 // src/pages/AgeCheck.tsx
 // Verificação de idade — primeiro passo do onboarding
-// "tenho 16 anos ou mais" → seta flag + /consent | "tenho menos de 16" → bloqueio inline
+// "tenho 16 anos ou mais" → marca step em user_onboarding_state + /consent | "tenho menos de 16" → bloqueio inline
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { track } from "@/lib/analytics";
+import { markOnboardingStep } from "@/hooks/useOnboardingState";
 
 export default function AgeCheck() {
   const navigate = useNavigate();
@@ -59,9 +60,9 @@ export default function AgeCheck() {
 
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div
-            onClick={() => {
+            onClick={async () => {
               track("age_confirmed");
-              localStorage.setItem("rdwth_age_confirmed", "1");
+              await markOnboardingStep("age_confirmed");
               navigate("/consent");
             }}
             style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}

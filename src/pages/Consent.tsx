@@ -1,10 +1,11 @@
 // src/pages/Consent.tsx
 // Aceite de Política de Privacidade + Termos — segundo passo do onboarding
-// Checkbox → habilita "continuar" → seta flag + /letter
+// Checkbox → habilita "continuar" → marca step em user_onboarding_state + /letter
 
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { track } from "@/lib/analytics";
+import { markOnboardingStep } from "@/hooks/useOnboardingState";
 
 const ABOUT = [
   "rdwth oferece leituras reflexivas estruturais baseadas nas suas respostas.",
@@ -114,10 +115,10 @@ export default function Consent() {
 
         {/* Continue */}
         <div
-          onClick={() => {
+          onClick={async () => {
             if (!accepted) return;
             track("consent_given");
-            localStorage.setItem("rdwth_consent_given", "1");
+            await markOnboardingStep("consent_given");
             navigate("/letter");
           }}
           style={{

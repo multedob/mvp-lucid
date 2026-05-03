@@ -1,12 +1,13 @@
 // src/pages/OnboardingLetter.tsx
 // Exibida uma única vez após consentimento.
-// Persiste flag em localStorage: "rdwth_letter_seen"
+// Persiste em user_onboarding_state.letter_seen_at (substituiu localStorage flag)
 // Após "começar" → /onboarding (coleta de nome)
 
 import { useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getToday } from "@/lib/api";
 import { track } from "@/lib/analytics";
+import { markOnboardingStep } from "@/hooks/useOnboardingState";
 
 type LetterKey = "r" | "d" | "w" | "t" | "h";
 interface FontDef { f: string; w: number; sz?: number }
@@ -162,9 +163,9 @@ export default function OnboardingLetter() {
     };
   }, []);
 
-  const handleBegin = () => {
+  const handleBegin = async () => {
     track("letter_completed");
-    localStorage.setItem("rdwth_letter_seen", "1");
+    await markOnboardingStep("letter_seen");
     navigate("/onboarding");
   };
 
