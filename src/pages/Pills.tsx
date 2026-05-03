@@ -83,6 +83,7 @@ export default function Pills() {
         <EmptyStateMessage
           text="seis pills. comece pela primeira."
           contextKey="pills_first_visit"
+          onAction={() => navigate("/pill/PI")}
         />
       )}
 

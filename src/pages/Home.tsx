@@ -77,6 +77,7 @@ export default function Home() {
         <EmptyStateMessage
           text="comece pela primeira pill"
           contextKey="home_first_visit"
+          onAction={() => navigate("/pills")}
         />
       </div>
 

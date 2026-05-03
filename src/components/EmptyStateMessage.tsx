@@ -17,6 +17,8 @@ interface EmptyStateMessageProps {
   contextKey: string;
   dismissible?: boolean;
   onDismiss?: () => void;
+  /** Quando provided, clique dispara onAction E marca como dispensado. */
+  onAction?: () => void;
   highlightTargetId?: string;
   highlightEffect?: HighlightEffect;
 }
@@ -53,6 +55,7 @@ export default function EmptyStateMessage({
   contextKey,
   dismissible = true,
   onDismiss,
+  onAction,
   highlightTargetId,
   highlightEffect = "pulse",
 }: EmptyStateMessageProps) {
@@ -73,7 +76,14 @@ export default function EmptyStateMessage({
 
   if (dismissed) return null;
 
-  const handleDismiss = () => {
+  const handleClick = () => {
+    // Se há onAction (CTA), dispara ação + marca como visto (não fade-out).
+    if (onAction) {
+      localStorage.setItem(dismissKey, "1");
+      onAction();
+      return;
+    }
+    // Sem onAction: comportamento de dismiss padrão.
     if (!dismissible) return;
     localStorage.setItem(dismissKey, "1");
     setVisible(false);
@@ -83,27 +93,29 @@ export default function EmptyStateMessage({
     }, 300);
   };
 
+  const isClickable = !!onAction || dismissible;
+
   const isSystem = voice === "system";
   const color = isSystem ? "var(--r-muted)" : "var(--r-telha)";
 
   return (
     <>
       <div
-        onClick={handleDismiss}
-        role={dismissible ? "button" : undefined}
-        tabIndex={dismissible ? 0 : undefined}
+        onClick={isClickable ? handleClick : undefined}
+        role={isClickable ? "button" : undefined}
+        tabIndex={isClickable ? 0 : undefined}
         onKeyDown={(e) => {
-          if (dismissible && (e.key === "Enter" || e.key === " ")) {
+          if (isClickable && (e.key === "Enter" || e.key === " ")) {
             e.preventDefault();
-            handleDismiss();
+            handleClick();
           }
         }}
         aria-describedby={highlightTargetId}
-        aria-label={dismissible ? "tocar para fechar" : undefined}
+        aria-label={onAction ? text : dismissible ? "tocar para fechar" : undefined}
         style={{
           padding: "12px 24px 20px",
           textAlign: "left",
-          cursor: dismissible ? "pointer" : "default",
+          cursor: isClickable ? "pointer" : "default",
           opacity: visible ? 1 : 0,
           transition: "opacity 300ms ease-out",
           userSelect: "none",
