@@ -4,6 +4,11 @@
 //   → ContextDeep        — leitura profunda do ciclo
 //   → ContextSystem      — "Como o rdwth funciona"
 //   → ContextThirdParty  — convites pra terceiros (W20.4)
+//
+// Refactor B-S5.D: voz sistema padronizada via SystemTerminalLine /
+// SystemTerminalCounter. Contador de perguntas usa Counter (só o número
+// re-anima quando muda; prefixo permanece estável). Disclaimer espera o
+// contador terminar (delayMs=700) pra digitar — sequencial, não simultâneo.
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -11,6 +16,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { getToday } from "@/lib/api";
 import { useUserName } from "@/hooks/useUserName";
 import NavBottom from "@/components/NavBottom";
+import SystemTerminalLine from "@/components/SystemTerminalLine";
+import SystemTerminalCounter from "@/components/SystemTerminalCounter";
 import { fetchQuestionnaireProgress } from "@/lib/questionnaireProgress";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { track } from "@/lib/analytics";
@@ -155,6 +162,10 @@ export function ContextSystem({ onBack }: { onBack?: () => void }) {
 // ─── ContextCycle — leitura salva ────────────────────────────────
 function ContextCycle({ cycle, onBack, userName }: { cycle: CycleData; onBack: () => void; userName: string | null }) {
   const navigate = useNavigate();
+  const disclaimerText = userName
+    ? `${userName}, esta é uma leitura estrutural de um momento. Não define quem você é.`
+    : "Esta é uma leitura estrutural de um momento. Não define quem você é.";
+
   return (
     <div className="r-screen">
       <div className="r-header">
@@ -172,11 +183,7 @@ function ContextCycle({ cycle, onBack, userName }: { cycle: CycleData; onBack: (
           {cycle.description}
         </div>
         <div style={{ height: 1, background: "var(--r-ghost)", opacity: 0.5 }} />
-        <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10, color: "var(--r-muted)", letterSpacing: "0.04em", lineHeight: 1.7 }}>
-          {userName
-                ? `${userName}, esta é uma leitura estrutural de um momento. Não define quem você é.`
-                : "Esta é uma leitura estrutural de um momento. Não define quem você é."}
-        </div>
+        <SystemTerminalLine text={disclaimerText} />
       </div>
 
       <div className="r-line" />
@@ -190,6 +197,10 @@ function ContextCycle({ cycle, onBack, userName }: { cycle: CycleData; onBack: (
 // ─── ContextDeep — deep reading ──────────────────────────────────
 function ContextDeep({ cycle, onBack, userName }: { cycle: CycleData; onBack: () => void; userName: string | null }) {
   const navigate = useNavigate();
+  const disclaimerText = userName
+    ? `${userName}, esta é uma leitura estrutural de um momento. Não define quem você é.`
+    : "Esta é uma leitura estrutural de um momento. Não define quem você é.";
+
   return (
     <div className="r-screen">
       <div className="r-header">
@@ -207,11 +218,7 @@ function ContextDeep({ cycle, onBack, userName }: { cycle: CycleData; onBack: ()
           {cycle.deep}
         </div>
         <div style={{ height: 1, background: "var(--r-ghost)", opacity: 0.5 }} />
-        <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10, color: "var(--r-muted)", letterSpacing: "0.04em", lineHeight: 1.7 }}>
-          {userName
-                ? `${userName}, esta é uma leitura estrutural de um momento. Não define quem você é.`
-                : "Esta é uma leitura estrutural de um momento. Não define quem você é."}
-        </div>
+        <SystemTerminalLine text={disclaimerText} />
       </div>
 
       <div className="r-line" />
@@ -273,6 +280,10 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null); // invite_id expandido
   const [errorMsg, setErrorMsg] = useState("");
+
+  const headerText = userName
+    ? `${capitalizeName(userName)}, convide até 8 pessoas próximas que conhecem você. As respostas delas alimentam suas leituras com perspectiva externa.`
+    : "Convide até 8 pessoas próximas. As respostas delas alimentam suas leituras com perspectiva externa.";
 
   const loadAll = async () => {
     setLoading(true);
@@ -396,11 +407,7 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
       <div className="r-line" />
 
       <div className="r-scroll" style={{ padding: "28px 24px 16px", display: "flex", flexDirection: "column", gap: 20 }}>
-        <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10, color: "var(--r-muted)", letterSpacing: "0.04em", lineHeight: 1.7 }}>
-          {userName
-            ? `${capitalizeName(userName)}, convide até 8 pessoas próximas que conhecem você. As respostas delas alimentam suas leituras com perspectiva externa.`
-            : "Convide até 8 pessoas próximas. As respostas delas alimentam suas leituras com perspectiva externa."}
-        </div>
+        <SystemTerminalLine text={headerText} />
 
         <div style={{ height: 1, background: "var(--r-ghost)", opacity: 0.4 }} />
 
@@ -466,7 +473,6 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
         )}
 
         {/* Lista de invites */}
-        
 
         {!loading && invites.length === 0 && (
           <div className="r-sub" style={{ textAlign: "center", padding: "20px 0" }}>
@@ -591,6 +597,7 @@ export default function Context() {
   const [loadingScreenDone, setLoadingScreenDone] = useState(false);
   const [showOnbContext, setShowOnbContext] = useState(false);
   const [showOnbThirdParty, setShowOnbThirdParty] = useState(false);
+
   // Onboarding /contexto: primeira visita ao /context
   useEffect(() => {
     try {
@@ -755,7 +762,7 @@ export default function Context() {
     />;
   }
 
-  // Empty state
+  // Empty state — nenhum ciclo ainda
   if (!loading && cycles.length === 0) return (
     <div className="r-screen">
       <div className="r-header">
@@ -764,16 +771,20 @@ export default function Context() {
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 24px 40px" }}>
-        <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-ghost)", letterSpacing: "0.06em", lineHeight: 1.8 }}>
-          Nenhuma leitura ainda.<br />Complete um questionário pra começar.
-        </div>
+      <div style={{ padding: "12px 24px 0", flexShrink: 0 }}>
+        <SystemTerminalLine
+          text={"nenhuma leitura ainda.\ncomplete um questionário pra começar."}
+        />
       </div>
+      <div style={{ flex: 1 }} />
       <NavBottom active="context" />
     </div>
   );
 
   const cycle = cycles[selectedIdx];
+  const disclaimerText = userName
+    ? `${userName}, esta é uma leitura estrutural de um momento. Não define quem você é.`
+    : "Esta é uma leitura estrutural de um momento. Não define quem você é.";
 
   return (
     <div className="r-screen">
@@ -785,25 +796,30 @@ export default function Context() {
         <span className="r-header-date">{getToday()}</span>
       </div>
       <div className="r-line" />
+
+      {/* Voz sistema topo: contador + disclaimer numa linha após a outra
+          (disclaimer espera o contador terminar com delayMs=700) */}
       {cycle && (
         <div style={{ padding: "10px 24px 0", flexShrink: 0 }}>
-          <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-muted)", letterSpacing: "0.04em" }}>
-            {cycle.questionnaireRemaining} de 16 perguntas restantes do questionário
-          </span>
+          {cycle.questionnaireRemaining > 0 && (
+            <SystemTerminalCounter
+              prefix="perguntas restantes: "
+              value={cycle.questionnaireRemaining}
+            />
+          )}
+          <SystemTerminalLine
+            text={disclaimerText}
+            delayMs={cycle.questionnaireRemaining > 0 ? 700 : 0}
+          />
         </div>
       )}
 
       {/* Conteúdo principal */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 24px 16px", overflow: "hidden" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "16px 24px 16px", overflow: "hidden" }}>
 
         {/* TOP — leitura atual */}
         {cycle && (
           <div style={{ flexShrink: 0 }}>
-            <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 10, color: "var(--r-muted)", letterSpacing: "0.04em", lineHeight: 1.6, marginBottom: 14 }}>
-              {userName
-                ? `${userName}, esta é uma leitura estrutural de um momento. Não define quem você é.`
-                : "Esta é uma leitura estrutural de um momento. Não define quem você é."}
-            </div>
             <div style={{ height: 1, background: "var(--r-ghost)", opacity: 0.4, marginBottom: 14 }} />
 
             {/* Descrição — scroll interno */}
