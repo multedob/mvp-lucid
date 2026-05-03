@@ -1002,6 +1002,68 @@ export type Database = {
           },
         ]
       }
+      team_message_views: {
+        Row: {
+          id: string
+          message_id: string
+          seen_at: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          message_id: string
+          seen_at?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          message_id?: string
+          seen_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_message_views_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "team_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_messages: {
+        Row: {
+          active: boolean | null
+          context_key: string
+          created_at: string | null
+          id: string
+          priority: number | null
+          text: string
+          tone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          context_key: string
+          created_at?: string | null
+          id?: string
+          priority?: number | null
+          text: string
+          tone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          context_key?: string
+          created_at?: string | null
+          id?: string
+          priority?: number | null
+          text?: string
+          tone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       third_party_invites: {
         Row: {
           created_at: string

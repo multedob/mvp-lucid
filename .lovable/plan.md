@@ -1,16 +1,14 @@
+## Deploy `get-team-message` edge function
 
+A função já existe em `supabase/functions/get-team-message/index.ts` e está pronta. Só precisa ser deployada.
 
-# Configurar OPENAI_API_KEY
+### Passos
 
-A edge function `transcribe-audio` precisa do secret `OPENAI_API_KEY` para funcionar. Ele não está configurado no projeto.
+1. Deploy via `supabase--deploy_edge_functions` com `["get-team-message"]`.
+2. Validar com `supabase--curl_edge_functions`:
+   - `POST /get-team-message`
+   - body: `{"context_key":"test"}`
+   - esperado: `{"message": null}` (tabela `team_messages` vazia)
+3. Se erro, checar logs com `supabase--edge_function_logs`.
 
-## Plano
-
-1. **Adicionar o secret `OPENAI_API_KEY`** — Vou solicitar que você insira sua chave da OpenAI (encontrada em [platform.openai.com/api-keys](https://platform.openai.com/api-keys)).
-
-2. **Testar a edge function** — Após configurar, vou chamar `transcribe-audio` para confirmar que o erro `missing_openai_key` desapareceu.
-
-## Detalhes técnicos
-- O secret será armazenado de forma segura no backend e ficará disponível para todas as edge functions.
-- A chave precisa ter permissão para `audio.transcriptions` (Whisper API).
-
+Nenhum outro arquivo será modificado. Sem migrações, sem mudanças de config.
