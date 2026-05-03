@@ -214,7 +214,7 @@ export function AnimatedWordmark({ fontSize }: AnimatedWordmarkProps) {
         </defs>
       </svg>
 
-      <div style={{ display: "flex", alignItems: "flex-end", gap: 0, lineHeight: 1, justifyContent: "center" }}>
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 0, lineHeight: 1, justifyContent: "center", height: `calc(${baseFontSize} * 1.5)`, overflow: "visible" }}>
         {(["r","d","w","t","h"] as LetterKey[]).map(letter => (
           <span
             key={letter}

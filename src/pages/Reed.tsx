@@ -58,7 +58,7 @@ você pode começar me contando o que te trouxe aqui, ou me perguntar qualquer c
 (escreva no idioma que sentir mais natural — eu acompanho.)`
 
 // Typewriter inline — texto aparece L→R, char por char
-function Typewriter({ text, charDelayMs = 18, onDone }: { text: string; charDelayMs?: number; onDone?: () => void }) {
+function Typewriter({ text, charDelayMs = 38, onDone }: { text: string; charDelayMs?: number; onDone?: () => void }) {
   const [shown, setShown] = useState('')
   const doneRef = useRef(false)
 
@@ -534,7 +534,7 @@ export default function Reed() {
               return (
                 <div key={i} style={{ paddingLeft: 0 }}>
                   <p style={reedStyle}>
-                    <Typewriter text={msg.text} charDelayMs={18} />
+                    <Typewriter text={msg.text} charDelayMs={38} />
                   </p>
                 </div>
               )
