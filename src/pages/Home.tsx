@@ -1,10 +1,14 @@
 // src/pages/Home.tsx
-// v3.2 — saudação + empty message em cadeia no topo (ONB-7 §1.7)
-// Saudação `> {nome}, {período}.` em IBM Plex Mono cinza terminal, no topo.
-// Empty message `> comece pela primeira pill.` aparece logo abaixo,
-// com delayMs=1100 — espera a saudação digitar antes de começar (cadeia).
-// Clique navega pra /pills (CTA via onAction — Bruno d39c861).
-// Resto do canvas fica vazio (spacer flex 1 — voz sistema sempre no topo).
+// v3.4 — saudação + empty message em cadeia + team_message banner topo (B-S5.F2)
+// Saudação `> {nome}, {período}.` em IBM Plex Mono cinza terminal.
+// Empty message `> comece pela primeira pill.` em cadeia logo abaixo.
+// TeamMessage como banner editorial no topo (acima da saudação) — só
+// renderiza quando há mensagem ativa que user nunca viu (cache 3 visitas).
+// Clique no empty navega pra /pills (CTA via onAction — Bruno d39c861).
+//
+// Fix v3.4: removido fade-in opacity da saudação que escondia o typewriter
+// (typewriter rodava invisível, texto aparecia completo via fade). Agora
+// saudação aparece imediatamente, typewriter visível desde o começo.
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -13,6 +17,7 @@ import { useUserName } from "@/hooks/useUserName";
 import NavBottom from "@/components/NavBottom";
 import EmptyStateMessage from "@/components/EmptyStateMessage";
 import SystemTerminalLine from "@/components/SystemTerminalLine";
+import TeamMessage from "@/components/TeamMessage";
 
 function getGreeting(name: string | null): string | null {
   const hour = new Date().getHours();
@@ -30,16 +35,10 @@ export default function Home() {
   const navigate = useNavigate();
   const userName = useUserName();
   const [greeting, setGreeting] = useState<string | null>(null);
-  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const text = getGreeting(userName);
-    if (text) {
-      setGreeting(text);
-      // Fade in after a brief pause — feels intentional, not instant
-      const timer = setTimeout(() => setVisible(true), 400);
-      return () => clearTimeout(timer);
-    }
+    if (text) setGreeting(text);
   }, [userName]);
 
   return (
@@ -52,23 +51,21 @@ export default function Home() {
       </div>
       <div className="r-line" />
 
-      {/* Saudação voz sistema — topo do canvas */}
+      {/* TeamMessage — banner editorial topo (só renderiza se houver mensagem ativa) */}
+      <TeamMessage contextKey="home_first_visit" />
+
+      {/* Saudação voz sistema — espera TeamMessage aparecer (delayMs=700) */}
       {greeting && (
-        <div style={{
-          padding: "12px 24px 0",
-          opacity: visible ? 1 : 0,
-          transition: "opacity 0.8s ease-in",
-        }}>
-          <SystemTerminalLine text={greeting} />
+        <div style={{ padding: "12px 24px 0" }}>
+          <SystemTerminalLine text={greeting} delayMs={700} />
         </div>
       )}
 
-      {/* Empty canvas — em cadeia logo abaixo da saudação (delayMs espera saudação) */}
-      {/* Clique navega pra /pills (CTA via onAction) */}
+      {/* Empty canvas — em cadeia após saudação terminar de digitar (delayMs=1500) */}
       <EmptyStateMessage
         text="comece pela primeira pill."
         contextKey="home_first_visit"
-        delayMs={1100}
+        delayMs={1500}
         onAction={() => navigate("/pills")}
       />
 
