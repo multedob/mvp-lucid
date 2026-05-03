@@ -199,18 +199,32 @@ export default function Questionnaire() {
         .from('ipe_cycles')
         .select('id, status')
         .eq('user_id', session.user.id)
-        .in('status', ['questionnaire', 'pills'])
         .order('cycle_number', { ascending: false })
         .limit(1)
         .maybeSingle()
 
-      if (!cycle) { navigate('/home'); return }
-      setCycleId(cycle.id)
+      let activeCycle = cycle
+      if (!activeCycle) {
+        const { data: lastCycle } = await (supabase.from('ipe_cycles') as any)
+          .select('cycle_number')
+          .eq('user_id', session.user.id)
+          .order('cycle_number', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        const nextNum = (lastCycle?.cycle_number ?? 0) + 1
+        const { data: newCycle } = await (supabase.from('ipe_cycles') as any)
+          .insert({ user_id: session.user.id, status: 'pills', cycle_number: nextNum, pills_completed: [] })
+          .select('id, status')
+          .single()
+        activeCycle = newCycle
+      }
+      if (!activeCycle) { navigate('/home'); return }
+      setCycleId(activeCycle.id)
 
       // Fetch progress sincronamente pra distinguir started vs resumed
       let initialRemaining: number | null = null
       try {
-        const progress = await fetchQuestionnaireProgress(cycle.id)
+        const progress = await fetchQuestionnaireProgress(activeCycle.id)
         initialRemaining = progress.remaining
         setRemainingQuestions(progress.remaining)
       } catch (err) {
@@ -218,7 +232,7 @@ export default function Questionnaire() {
       }
 
       const planRes = await callEdgeFunction('ipe-questionnaire-engine/plan', {
-        ipe_cycle_id: cycle.id,
+        ipe_cycle_id: activeCycle.id,
       })
       setStateId((planRes as any).questionnaire_state_id)
 
@@ -233,7 +247,7 @@ export default function Questionnaire() {
         }>('ipe-variation-selector', {
           action: 'select_questionnaire_variations',
           user_id: session.user.id,
-          ipe_cycle_id: cycle.id,
+          ipe_cycle_id: activeCycle.id,
           block_ids: allBlockIds,
           ipe_level: 1.0,
         })
@@ -246,12 +260,12 @@ export default function Questionnaire() {
       // Track início do questionário (ou resume se já tinha progresso)
       const isResume = initialRemaining !== null && initialRemaining < 16
       track('questionnaire_started', {
-        cycle_id: cycle.id,
+        cycle_id: activeCycle.id,
         is_resume: isResume,
         remaining_questions: initialRemaining,
       })
 
-      await fetchNextBlock(cycle.id, null)
+      await fetchNextBlock(activeCycle.id, null)
     } catch (e) {
       track('questionnaire_init_failed', { reason: String(e) })
       setError('algo deu errado ao iniciar. tenta de novo.')
