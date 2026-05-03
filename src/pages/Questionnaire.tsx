@@ -180,7 +180,7 @@ export default function Questionnaire() {
   const [loadingScreenDone, setLoadingScreenDone] = useState(false)
 
   // Rotation variants: loaded once after /plan, used for principal question text
-  const [rotationVariants, setRotationVariants] = useState
+  const [rotationVariants, setRotationVariants] = useState<
     Record<string, { variation_key: string; content: { principal: string; hint?: string | null } }>
   >({})
 
