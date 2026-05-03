@@ -81,9 +81,9 @@ export default function Consent() {
         >
           <div style={{
             width: 14, height: 14, flexShrink: 0,
-            border: `1px solid ${accepted ? "var(--r-accent)" : "var(--r-ghost)"}`,
+            border: `1px solid ${accepted ? "var(--r-telha)" : "var(--r-ghost)"}`,
             borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center",
-            background: accepted ? "var(--r-accent)" : "transparent", transition: "all 0.15s",
+            background: accepted ? "var(--r-telha)" : "transparent", transition: "all 0.15s",
           }}>
             {accepted && <div style={{ width: 6, height: 6, background: "var(--r-bg)", borderRadius: 1 }} />}
           </div>
@@ -96,7 +96,7 @@ export default function Consent() {
               to="/privacy"
               target="_blank"
               onClick={e => { e.stopPropagation(); track("consent_privacy_link_clicked"); }}
-              style={{ color: "var(--r-accent)", borderBottom: "1px solid var(--r-accent)", paddingBottom: 1, textDecoration: "none" }}
+              style={{ color: "var(--r-telha)", borderBottom: "1px solid var(--r-telha)", paddingBottom: 1, textDecoration: "none" }}
             >
               Política de Privacidade
             </Link>
@@ -105,7 +105,7 @@ export default function Consent() {
               to="/terms"
               target="_blank"
               onClick={e => { e.stopPropagation(); track("consent_terms_link_clicked"); }}
-              style={{ color: "var(--r-accent)", borderBottom: "1px solid var(--r-accent)", paddingBottom: 1, textDecoration: "none" }}
+              style={{ color: "var(--r-telha)", borderBottom: "1px solid var(--r-telha)", paddingBottom: 1, textDecoration: "none" }}
             >
               Termos de Uso
             </Link>.
@@ -126,7 +126,7 @@ export default function Consent() {
             opacity: accepted ? 1 : 0.35, transition: "opacity 0.2s",
           }}
         >
-          <div style={{ width: 1, height: 12, background: "var(--r-accent)", flexShrink: 0 }} />
+          <div style={{ width: 1, height: 12, background: "var(--r-telha)", flexShrink: 0 }} />
           <span style={{
             fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11,
             color: "var(--r-text)", letterSpacing: "0.06em",

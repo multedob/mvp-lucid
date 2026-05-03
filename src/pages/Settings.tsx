@@ -137,7 +137,7 @@ export default function Settings() {
           },
           {
             label: deleting ? "apagando..." : "apagar conta",
-            color: "var(--r-accent)",
+            color: "var(--r-telha)",
             action: deleting ? undefined : handleDeleteAccount,
           },
         ].map((item, i) => (

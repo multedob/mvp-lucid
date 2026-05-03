@@ -533,7 +533,7 @@ export default function Questionnaire() {
           </p>
         )}
         {error && (
-          <p className="r-sub" style={{ color: 'var(--r-accent)', marginTop: 12 }}>
+          <p className="r-sub" style={{ color: 'var(--r-telha)', marginTop: 12 }}>
             {error}
           </p>
         )}

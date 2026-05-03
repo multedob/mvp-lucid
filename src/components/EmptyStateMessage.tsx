@@ -84,7 +84,7 @@ export default function EmptyStateMessage({
   };
 
   const isSystem = voice === "system";
-  const color = isSystem ? "var(--r-muted)" : "var(--r-accent)";
+  const color = isSystem ? "var(--r-muted)" : "var(--r-telha)";
 
   return (
     <>

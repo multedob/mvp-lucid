@@ -218,8 +218,8 @@ export default function Auth() {
             >
               <div style={{
                 width: 14, height: 14, borderRadius: 2, flexShrink: 0,
-                border: `1px solid ${ageConfirmed ? "var(--r-accent)" : "var(--r-ghost)"}`,
-                background: ageConfirmed ? "var(--r-accent)" : "transparent",
+                border: `1px solid ${ageConfirmed ? "var(--r-telha)" : "var(--r-ghost)"}`,
+                background: ageConfirmed ? "var(--r-telha)" : "transparent",
                 transition: "all 0.15s",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
@@ -258,7 +258,7 @@ export default function Auth() {
 
           {/* erro / mensagem */}
           {error && (
-            <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 9, color: "var(--r-accent)", letterSpacing: "0.04em" }}>
+            <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 9, color: "var(--r-telha)", letterSpacing: "0.04em" }}>
               {error}
             </div>
           )}
@@ -274,7 +274,7 @@ export default function Auth() {
               style={{ display: "flex", alignItems: "center", gap: 8, cursor: loading ? "default" : "pointer", opacity: loading ? 0.5 : 1 }}
               onClick={() => !loading && handleSubmit({ preventDefault: () => {} } as React.FormEvent)}
             >
-              <div style={{ width: 1, height: 13, background: "var(--r-accent)", flexShrink: 0 }} />
+              <div style={{ width: 1, height: 13, background: "var(--r-telha)", flexShrink: 0 }} />
               <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-text)", letterSpacing: "0.06em" }}>
                 {loading ? "..." : mode === "signin" ? "entrar" : "criar conta"}
               </span>

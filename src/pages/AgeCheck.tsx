@@ -66,7 +66,7 @@ export default function AgeCheck() {
             }}
             style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
           >
-            <div style={{ width: 1, height: 12, background: "var(--r-accent)", flexShrink: 0 }} />
+            <div style={{ width: 1, height: 12, background: "var(--r-telha)", flexShrink: 0 }} />
             <span style={{
               fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11,
               color: "var(--r-text)", letterSpacing: "0.06em",
