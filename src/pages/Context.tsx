@@ -648,22 +648,26 @@ export default function Context() {
         .in("status", ["pills", "complete", "questionnaire"])
         .order("cycle_number", { ascending: true });
 
-      // TA-S6.1b — Quando user não tem ciclo, mostra warmup_deep_reading como leitura inicial
-      if (!ipeCycles || ipeCycles.length === 0) {
-        const { data: warmupDeep } = await (supabase as any)
-          .from("echoes")
-          .select("id, eco_text, follow_up_question, created_at")
-          .eq("user_id", session.user.id)
-          .eq("kind", "warmup_deep_reading")
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+      // TA-S6.1b — Busca warmup_deep_reading do user (usado em 2 cenários):
+      //   1. user sem ciclo nenhum → vira card L0
+      //   2. user com C1 vazio (sem deep_reading_text) → fallback do C1 (opção B)
+      const { data: warmupDeep } = await (supabase as any)
+        .from("echoes")
+        .select("id, eco_text, follow_up_question, created_at")
+        .eq("user_id", session.user.id)
+        .eq("kind", "warmup_deep_reading")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-        if (warmupDeep && warmupDeep.eco_text) {
-          const ecoText: string = warmupDeep.eco_text ?? "";
-          const followUp: string | null = warmupDeep.follow_up_question ?? null;
-          const fullDeep = followUp ? `${ecoText}\n\n${followUp}` : ecoText;
-          const paragraphs = ecoText.split("\n\n").filter(Boolean);
+      const warmupEco: string | null = warmupDeep?.eco_text ?? null;
+      const warmupFollowUp: string | null = warmupDeep?.follow_up_question ?? null;
+
+      // Cenário 1: user sem ciclo — mostra warmup como L0 (leitura inicial)
+      if (!ipeCycles || ipeCycles.length === 0) {
+        if (warmupEco) {
+          const fullDeep = warmupFollowUp ? `${warmupEco}\n\n${warmupFollowUp}` : warmupEco;
+          const paragraphs = warmupEco.split("\n\n").filter(Boolean);
           const description = paragraphs.slice(0, 2).join("\n\n");
 
           setCycles([{
@@ -681,17 +685,32 @@ export default function Context() {
 
       // Wave 14 — apenas deep_reading_text (incremental). Sem fallback pra cycles.llm_response
       // (esse legado tinha invenções/diagnósticos). Sem texto = mensagem de pending.
+      // TA-S6.1b — fallback: C1 vazio E há warmup_deep_reading → usa warmup no lugar do placeholder.
       const cycleData: CycleData[] = await Promise.all(ipeCycles.map(async (ipe: any) => {
         const text: string = ipe.deep_reading_text ?? "";
         const paragraphs = text.split("\n\n").filter(Boolean);
         const hasPending = !text;
         const progress = await fetchQuestionnaireProgress(ipe.id);
-        const description = hasPending
-          ? "A leitura aparece conforme você responde — pills e questionário alimentam ela."
-          : paragraphs.slice(0, 2).join("\n\n");
-        const deep = hasPending
-          ? "Esta leitura se constrói conforme você fala. Responda uma pill ou um bloco do questionário pra ela aparecer aqui."
-          : text;
+
+        // TA-S6.1b — só aplica fallback no PRIMEIRO ciclo (cycle_number === 1)
+        const useWarmupFallback = hasPending && ipe.cycle_number === 1 && warmupEco;
+
+        let description: string;
+        let deep: string;
+        if (useWarmupFallback) {
+          const wEco = warmupEco as string; // type narrowed pelo guard
+          const wFull = warmupFollowUp ? `${wEco}\n\n${warmupFollowUp}` : wEco;
+          const wParas = wEco.split("\n\n").filter(Boolean);
+          description = wParas.slice(0, 2).join("\n\n");
+          deep = wFull;
+        } else if (hasPending) {
+          description = "A leitura aparece conforme você responde — pills e questionário alimentam ela.";
+          deep = "Esta leitura se constrói conforme você fala. Responda uma pill ou um bloco do questionário pra ela aparecer aqui.";
+        } else {
+          description = paragraphs.slice(0, 2).join("\n\n");
+          deep = text;
+        }
+
         return {
           id: `C${ipe.cycle_number}`,
           ipeCycleId: ipe.id,
