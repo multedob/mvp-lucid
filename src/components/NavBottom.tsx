@@ -20,7 +20,9 @@ interface NavBottomProps {
 }
 
 const PULSE_STYLE_ID = 'rdwth-navbottom-pulse-once'
-const PULSE_DURATION_MS = 3500
+// Bruno: subido pra 5s pra atenção sair da parte superior da tela e pegar o pulse.
+// ONB-7 §1.4 padrão é 3.5s — esta exceção fica registrada.
+const PULSE_DURATION_MS = 5000
 const PULSE_KEYFRAMES = `
 @keyframes rdwth-navbottom-pulse-once {
   0%, 100% { opacity: 1; }
@@ -28,7 +30,7 @@ const PULSE_KEYFRAMES = `
 }
 .rdwth-navbottom-pulse-once span {
   color: #7868B8 !important;
-  animation: rdwth-navbottom-pulse-once 3.5s cubic-bezier(0.4, 0, 0.6, 1) 1 !important;
+  animation: rdwth-navbottom-pulse-once 5s cubic-bezier(0.4, 0, 0.6, 1) 1 !important;
 }
 @media (prefers-reduced-motion: reduce) {
   .rdwth-navbottom-pulse-once span {

@@ -83,7 +83,7 @@ export default function Onboarding() {
     // Mark onboarding step (single source of truth para fluxo de redirect)
     await markOnboardingStep("name_set");
 
-    navigate("/home");
+    navigate("/");
   });
 
   return (
@@ -163,7 +163,7 @@ export default function Onboarding() {
             // A2 — marca name_set mesmo sem nome para evitar loop no RootRedirect.
             // Step "name_set" significa "passou pela tela de nome", não "tem nome".
             await markOnboardingStep("name_set");
-            navigate("/home");
+            navigate("/");
           }}
           style={{
             display: "flex", alignItems: "center", gap: 10,

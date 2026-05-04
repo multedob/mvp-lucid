@@ -20,8 +20,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.27.3";
 
-const DEPLOY_FINGERPRINT = "afc-onb-6-warmup-eco-v1";
-const NODES_TO_SELECT = 4;
+const DEPLOY_FINGERPRINT = "afc-onb-6-warmup-eco-v2-faster";
+const NODES_TO_SELECT = 2; // v2: reduzido de 4 → 2 (latency optimization)
 const MODEL_ID = "claude-sonnet-4-5-20250929";
 const MAX_TOKENS = 600;
 const TEMPERATURE = 0.7;

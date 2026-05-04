@@ -296,31 +296,53 @@ export default function Warmup() {
 
         {(phase === "streaming" || phase === "done") && (
           <>
-            <div
-              style={{
-                fontFamily: "var(--r-font-ed)",
-                fontWeight: 300,
-                fontSize: 16,
-                lineHeight: 1.7,
-                color: "var(--r-text)",
-                whiteSpace: "pre-wrap",
-                marginBottom: 32,
-              }}
-            >
-              {eco}
-              {phase === "streaming" && (
-                <span
-                  aria-hidden="true"
-                  style={{
-                    display: "inline-block",
-                    marginLeft: 2,
-                    color: "var(--r-text)",
-                  }}
-                >
-                  ▌
-                </span>
-              )}
-            </div>
+            {/* Placeholder voz sistema enquanto eco ainda não chegou — reduz percepção de espera */}
+            {phase === "streaming" && eco === "" && (
+              <div
+                style={{
+                  fontFamily: "var(--r-font-sys)",
+                  fontWeight: 300,
+                  fontSize: 11,
+                  lineHeight: 1.7,
+                  letterSpacing: "0.04em",
+                  color: "var(--r-voice-sys)",
+                  marginBottom: 28,
+                  textAlign: "left",
+                  whiteSpace: "pre-wrap",
+                }}
+              >
+                <span aria-hidden="true">{"> "}</span>
+                <Typewriter text="reed lê suas respostas." charDelayMs={45} />
+              </div>
+            )}
+
+            {(eco !== "" || phase === "done") && (
+              <div
+                style={{
+                  fontFamily: "var(--r-font-ed)",
+                  fontWeight: 300,
+                  fontSize: 16,
+                  lineHeight: 1.7,
+                  color: "var(--r-text)",
+                  whiteSpace: "pre-wrap",
+                  marginBottom: 32,
+                }}
+              >
+                {eco}
+                {phase === "streaming" && (
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      display: "inline-block",
+                      marginLeft: 2,
+                      color: "var(--r-text)",
+                    }}
+                  >
+                    ▌
+                  </span>
+                )}
+              </div>
+            )}
 
             {phase === "done" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 24 }}>
