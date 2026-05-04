@@ -378,6 +378,38 @@ Deno.serve(async (req) => {
           console.error("[warmup-eco] onboarding state update error:", stateErr);
         }
 
+        // TA-S6.1b — Fire-and-forget: dispara lucid-deep-reading em modo warmup-only
+        // (sem ipe_cycle_id). Gera deep reading inicial baseado nos warmups, com pergunta
+        // Lei 6 puxando pra primeira pill. Roda em background — não bloqueia o response.
+        const triggerWarmupDeepReading = async () => {
+          try {
+            const resp = await fetch(`${supabase_url}/functions/v1/lucid-deep-reading`, {
+              method: "POST",
+              headers: {
+                "Authorization": auth_header,
+                "apikey": anon_key,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({}),
+            });
+            if (!resp.ok) {
+              const txt = await resp.text().catch(() => "");
+              console.error(`[warmup-eco] deep reading trigger HTTP ${resp.status}:`, txt.slice(0, 200));
+            } else {
+              console.log("[warmup-eco] deep reading trigger ok");
+            }
+          } catch (err) {
+            console.error("[warmup-eco] deep reading trigger failed:", err);
+          }
+        };
+        const waitUntil = (globalThis as any).EdgeRuntime?.waitUntil;
+        if (typeof waitUntil === "function") {
+          waitUntil(triggerWarmupDeepReading());
+        } else {
+          // Fallback: fire-and-forget sem waitUntil
+          triggerWarmupDeepReading().catch(() => {});
+        }
+
         controller.enqueue(encodeSSE({
           type: "done",
           echo_id: insertedEcho?.id ?? null,

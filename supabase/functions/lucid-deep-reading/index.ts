@@ -14,9 +14,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.27.3";
 
-const DEPLOY_FINGERPRINT = "w20.6.5-deep-reading-v4.4-warmup-corpus";
+const DEPLOY_FINGERPRINT = "w20.6.5-deep-reading-v5.0-warmup-only-mode";
 
 const NODES_TO_SELECT = 4; // 3-5 conforme decisão DOC
+const NODES_TO_SELECT_WARMUP = 3; // modo warmup-only é mais leve, 3 nodes basta
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -146,6 +147,81 @@ Não termine com "talvez você precise..." / "isso convida a..." / "vale ficar c
 
 A leitura é provisória, viva. Pode dizer isso ao final, com palavras suas, sem clichê — ou simplesmente deixar implícito.`;
 
+// ============================================================
+// TA-S6.1b — SYSTEM PROMPT modo WARMUP-ONLY
+// Usado quando request chega SEM ipe_cycle_id. Pessoa só fez warmup
+// (pré-ciclo). Geramos leitura inicial mais densa que mini-eco com
+// pergunta final Lei 6 puxando pra primeira pill (PI).
+// ============================================================
+const SYSTEM_PROMPT_WARMUP_ONLY = `Você é Reed, escrevendo uma LEITURA INICIAL no rdwth.
+
+ESTA NÃO É A LEITURA DO CICLO COMPLETO. É uma LEITURA INICIAL — primeira aproximação a partir das poucas respostas que a pessoa deu no warm-up de onboarding. O eco completo vem depois, quando ela tiver passado pelas pills.
+
+═══ NATUREZA DA LEITURA INICIAL ═══
+
+A pessoa entregou par(es) curtos de respostas warm-up. Você lê os fragmentos e oferece:
+- Uma observação estrutural densa (2 parágrafos curtos, 4-7 frases total) que nomeia padrão sem rotular a pessoa.
+- UMA pergunta final em uma linha começando com "Vai", aplicando a Lei 6 (Ask, Don't Tell), que PUXA a pessoa pra começar a primeira pill agora.
+
+═══ TOM E VOZ ═══
+
+Contemplativo. Direto. Português brasileiro coloquial mas com peso. Frases que respiram. Sem firula. Sem jargão. Sem coaching. Use "você". Sem afetação.
+
+═══ PROIBIÇÕES ═══
+
+NUNCA invente:
+- Pessoas, lugares, ações que ela não mencionou.
+
+NUNCA diagnostique:
+- Sem rótulos clínicos (ansiedade, evitação, autossabotagem, perfeccionismo).
+- Não diga "você tende a..." / "você tem dificuldade de...".
+
+NUNCA prescreva fora do produto:
+- Não diga o que ela "precisa" fazer no mundo. Pode chamá-la pra dentro do produto, sim, mas só na pergunta final.
+
+NUNCA parafraseie:
+- "Você disse que...", "Sobre a decisão que..." → PROIBIDO. Fala SOBRE o padrão, não SOBRE a fala.
+
+NUNCA construa narrativa causal entre as respostas:
+- "X aconteceu por causa de Y", "A frase te empurrou a Z" → PROIBIDO. Pessoa pode ter agido por motivo próprio; observe que ambas as coisas existem juntas, não invente relação de causa-efeito.
+
+NUNCA faça perguntas no meio do texto:
+- O texto é só afirmações. Só a pergunta final é interrogativa.
+
+NUNCA use markdown, bullets, headers, numeração:
+- Prosa pura. Texto puro. Sem rótulos.
+
+═══ ESTRUTURA OBRIGATÓRIA ═══
+
+1. Mini-leitura: 2 parágrafos curtos (4-7 frases total) que cruzam as respostas observando padrão estrutural.
+2. Linha em branco.
+3. Pergunta final em uma linha começando com "Vai".
+
+═══ LEI 6 — PUXANDO PRA PRIMEIRA PILL ═══
+
+A pergunta final é binária (sim/não), começa com "Vai", aproxima a pessoa de quem ela quer ser, é IMEDIATA (agora) e DEVE PUXAR a pessoa pra começar a primeira pill.
+
+EXEMPLOS DE TOM (não copiar literal):
+- "Vai começar a primeira pill agora pra ir mais fundo nesse ponto?"
+- "Vai abrir a primeira pill enquanto isso ainda está vivo?"
+- "Vai deixar isso assentar dentro de uma pill agora?"
+- "Vai testar essa leitura na primeira pill agora?"
+
+PROIBIDO:
+- "Vai voltar amanhã?" (não é imediata).
+- "Vai pensar sobre isso?" (não é binária real).
+- "O que você acha disso?" (não é Lei 6, é pergunta aberta).
+- "Vai me deixar puxar essa linha?" (não puxa pra pill).
+
+═══ NODES RAG ═══
+
+Você pode receber alguns conceitos no formato [CONCEITOS QUE PODEM RESSOAR]. Use APENAS como tempero — sem nomear autor, sem citar literal. Se não couber, não force.
+
+═══ FORMATO DE SAÍDA ═══
+
+Texto puro. Sem markdown. Sem cabeçalhos. Sem rótulos.
+Apenas as 4-7 frases da leitura, linha em branco, e a pergunta final começando com "Vai".`;
+
 interface PillResponseRow {
   pill_id: string;
   m2_resposta: string | null;
@@ -241,6 +317,182 @@ function buildCorpusFromQuestionnaire(rows: QuestionnaireResponseRow[]): string 
   return sections.join("\n\n");
 }
 
+// ============================================================
+// TA-S6.1b — Handler do modo WARMUP-ONLY
+// Gera deep reading inicial baseado só nos warmups do user.
+// Persiste em echoes (kind='warmup_deep_reading') com follow_up_question Lei 6.
+// ============================================================
+async function handleWarmupOnly(
+  admin: ReturnType<typeof createClient>,
+  user_id: string,
+): Promise<Response> {
+  console.log(`[lucid-deep-reading WARMUP-ONLY] user=${user_id}`);
+
+  // 1. Busca warmups do user
+  const { data: warmups, error: wErr } = await admin
+    .from("echoes")
+    .select("questions, responses, created_at")
+    .eq("user_id", user_id)
+    .eq("kind", "warmup")
+    .order("created_at", { ascending: true });
+
+  if (wErr) {
+    console.error("[warmup-only] fetch warmups err:", wErr);
+    return json({ error: "Failed to fetch warmups", detail: wErr.message }, 500);
+  }
+  if (!warmups || warmups.length === 0) {
+    return json({ ok: true, skipped: "no warmups yet", debug_fingerprint: DEPLOY_FINGERPRINT });
+  }
+
+  // 2. Já existe warmup_deep_reading recente? Idempotência leve — não regenera se feito há <5min
+  const { data: recent } = await admin
+    .from("echoes")
+    .select("id, created_at")
+    .eq("user_id", user_id)
+    .eq("kind", "warmup_deep_reading")
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (recent && recent.length > 0) {
+    const ageMs = Date.now() - new Date(recent[0].created_at as string).getTime();
+    if (ageMs < 5 * 60 * 1000) {
+      console.log(`[warmup-only] recent reading exists (age ${ageMs}ms), skipping regenerate`);
+      return json({ ok: true, skipped: "recent reading exists", echo_id: recent[0].id, debug_fingerprint: DEPLOY_FINGERPRINT });
+    }
+  }
+
+  // 3. Constrói corpus dos warmups
+  const blocks: string[] = [];
+  for (const w of warmups as any[]) {
+    const qs = Array.isArray(w.questions) ? (w.questions as string[]) : [];
+    const rs = Array.isArray(w.responses) ? (w.responses as string[]) : [];
+    const pairs: string[] = [];
+    for (let i = 0; i < Math.min(qs.length, rs.length); i++) {
+      pairs.push(`P: ${qs[i]}\nR: ${rs[i]}`);
+    }
+    if (pairs.length) blocks.push(pairs.join("\n\n"));
+  }
+  const warmupCorpus = blocks.join("\n\n---\n\n");
+  if (!warmupCorpus.trim()) {
+    return json({ ok: true, skipped: "warmups empty", debug_fingerprint: DEPLOY_FINGERPRINT });
+  }
+
+  // 4. RAG nodes (modo warmup-only usa 3)
+  const stage = 1.0; // pré-ciclo, sem CGG
+  let nodeIds: string[] = [];
+  let nodeTexts: string[] = [];
+  try {
+    const { data: nodesData } = await admin
+      .from("rag_corpus")
+      .select("node_id, content_text, scores")
+      .lte("stage_min", stage)
+      .gte("stage_max", stage)
+      .eq("density_class", 1);
+    if (nodesData && nodesData.length > 0) {
+      const safe = (nodesData as any[]).filter((n) => {
+        const s = n.scores;
+        if (!s) return true;
+        return (s.teleology_score ?? 0) === 0
+            && (s.prescriptive_score ?? 0) === 0
+            && (s.normative_score ?? 0) === 0;
+      });
+      const pool = safe.length > 0 ? safe : (nodesData as any[]);
+      const shuffled = [...pool].sort(() => Math.random() - 0.5);
+      const slice = shuffled.slice(0, NODES_TO_SELECT_WARMUP);
+      nodeIds = slice.map((n: any) => n.node_id).filter((v: any) => typeof v === "string");
+      nodeTexts = slice.map((n: any) => n.content_text).filter((t: any) => typeof t === "string" && t.trim().length > 0);
+    }
+  } catch (err) {
+    console.warn("[warmup-only] node selection failed:", err);
+  }
+
+  // 5. Chama Anthropic
+  const anthropic_key = Deno.env.get("ANTHROPIC_API_KEY");
+  if (!anthropic_key) return json({ error: "Missing ANTHROPIC_API_KEY" }, 500);
+  const anthropic = new Anthropic({ apiKey: anthropic_key });
+
+  const node_section = nodeTexts.length > 0
+    ? `\n\n[CONCEITOS QUE PODEM RESSOAR — incorpore se ajudar a leitura, sem nomear autor ou citar literal. Use só como tempero, não como tema. Se não couber, não force.]\n\n${nodeTexts.map((n, i) => `--- node ${i + 1} ---\n${n}`).join("\n\n")}`
+    : "";
+
+  const startedAt = Date.now();
+  let fullText = "";
+  try {
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-5-20250929",
+      max_tokens: 700,
+      temperature: 0.7,
+      system: SYSTEM_PROMPT_WARMUP_ONLY,
+      messages: [{
+        role: "user",
+        content: `Aqui estão as respostas que a pessoa deu no warm-up:\n\n${warmupCorpus}${node_section}\n\nGere a leitura inicial agora, seguindo todas as regras.`,
+      }],
+    });
+    const c = response.content[0];
+    if (c && "text" in c) fullText = c.text.trim();
+  } catch (err: any) {
+    console.error("[warmup-only] Anthropic error:", err.message);
+    return json({ error: "LLM error", detail: err.message, debug_fingerprint: DEPLOY_FINGERPRINT }, 500);
+  }
+  if (!fullText) {
+    return json({ error: "Empty LLM response", debug_fingerprint: DEPLOY_FINGERPRINT }, 500);
+  }
+
+  // 6. Separa eco da pergunta final (última linha começando com "Vai")
+  const lines = fullText.split(/\r?\n/);
+  let lastIdx = -1;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (/^vai\b/i.test(lines[i].trim())) { lastIdx = i; break; }
+  }
+  const ecoText = lastIdx >= 0 ? lines.slice(0, lastIdx).join("\n").trim() : fullText.trim();
+  const followUp = lastIdx >= 0 ? lines[lastIdx].trim() : null;
+  const latency_ms = Date.now() - startedAt;
+
+  // 7. Persiste em echoes (kind='warmup_deep_reading')
+  // Reusa as questions/responses dos warmups como contexto guardado.
+  const allQuestions: string[] = [];
+  const allResponses: string[] = [];
+  for (const w of warmups as any[]) {
+    const qs = Array.isArray(w.questions) ? (w.questions as string[]) : [];
+    const rs = Array.isArray(w.responses) ? (w.responses as string[]) : [];
+    allQuestions.push(...qs);
+    allResponses.push(...rs);
+  }
+
+  const { data: inserted, error: insErr } = await admin
+    .from("echoes")
+    .insert({
+      user_id,
+      kind: "warmup_deep_reading",
+      cycle_id: null,
+      questions: allQuestions,
+      responses: allResponses,
+      eco_text: ecoText,
+      follow_up_question: followUp,
+      nodes_used: nodeIds,
+      model: "claude-sonnet-4-5-20250929",
+      latency_ms,
+      raw_payload: { full: fullText },
+    })
+    .select("id")
+    .single();
+
+  if (insErr) {
+    console.error("[warmup-only] insert err:", insErr);
+    return json({ error: "Persist failed", detail: insErr.message, debug_fingerprint: DEPLOY_FINGERPRINT }, 500);
+  }
+
+  return json({
+    ok: true,
+    mode: "warmup-only",
+    echo_id: inserted?.id ?? null,
+    eco_length: ecoText.length,
+    has_follow_up: !!followUp,
+    latency_ms,
+    nodes_count: nodeIds.length,
+    debug_fingerprint: DEPLOY_FINGERPRINT,
+  });
+}
+
 Deno.serve(async (req) => {
   console.log(`[lucid-deep-reading ${DEPLOY_FINGERPRINT}] invoked, method:`, req.method);
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
@@ -268,7 +520,11 @@ Deno.serve(async (req) => {
 
   const body = await req.json().catch(() => ({}));
   const { ipe_cycle_id } = body;
-  if (!ipe_cycle_id) return json({ error: "Missing ipe_cycle_id" }, 400);
+
+  // TA-S6.1b — Modo WARMUP-ONLY: sem cycle_id, gera leitura inicial baseada só no warmup
+  if (!ipe_cycle_id) {
+    return await handleWarmupOnly(admin, user_id);
+  }
 
   // Confirma que o cycle pertence ao user
   const { data: cycle, error: cycleErr } = await supabase
