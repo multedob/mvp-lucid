@@ -118,23 +118,27 @@ export default function SystemTerminalLine({
         minHeight: `${Math.round(fontSize * 1.7)}px`,
       }}
     >
-      <span aria-hidden="true">{"> "}</span>
-      {displayed}
-      {showCursor && started && (
-        <span
-          aria-hidden="true"
-          style={{
-            display: "inline-block",
-            marginLeft: 2,
-            opacity: 1,
-            animation: done
-              ? "rdwth-systemterminalline-cursor 0.6s steps(2) 2 forwards"
-              : "none",
-          }}
-        >
-          █
-        </span>
-      )}
+      {started ? (
+        <>
+          <span aria-hidden="true">{"> "}</span>
+          {displayed}
+          {showCursor && (
+            <span
+              aria-hidden="true"
+              style={{
+                display: "inline-block",
+                marginLeft: 2,
+                opacity: 1,
+                animation: done
+                  ? "rdwth-systemterminalline-cursor 0.6s steps(2) 2 forwards"
+                  : "none",
+              }}
+            >
+              █
+            </span>
+          )}
+        </>
+      ) : null}
     </div>
   );
 }
