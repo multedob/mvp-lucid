@@ -12,6 +12,7 @@ import OnboardingLetter from "./pages/OnboardingLetter";
 import AgeCheck from "./pages/AgeCheck";
 import Consent from "./pages/Consent";
 import Onboarding from "./pages/Onboarding";
+import Warmup from "./pages/Warmup";
 import Pills from "./pages/Pills";
 import PillFlow from "./pages/pill/PillFlow";
 import Context, { ContextSystem } from "./pages/Context";
@@ -81,7 +82,7 @@ function RootRedirect() {
       // ── Onboarding state via Supabase (single source of truth) ───
       const { data: ob } = await (supabase
         .from("user_onboarding_state") as any)
-        .select("age_confirmed_at, consent_given_at, letter_seen_at, name_set_at")
+        .select("age_confirmed_at, consent_given_at, letter_seen_at, name_set_at, warmup_completed_at")
         .eq("user_id", session.user.id)
         .maybeSingle();
 
@@ -105,6 +106,13 @@ function RootRedirect() {
 
       if (!ob?.name_set_at) {
         setRedirectTo("/onboarding");
+        setChecking(false);
+        return;
+      }
+
+      // AFC ONB-6 — warmup como step antes da Home/ciclo
+      if (!ob?.warmup_completed_at) {
+        setRedirectTo("/warmup");
         setChecking(false);
         return;
       }
@@ -190,6 +198,7 @@ const App = () => (
           <Route path="/consent" element={<Consent />} />
           <Route path="/letter" element={<OnboardingLetter />} />
           <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/warmup" element={<ProtectedRoute><Warmup /></ProtectedRoute>} />
           <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
           <Route path="/pills" element={<ProtectedRoute><Pills /></ProtectedRoute>} />
           <Route path="/pill/:pillId" element={<ProtectedRoute><PillFlow /></ProtectedRoute>} />

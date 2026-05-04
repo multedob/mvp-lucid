@@ -9,7 +9,8 @@ export type OnboardingStep =
   | "age_confirmed"
   | "consent_given"
   | "letter_seen"
-  | "name_set";
+  | "name_set"
+  | "warmup_completed"; // AFC ONB-6
 
 export interface OnboardingState {
   user_id: string;
@@ -17,6 +18,7 @@ export interface OnboardingState {
   consent_given_at: string | null;
   letter_seen_at: string | null;
   name_set_at: string | null;
+  warmup_completed_at: string | null; // AFC ONB-6
   created_at: string;
   updated_at: string;
 }
@@ -34,7 +36,8 @@ interface UseOnboardingStateReturn {
   isConsentGiven: boolean;
   isLetterSeen: boolean;
   isNameSet: boolean;
-  /** True quando todos os 4 steps estão concluídos. */
+  isWarmupCompleted: boolean;
+  /** True quando todos os 5 steps estão concluídos. */
   isOnboardingComplete: boolean;
 }
 
@@ -55,7 +58,7 @@ export function useOnboardingState(): UseOnboardingStateReturn {
 
       const { data, error: fetchError } = await (supabase
         .from("user_onboarding_state") as any)
-        .select("*")
+        .select("user_id, age_confirmed_at, consent_given_at, letter_seen_at, name_set_at, warmup_completed_at, created_at, updated_at")
         .eq("user_id", session.user.id)
         .maybeSingle();
 
@@ -127,11 +130,13 @@ export function useOnboardingState(): UseOnboardingStateReturn {
     isConsentGiven: !!state?.consent_given_at,
     isLetterSeen: !!state?.letter_seen_at,
     isNameSet: !!state?.name_set_at,
+    isWarmupCompleted: !!state?.warmup_completed_at,
     isOnboardingComplete:
       !!state?.age_confirmed_at &&
       !!state?.consent_given_at &&
       !!state?.letter_seen_at &&
-      !!state?.name_set_at,
+      !!state?.name_set_at &&
+      !!state?.warmup_completed_at,
   };
 }
 
