@@ -3,7 +3,7 @@
 // Par A do Banco v0.2 (#1 + #13). Streaming SSE pelo edge function warmup-eco.
 // Estados: q1 → q2 → streaming → done. "decidir depois" no canto inferior direito.
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { markOnboardingStep } from "@/hooks/useOnboardingState";
@@ -19,9 +19,33 @@ const QUESTIONS: [string, string] = [
   "O que alguém te disse recentemente que ficou voltando?",
 ];
 
-const INTRO_TEXT = "antes de começar, responda no seu ritmo — uma ou duas frases servem.";
+const INTRO_TEXT = "para começar, responda as perguntas. quanto mais completa melhor.";
 
 type Phase = "q1" | "q2" | "streaming" | "done";
+
+// Typewriter inline — texto aparece L→R, char por char.
+// Cursor ▌ visível enquanto digita, somem ao terminar.
+function Typewriter({ text, charDelayMs = 38 }: { text: string; charDelayMs?: number }) {
+  const [shown, setShown] = useState("");
+  const textRef = useRef(text);
+  useEffect(() => {
+    textRef.current = text;
+    setShown("");
+    let i = 0;
+    const interval = window.setInterval(() => {
+      i++;
+      setShown(text.slice(0, i));
+      if (i >= text.length) window.clearInterval(interval);
+    }, charDelayMs);
+    return () => window.clearInterval(interval);
+  }, [text, charDelayMs]);
+  return (
+    <>
+      {shown}
+      <span style={{ opacity: shown.length < text.length ? 0.5 : 0 }}>▌</span>
+    </>
+  );
+}
 
 export default function Warmup() {
   const navigate = useNavigate();
@@ -157,14 +181,18 @@ export default function Warmup() {
             <div
               style={{
                 fontFamily: "var(--r-font-sys)",
-                fontSize: 13,
-                lineHeight: 1.6,
+                fontWeight: 300,
+                fontSize: 11,
+                lineHeight: 1.7,
+                letterSpacing: "0.04em",
                 color: "var(--r-voice-sys)",
                 marginBottom: 28,
                 textAlign: "left",
+                whiteSpace: "pre-wrap",
               }}
             >
-              {INTRO_TEXT}
+              <span aria-hidden="true">{"> "}</span>
+              <Typewriter text={INTRO_TEXT} />
             </div>
 
             <div style={{ marginBottom: 28 }}>

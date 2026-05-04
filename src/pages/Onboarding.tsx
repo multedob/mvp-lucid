@@ -112,7 +112,7 @@ export default function Onboarding() {
           opacity: reedReady ? 1 : 0,
           transition: "opacity 800ms ease-in",
         }}>
-          como Reed deve chamar você?
+          como eu devo te chamar?
         </div>
 
         <div style={{
