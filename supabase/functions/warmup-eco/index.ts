@@ -20,8 +20,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.27.3";
 
-const DEPLOY_FINGERPRINT = "afc-onb-6-warmup-eco-v2-faster";
-const NODES_TO_SELECT = 2; // v2: reduzido de 4 → 2 (latency optimization)
+const DEPLOY_FINGERPRINT = "afc-onb-6-warmup-eco-v3-causal-guard";
+const NODES_TO_SELECT = 3; // v3: 2 → 3 (qualidade — Bruno aceita ~ms a mais)
 const MODEL_ID = "claude-sonnet-4-5-20250929";
 const MAX_TOKENS = 600;
 const TEMPERATURE = 0.7;
@@ -140,6 +140,27 @@ NUNCA faça perguntas no meio do eco:
 - O eco é apenas afirmações. Sem interrogações intermediárias.
 - A ÚNICA pergunta permitida em todo o output é a pergunta FINAL, em uma linha separada, começando com "Vai".
 - Frases como "por que parou?", "o que você fez?", "será que...?" no meio do eco → PROIBIDO.
+
+═══ NUNCA CONSTRUA NARRATIVA CAUSAL ENTRE AS DUAS RESPOSTAS ═══
+
+CRUZAR as duas respostas significa OBSERVAR que ambas existem juntas e mostrar PADRÃO ESTRUTURAL — NÃO construir relação de causa-efeito.
+
+PROIBIDO inferir ou implicar:
+- "Você fez X por causa de Y."
+- "X aconteceu DEPOIS QUE Y."
+- "A frase Y te empurrou / fez você / virou Z."
+- "Você parou X em resposta a Y."
+- "A palavra grudou e virou decisão."
+
+A pessoa pode ter parado de fazer algo POR MOTIVOS PRÓPRIOS, e separadamente alguém disse algo. Não há evidência de causalidade — não invente.
+
+PADRÃO ESTRUTURAL OK (observação sem causalidade):
+- "ambas envolvem decisões que ainda não fecharam por dentro."
+- "as duas trazem algo que veio antes da explicação."
+- "tanto a decisão quanto a frase pedem espaço pra assentar."
+- "as duas têm em comum [coisa estrutural observável], sem que uma cause a outra."
+
+Se não consegue ver padrão estrutural sem inferir causa-efeito, descreva CADA UMA brevemente e nomeie o que tem em COMUM (não em cadeia).
 
 ═══ ESTRUTURA OBRIGATÓRIA ═══
 
