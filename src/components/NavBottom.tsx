@@ -32,14 +32,19 @@ const PULSE_KEYFRAMES = `
     text-shadow: 0 0 12px rgba(120, 104, 184, 0.9), 0 0 24px rgba(155, 130, 240, 0.5);
   }
   25%, 75% {
-    opacity: 0.55;
-    color: #7868B8;
-    text-shadow: 0 0 4px rgba(120, 104, 184, 0.25);
+    opacity: 0.5;
+    color: #6E5BAE;
+    text-shadow: 0 0 3px rgba(120, 104, 184, 0.2);
   }
   50% {
     opacity: 1;
-    color: #B197FC;
-    text-shadow: 0 0 16px rgba(177, 151, 252, 1), 0 0 32px rgba(155, 130, 240, 0.7);
+    color: #D4C5FF;
+    text-shadow:
+      0 0 6px #ffffff,
+      0 0 18px rgba(212, 197, 255, 1),
+      0 0 36px rgba(177, 151, 252, 0.95),
+      0 0 54px rgba(155, 130, 240, 0.7),
+      0 0 72px rgba(120, 104, 184, 0.4);
   }
 }
 .rdwth-navbottom-pulse-once span {

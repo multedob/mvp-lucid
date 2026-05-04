@@ -14,7 +14,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Anthropic from "https://esm.sh/@anthropic-ai/sdk@0.27.3";
 
-const DEPLOY_FINGERPRINT = "w20.6.5-deep-reading-v4.3-anon-via-admin";
+const DEPLOY_FINGERPRINT = "w20.6.5-deep-reading-v4.4-warmup-corpus";
 
 const NODES_TO_SELECT = 4; // 3-5 conforme decisão DOC
 
@@ -349,7 +349,36 @@ Deno.serve(async (req) => {
   const pillsCorpus = buildCorpusFromPills((pills ?? []) as PillResponseRow[]);
   const qCorpus = buildCorpusFromQuestionnaire(questionnaire);
 
-  if (!pillsCorpus && !qCorpus && !thirdPartyCorpus) {
+  // AFC ONB-6 §4.6 — warm-ups entram como camada leve de fundação (pré-ciclo).
+  // NÃO contam como ciclo. NÃO são tema central. Só ressoam se aparecerem juntas
+  // com as pills/questionário deste ciclo.
+  let warmupCorpus = "";
+  try {
+    const { data: warmups } = await admin
+      .from("echoes")
+      .select("questions, responses, created_at")
+      .eq("user_id", user_id)
+      .eq("kind", "warmup")
+      .order("created_at", { ascending: true });
+
+    if (warmups && warmups.length > 0) {
+      const blocks: string[] = [];
+      for (const w of warmups as any[]) {
+        const qs = Array.isArray(w.questions) ? (w.questions as string[]) : [];
+        const rs = Array.isArray(w.responses) ? (w.responses as string[]) : [];
+        const pairs: string[] = [];
+        for (let i = 0; i < Math.min(qs.length, rs.length); i++) {
+          pairs.push(`P: ${qs[i]}\nR: ${rs[i]}`);
+        }
+        if (pairs.length) blocks.push(pairs.join("\n\n"));
+      }
+      warmupCorpus = blocks.join("\n\n---\n\n");
+    }
+  } catch (err) {
+    console.warn("[lucid-deep-reading] warmup fetch failed:", err);
+  }
+
+  if (!pillsCorpus && !qCorpus && !thirdPartyCorpus && !warmupCorpus) {
     return json({
       ok: true,
       skipped: "no data yet",
@@ -362,8 +391,9 @@ Deno.serve(async (req) => {
   if (pillsCorpus) sections.push(`=== O QUE A PESSOA DISSE NAS PILLS ===\n${pillsCorpus}`);
   if (qCorpus) sections.push(`=== O QUE A PESSOA DISSE NO QUESTIONÁRIO ===\n${qCorpus}`);
   if (thirdPartyCorpus) sections.push(`=== O QUE PESSOAS PRÓXIMAS DESCREVERAM (perspectiva externa) ===\n${thirdPartyCorpus}`);
+  if (warmupCorpus) sections.push(`=== RESPOSTAS DO WARM-UP (pré-ciclo, camada leve de fundação — NÃO trate como tema central; só use se ressoar com o que aparece nas pills/questionário) ===\n${warmupCorpus}`);
   const corpus = sections.join("\n\n");
-  console.log(`[lucid-deep-reading] corpus length: ${corpus.length} (third_party: ${thirdPartyCorpus.length} chars)`);
+  console.log(`[lucid-deep-reading] corpus length: ${corpus.length} (third_party: ${thirdPartyCorpus.length} chars, warmup: ${warmupCorpus.length} chars)`);
 
   // Wave 14 v3 — seleção silenciosa de nodes do RAG (3-5 nodes filosóficos)
   const cgg = await fetchCgg(supabase, user_id);
