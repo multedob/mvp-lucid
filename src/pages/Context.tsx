@@ -648,7 +648,36 @@ export default function Context() {
         .in("status", ["pills", "complete", "questionnaire"])
         .order("cycle_number", { ascending: true });
 
-      if (!ipeCycles || ipeCycles.length === 0) { setLoading(false); return; }
+      // TA-S6.1b — Quando user não tem ciclo, mostra warmup_deep_reading como leitura inicial
+      if (!ipeCycles || ipeCycles.length === 0) {
+        const { data: warmupDeep } = await (supabase as any)
+          .from("echoes")
+          .select("id, eco_text, follow_up_question, created_at")
+          .eq("user_id", session.user.id)
+          .eq("kind", "warmup_deep_reading")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (warmupDeep && warmupDeep.eco_text) {
+          const ecoText: string = warmupDeep.eco_text ?? "";
+          const followUp: string | null = warmupDeep.follow_up_question ?? null;
+          const fullDeep = followUp ? `${ecoText}\n\n${followUp}` : ecoText;
+          const paragraphs = ecoText.split("\n\n").filter(Boolean);
+          const description = paragraphs.slice(0, 2).join("\n\n");
+
+          setCycles([{
+            id: "L0",
+            ipeCycleId: "", // warmup-only — sem ciclo real
+            cycleNumber: 0,
+            description,
+            deep: fullDeep,
+            questionnaireRemaining: 0,
+          }]);
+        }
+        setLoading(false);
+        return;
+      }
 
       // Wave 14 — apenas deep_reading_text (incremental). Sem fallback pra cycles.llm_response
       // (esse legado tinha invenções/diagnósticos). Sem texto = mensagem de pending.
@@ -877,16 +906,18 @@ export default function Context() {
                 ))}
               </div>
 
-              {/* Terceiros */}
-              <div
-                onClick={handleOpenThirdParty}
-                style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
-              >
-                <div style={{ width: 1, height: 12, background: "var(--r-ghost)", flexShrink: 0 }} />
-                <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-muted)", letterSpacing: "0.06em" }}>
-                  terceiros
-                </span>
-              </div>
+              {/* Terceiros — escondido em leitura inicial (warmup-only, sem ciclo real) */}
+              {cycle && cycle.ipeCycleId && (
+                <div
+                  onClick={handleOpenThirdParty}
+                  style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
+                >
+                  <div style={{ width: 1, height: 12, background: "var(--r-ghost)", flexShrink: 0 }} />
+                  <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-muted)", letterSpacing: "0.06em" }}>
+                    terceiros
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
