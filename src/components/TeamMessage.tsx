@@ -5,13 +5,15 @@
 // Backend retorna a próxima mensagem que user nunca viu (priority DESC,
 // created_at ASC), e marca como vista (fire-and-forget).
 //
-// Lifetime de exibição (front-side, MAX_VIEWS = 3):
-// - Visit 1: fetch backend, salva em localStorage com viewCount=1, mostra
-// - Visit 2-3: lê cache local, incrementa viewCount, mostra (sem fetch)
-// - Visit 4+: limpa cache, faz fetch novo (próxima mensagem ou null)
+// Lifetime de exibição:
+// - Mostra 1 vez por user (backend marca como vista no GET)
+// - Durante a sessão atual, persiste mesmo após navegar entre telas e voltar
+//   (sessionStorage cacheia a resposta)
+// - Quando fecha a aba/navegador → sessão acaba, sessionStorage some, próxima
+//   sessão faz fetch novo (que provavelmente retorna null — já vista)
 //
-// Tipografia: voz fundadores (Plex Mono cor de identidade, sem prefixo `> ` nem typewriter).
-// Sem dismiss UI — visibility é controlada pela lógica de cache + backend.
+// Tipografia: voz fundadores (Plex Mono cor de identidade, sem prefixo `> `,
+// sem typewriter — mensagem do time é editorial, não voz sistema falando).
 //
 // Uso típico (banner topo da Home):
 //   <TeamMessage contextKey="home_first_visit" />
@@ -25,17 +27,12 @@ interface TeamMessageData {
   tone: string | null;
 }
 
-interface CachedTeamMessage extends TeamMessageData {
-  viewCount: number;
-}
-
 interface TeamMessageProps {
   contextKey: string;
 }
 
 const STYLE_ID = "rdwth-teammessage-styles";
-const STORAGE_KEY_PREFIX = "rdwth_team_message_cache_";
-const MAX_VIEWS = 3;
+const SESSION_KEY_PREFIX = "rdwth_team_message_session_";
 
 const styles = `
 @keyframes rdwth-teammessage-fade-in {
@@ -59,32 +56,27 @@ function injectStyles() {
   document.head.appendChild(styleEl);
 }
 
-function readCache(storageKey: string): CachedTeamMessage | null {
+type SessionCache =
+  | { kind: "message"; data: TeamMessageData }
+  | { kind: "empty" };
+
+function readSessionCache(storageKey: string): SessionCache | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(storageKey);
+    const raw = sessionStorage.getItem(storageKey);
     if (!raw) return null;
-    return JSON.parse(raw) as CachedTeamMessage;
+    return JSON.parse(raw) as SessionCache;
   } catch {
     return null;
   }
 }
 
-function writeCache(storageKey: string, cache: CachedTeamMessage): void {
+function writeSessionCache(storageKey: string, cache: SessionCache): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(storageKey, JSON.stringify(cache));
+    sessionStorage.setItem(storageKey, JSON.stringify(cache));
   } catch {
     // QuotaExceeded ou disabled — silencioso
-  }
-}
-
-function clearCache(storageKey: string): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.removeItem(storageKey);
-  } catch {
-    // silencioso
   }
 }
 
@@ -98,22 +90,21 @@ export default function TeamMessage({ contextKey }: TeamMessageProps) {
 
   useEffect(() => {
     let cancelled = false;
-    const storageKey = STORAGE_KEY_PREFIX + contextKey;
+    const storageKey = SESSION_KEY_PREFIX + contextKey;
 
-    // 1. Tenta cache primeiro
-    const cached = readCache(storageKey);
-    if (cached && cached.viewCount < MAX_VIEWS) {
-      setMessage({ id: cached.id, text: cached.text, tone: cached.tone });
+    // 1. Tenta sessionStorage primeiro — persiste durante a sessão atual
+    const cached = readSessionCache(storageKey);
+    if (cached) {
+      if (cached.kind === "message") {
+        setMessage(cached.data);
+      } else {
+        setMessage(null);
+      }
       setLoading(false);
-      writeCache(storageKey, { ...cached, viewCount: cached.viewCount + 1 });
       return;
     }
 
-    // 2. Cache esgotado ou inexistente — limpa e faz fetch
-    if (cached && cached.viewCount >= MAX_VIEWS) {
-      clearCache(storageKey);
-    }
-
+    // 2. Sem cache de sessão — fetch backend
     async function fetchMessage() {
       try {
         const { data, error } = await supabase.functions.invoke("get-team-message", {
@@ -125,6 +116,7 @@ export default function TeamMessage({ contextKey }: TeamMessageProps) {
         if (error) {
           console.warn("[TeamMessage] fetch error:", error);
           setMessage(null);
+          // Não cacheia erro — próxima carga tenta de novo
         } else if (data?.text && data?.id) {
           const newMessage: TeamMessageData = {
             id: data.id,
@@ -132,11 +124,13 @@ export default function TeamMessage({ contextKey }: TeamMessageProps) {
             tone: data.tone ?? null,
           };
           setMessage(newMessage);
-          // Cache: primeira visualização contada
-          writeCache(storageKey, { ...newMessage, viewCount: 1 });
+          // Cache pra resto da sessão (persiste em navegações entre telas)
+          writeSessionCache(storageKey, { kind: "message", data: newMessage });
         } else {
-          // { message: null } — user já viu todas, ou nenhuma ativa
+          // { message: null } — user já viu todas, ou nenhuma ativa pro contexto
           setMessage(null);
+          // Cacheia "verificado, sem mensagem" pra evitar refetch na sessão
+          writeSessionCache(storageKey, { kind: "empty" });
         }
       } catch (err) {
         if (cancelled) return;
