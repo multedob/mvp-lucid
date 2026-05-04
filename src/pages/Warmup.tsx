@@ -29,7 +29,7 @@ const QUESTIONS: [string, string] = [
   "O que alguém te disse recentemente que ficou voltando?",
 ];
 
-const INTRO_TEXT = "para começar, responda as perguntas. quanto mais completa melhor.";
+const INTRO_TEXT = "para começar, responda as perguntas. quanto mais completas melhor.";
 
 type Phase = "q1" | "q2" | "streaming" | "done";
 
