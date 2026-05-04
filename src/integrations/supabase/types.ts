@@ -388,6 +388,62 @@ export type Database = {
           },
         ]
       }
+      echoes: {
+        Row: {
+          created_at: string
+          cycle_id: string | null
+          eco_text: string
+          follow_up_question: string | null
+          id: string
+          kind: string
+          latency_ms: number | null
+          model: string
+          nodes_used: string[] | null
+          questions: Json
+          raw_payload: Json | null
+          responses: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          cycle_id?: string | null
+          eco_text: string
+          follow_up_question?: string | null
+          id?: string
+          kind: string
+          latency_ms?: number | null
+          model: string
+          nodes_used?: string[] | null
+          questions: Json
+          raw_payload?: Json | null
+          responses: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          cycle_id?: string | null
+          eco_text?: string
+          follow_up_question?: string | null
+          id?: string
+          kind?: string
+          latency_ms?: number | null
+          model?: string
+          nodes_used?: string[] | null
+          questions?: Json
+          raw_payload?: Json | null
+          responses?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "echoes_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "ipe_cycles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ipe_cycles: {
         Row: {
           completed_at: string | null
@@ -1234,6 +1290,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_onboarding_state: {
+        Row: {
+          age_confirmed_at: string | null
+          consent_given_at: string | null
+          created_at: string
+          letter_seen_at: string | null
+          name_set_at: string | null
+          updated_at: string
+          user_id: string
+          warmup_completed_at: string | null
+        }
+        Insert: {
+          age_confirmed_at?: string | null
+          consent_given_at?: string | null
+          created_at?: string
+          letter_seen_at?: string | null
+          name_set_at?: string | null
+          updated_at?: string
+          user_id: string
+          warmup_completed_at?: string | null
+        }
+        Update: {
+          age_confirmed_at?: string | null
+          consent_given_at?: string | null
+          created_at?: string
+          letter_seen_at?: string | null
+          name_set_at?: string | null
+          updated_at?: string
+          user_id?: string
+          warmup_completed_at?: string | null
+        }
+        Relationships: []
       }
       users: {
         Row: {
