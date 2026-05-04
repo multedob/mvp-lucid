@@ -1,7 +1,7 @@
 // src/pages/Warmup.tsx
 // AFC ONB-6 — Mini-Eco Warm-up
 // Par A do Banco v0.2 (#1 + #13). Streaming SSE pelo edge function warmup-eco.
-// Estados: questions → streaming → done. "decidir depois" no canto inferior direito.
+// Estados: q1 → q2 → streaming → done. "decidir depois" no canto inferior direito.
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -19,19 +19,35 @@ const QUESTIONS: [string, string] = [
   "O que alguém te disse recentemente que ficou voltando?",
 ];
 
-type Phase = "questions" | "streaming" | "done";
+const INTRO_TEXT = "antes de começar, responda no seu ritmo — uma ou duas frases servem.";
+
+type Phase = "q1" | "q2" | "streaming" | "done";
 
 export default function Warmup() {
   const navigate = useNavigate();
-  const [phase, setPhase] = useState<Phase>("questions");
+  const [phase, setPhase] = useState<Phase>("q1");
   const [answers, setAnswers] = useState<[string, string]>(["", ""]);
   const [eco, setEco] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const canContinue = answers.every((a) => a.trim().length > 0);
+  const currentIdx = phase === "q1" ? 0 : phase === "q2" ? 1 : -1;
+  const currentAnswer = currentIdx >= 0 ? answers[currentIdx] : "";
+  const canContinueQuestion = currentAnswer.trim().length > 0;
+
+  function handleQuestionContinue() {
+    if (!canContinueQuestion) return;
+    if (phase === "q1") {
+      track("warmup_q1_answered");
+      setPhase("q2");
+      return;
+    }
+    if (phase === "q2") {
+      track("warmup_q2_answered");
+      handleSubmit();
+    }
+  }
 
   async function handleSubmit() {
-    if (!canContinue) return;
     setEco("");
     setError(null);
     setPhase("streaming");
@@ -44,7 +60,7 @@ export default function Warmup() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
         setError("sessão expirou.");
-        setPhase("questions");
+        setPhase("q2");
         return;
       }
 
@@ -109,7 +125,7 @@ export default function Warmup() {
       const msg = err instanceof Error ? err.message : String(err);
       console.error("[Warmup] error:", msg);
       setError("algo travou no caminho. tenta de novo?");
-      setPhase("questions");
+      setPhase("q2");
       track("warmup_failed", { reason: msg });
     }
   }
@@ -120,12 +136,7 @@ export default function Warmup() {
     navigate("/home");
   }
 
-  function handleStartPills() {
-    track("warmup_to_pills");
-    navigate("/pills");
-  }
-
-  function handleGoHome() {
+  function handleContinueDone() {
     track("warmup_to_home");
     navigate("/home");
   }
@@ -141,7 +152,7 @@ export default function Warmup() {
 
       {/* Conteúdo */}
       <div className="r-scroll" style={{ flex: 1, padding: "24px 24px 64px" }}>
-        {phase === "questions" && (
+        {(phase === "q1" || phase === "q2") && (
           <>
             <div
               style={{
@@ -153,38 +164,42 @@ export default function Warmup() {
                 textAlign: "left",
               }}
             >
-              antes de começar, dois fragmentos.<br />
-              responda no seu ritmo — uma ou duas frases servem.
+              {INTRO_TEXT}
             </div>
 
-            {[0, 1].map((i) => (
-              <div key={i} style={{ marginBottom: 28 }}>
-                <div
-                  style={{
-                    fontFamily: "var(--r-font-ed)",
-                    fontWeight: 800,
-                    fontSize: 15,
-                    lineHeight: 1.5,
-                    color: "var(--r-text)",
-                    marginBottom: 12,
-                  }}
-                >
-                  {QUESTIONS[i]}
-                </div>
-                <textarea
-                  className="r-textarea"
-                  value={answers[i]}
-                  onChange={(e) => {
-                    const next: [string, string] = [...answers] as [string, string];
-                    next[i] = e.target.value;
-                    setAnswers(next);
-                  }}
-                  placeholder="..."
-                  rows={3}
-                  style={{ width: "100%", resize: "none", fontSize: 13 }}
-                />
+            <div style={{ marginBottom: 28 }}>
+              <div
+                style={{
+                  fontFamily: "var(--r-font-ed)",
+                  fontWeight: 800,
+                  fontSize: 15,
+                  lineHeight: 1.5,
+                  color: "var(--r-text)",
+                  marginBottom: 12,
+                }}
+              >
+                {QUESTIONS[currentIdx]}
               </div>
-            ))}
+              <textarea
+                className="r-textarea"
+                value={currentAnswer}
+                onChange={(e) => {
+                  const next: [string, string] = [...answers] as [string, string];
+                  next[currentIdx] = e.target.value;
+                  setAnswers(next);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                    e.preventDefault();
+                    handleQuestionContinue();
+                  }
+                }}
+                placeholder="..."
+                rows={3}
+                autoFocus
+                style={{ width: "100%", resize: "none", fontSize: 13 }}
+              />
+            </div>
 
             {error && (
               <div
@@ -201,13 +216,13 @@ export default function Warmup() {
             )}
 
             <div
-              onClick={canContinue ? handleSubmit : undefined}
+              onClick={canContinueQuestion ? handleQuestionContinue : undefined}
               style={{
                 display: "flex",
                 alignItems: "center",
                 gap: 10,
-                cursor: canContinue ? "pointer" : "default",
-                opacity: canContinue ? 1 : 0.3,
+                cursor: canContinueQuestion ? "pointer" : "default",
+                opacity: canContinueQuestion ? 1 : 0.3,
                 marginTop: 16,
               }}
             >
@@ -258,7 +273,7 @@ export default function Warmup() {
             {phase === "done" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 24 }}>
                 <div
-                  onClick={handleStartPills}
+                  onClick={handleContinueDone}
                   style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
                 >
                   <div style={{ width: 1, height: 13, background: "var(--r-telha)", flexShrink: 0 }} />
@@ -271,24 +286,7 @@ export default function Warmup() {
                       letterSpacing: "0.06em",
                     }}
                   >
-                    começar pelas pills
-                  </span>
-                </div>
-                <div
-                  onClick={handleGoHome}
-                  style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
-                >
-                  <div style={{ width: 1, height: 13, background: "var(--r-ghost)", flexShrink: 0 }} />
-                  <span
-                    style={{
-                      fontFamily: "var(--r-font-sys)",
-                      fontWeight: 300,
-                      fontSize: 11,
-                      color: "var(--r-muted)",
-                      letterSpacing: "0.06em",
-                    }}
-                  >
-                    voltar pra home
+                    continuar
                   </span>
                 </div>
               </div>
@@ -297,8 +295,8 @@ export default function Warmup() {
         )}
       </div>
 
-      {/* "decidir depois" — discreto, canto inferior direito (só em questions) */}
-      {phase === "questions" && (
+      {/* "decidir depois" — discreto, canto inferior direito (só nas perguntas) */}
+      {(phase === "q1" || phase === "q2") && (
         <div
           onClick={handleSkip}
           style={{

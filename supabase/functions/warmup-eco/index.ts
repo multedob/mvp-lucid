@@ -127,6 +127,11 @@ NUNCA aponte mecanicamente:
 - Não conte ocorrências, não inventário ("nas duas respostas aparece...").
 - Não numere, não use bullets.
 
+NUNCA faça perguntas no meio do eco:
+- O eco é apenas afirmações. Sem interrogações intermediárias.
+- A ÚNICA pergunta permitida em todo o output é a pergunta FINAL, em uma linha separada, começando com "Vai".
+- Frases como "por que parou?", "o que você fez?", "será que...?" no meio do eco → PROIBIDO.
+
 ═══ ESTRUTURA OBRIGATÓRIA ═══
 
 1. Mini-eco: 3 a 5 frases curtas que cruzam os dois fragmentos e nomeiam o padrão.
