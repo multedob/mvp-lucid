@@ -10,6 +10,16 @@ import { markOnboardingStep } from "@/hooks/useOnboardingState";
 import { getToday } from "@/lib/api";
 import { track } from "@/lib/analytics";
 
+// Telemetria one-time helper — evita disparo duplicado em React strict mode / re-renders.
+function useOnceTrack(eventName: string, props?: Record<string, unknown>) {
+  const fired = useRef(false);
+  useEffect(() => {
+    if (fired.current) return;
+    fired.current = true;
+    track(eventName, props);
+  }, [eventName, props]);
+}
+
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
@@ -53,6 +63,18 @@ export default function Warmup() {
   const [answers, setAnswers] = useState<[string, string]>(["", ""]);
   const [eco, setEco] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  // Telemetria — chegada na tela
+  useOnceTrack("warmup_started");
+
+  // Telemetria — eco completamente revelado (phase done)
+  const revealedRef = useRef(false);
+  useEffect(() => {
+    if (phase === "done" && !revealedRef.current) {
+      revealedRef.current = true;
+      track("minieco_revealed", { eco_length: eco.length });
+    }
+  }, [phase, eco.length]);
 
   const currentIdx = phase === "q1" ? 0 : phase === "q2" ? 1 : -1;
   const currentAnswer = currentIdx >= 0 ? answers[currentIdx] : "";
@@ -162,7 +184,9 @@ export default function Warmup() {
 
   function handleContinueDone() {
     track("warmup_to_home");
-    navigate("/home");
+    track("frame_completed");
+    // AFC ONB-6/7 — sinaliza pra Home disparar pulse roxo único na NavBottom
+    navigate("/home", { state: { warmupJustCompleted: true } });
   }
 
   return (

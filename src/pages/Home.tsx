@@ -11,7 +11,7 @@
 // saudação aparece imediatamente, typewriter visível desde o começo.
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { getToday } from "@/lib/api";
 import { useUserName } from "@/hooks/useUserName";
 import NavBottom from "@/components/NavBottom";
@@ -33,8 +33,21 @@ function getGreeting(name: string | null): string | null {
 
 export default function Home() {
   const navigate = useNavigate();
+  const location = useLocation();
   const userName = useUserName();
   const [greeting, setGreeting] = useState<string | null>(null);
+
+  // AFC ONB-6/7 — pulse roxo único na NavBottom quando user vem de /warmup.
+  // Limpa state imediatamente pra não disparar de novo em refresh.
+  const [pulseNavOnce, setPulseNavOnce] = useState(false);
+  useEffect(() => {
+    const fromWarmup = (location.state as { warmupJustCompleted?: boolean } | null)?.warmupJustCompleted;
+    if (fromWarmup) {
+      setPulseNavOnce(true);
+      // Remove state da history pra evitar re-trigger em F5
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     const text = getGreeting(userName);
@@ -72,7 +85,7 @@ export default function Home() {
       {/* Spacer — restante do canvas vazio */}
       <div style={{ flex: 1 }} />
 
-      <NavBottom active="home" />
+      <NavBottom active="home" pulseOnce={pulseNavOnce} />
 
     </div>
   );

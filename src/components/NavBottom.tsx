@@ -3,6 +3,7 @@
 // Mobile: 6 elementos equidistantes, mesma baseline (space-between)
 // Desktop: [reed] ... [pills · questionário · contexto · sistema] ... [○]
 
+import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useIsMobile } from '@/hooks/use-mobile'
 
@@ -10,12 +11,62 @@ type ActivePage = 'reed' | 'pills' | 'questionnaire' | 'context' | 'system' | 'h
 
 interface NavBottomProps {
   active?: ActivePage
+  /**
+   * AFC ONB-6 §4.2 + ONB-7 §1.5 — quando true, NavBottom recebe respiração breve
+   * em cor de função (#7868B8) por UM único ciclo (3.5s, 100%↔75%, ease-in-out simétrico).
+   * Exceção à regra single-target. Marca cognitivamente que a barra ficou disponível.
+   */
+  pulseOnce?: boolean
 }
 
-export default function NavBottom({ active = 'none' }: NavBottomProps) {
+const PULSE_STYLE_ID = 'rdwth-navbottom-pulse-once'
+const PULSE_DURATION_MS = 3500
+const PULSE_KEYFRAMES = `
+@keyframes rdwth-navbottom-pulse-once {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.75; }
+}
+.rdwth-navbottom-pulse-once span {
+  color: #7868B8 !important;
+  animation: rdwth-navbottom-pulse-once 3.5s cubic-bezier(0.4, 0, 0.6, 1) 1 !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rdwth-navbottom-pulse-once span {
+    animation: none !important;
+  }
+}
+`
+
+function injectPulseStyles() {
+  if (typeof document === 'undefined') return
+  if (document.getElementById(PULSE_STYLE_ID)) return
+  const styleEl = document.createElement('style')
+  styleEl.id = PULSE_STYLE_ID
+  styleEl.textContent = PULSE_KEYFRAMES
+  document.head.appendChild(styleEl)
+}
+
+export default function NavBottom({ active = 'none', pulseOnce = false }: NavBottomProps) {
   const navigate = useNavigate()
   const isMobile = useIsMobile()
   const fontSize = 'clamp(9px, 2.6vw, 11px)'
+
+  // AFC ONB-6/7 — respiração única na transição warmup → home
+  const pulseRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!pulseOnce) return
+    injectPulseStyles()
+    const el = pulseRef.current
+    if (!el) return
+    el.classList.add('rdwth-navbottom-pulse-once')
+    const timer = window.setTimeout(() => {
+      el.classList.remove('rdwth-navbottom-pulse-once')
+    }, PULSE_DURATION_MS)
+    return () => {
+      window.clearTimeout(timer)
+      el.classList.remove('rdwth-navbottom-pulse-once')
+    }
+  }, [pulseOnce])
 
   const renderItem = (label: string, slug: ActivePage, path: string) => (
     <span
@@ -73,7 +124,7 @@ export default function NavBottom({ active = 'none' }: NavBottomProps) {
     return (
       <>
         <div className="r-line" />
-        <div style={{
+        <div ref={pulseRef} style={{
           height: 56,
           display: 'flex',
           alignItems: 'center',
@@ -95,7 +146,7 @@ export default function NavBottom({ active = 'none' }: NavBottomProps) {
   return (
     <>
       <div className="r-line" />
-      <div style={{
+      <div ref={pulseRef} style={{
         height: 56,
         display: 'flex',
         alignItems: 'center',

@@ -21,9 +21,32 @@ export default function AgeCheck() {
       <div style={{ padding: "0 24px 56px", flexShrink: 0 }}>
         <div style={{
           fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11,
-          color: "var(--r-muted)", letterSpacing: "0.04em", lineHeight: 1.8,
+          color: "var(--r-voice-sys)", letterSpacing: "0.04em", lineHeight: 1.8,
         }}>
-          rdwth está disponível para pessoas com 16 anos ou mais.
+          <span aria-hidden="true">{"> "}</span>rdwth está disponível para pessoas com 16 anos ou mais.
+        </div>
+
+        {/* B6 (auditoria) — feedback visual de opções desativadas após bloqueio */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 28, opacity: 0.35, pointerEvents: "none" }} aria-disabled="true">
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 1, height: 12, background: "var(--r-ghost)", flexShrink: 0 }} />
+            <span style={{
+              fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11,
+              color: "var(--r-muted)", letterSpacing: "0.06em",
+              textDecoration: "line-through",
+            }}>
+              tenho 16 anos ou mais
+            </span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 1, height: 12, background: "var(--r-ghost)", flexShrink: 0 }} />
+            <span style={{
+              fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11,
+              color: "var(--r-muted)", letterSpacing: "0.06em",
+            }}>
+              tenho menos de 16
+            </span>
+          </div>
         </div>
       </div>
       <div className="r-line" />
