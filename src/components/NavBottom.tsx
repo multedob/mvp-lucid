@@ -20,21 +20,29 @@ interface NavBottomProps {
 }
 
 const PULSE_STYLE_ID = 'rdwth-navbottom-pulse-once'
-// Bruno: subido pra 5s pra atenção sair da parte superior da tela e pegar o pulse.
-// ONB-7 §1.4 padrão é 3.5s — esta exceção fica registrada.
-const PULSE_DURATION_MS = 5000
+// Bruno: 6s pra dar tempo da atenção pegar.
+// Cor neon (luz própria) com glow via text-shadow — desvia da ONB-7 §1.4 (3.5s, opacity-only).
+// Cor base #9B82F0 (luminosidade subida do canônico #7868B8) pra dar sensação de luz.
+const PULSE_DURATION_MS = 6000
 const PULSE_KEYFRAMES = `
 @keyframes rdwth-navbottom-pulse-once {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.75; }
+  0%, 100% {
+    opacity: 1;
+    text-shadow: 0 0 12px rgba(120, 104, 184, 0.9), 0 0 24px rgba(155, 130, 240, 0.6);
+  }
+  50% {
+    opacity: 0.75;
+    text-shadow: 0 0 6px rgba(120, 104, 184, 0.5);
+  }
 }
 .rdwth-navbottom-pulse-once span {
-  color: #7868B8 !important;
-  animation: rdwth-navbottom-pulse-once 5s cubic-bezier(0.4, 0, 0.6, 1) 1 !important;
+  color: #9B82F0 !important;
+  animation: rdwth-navbottom-pulse-once 6s cubic-bezier(0.4, 0, 0.6, 1) 1 !important;
 }
 @media (prefers-reduced-motion: reduce) {
   .rdwth-navbottom-pulse-once span {
     animation: none !important;
+    color: #9B82F0 !important;
   }
 }
 `
