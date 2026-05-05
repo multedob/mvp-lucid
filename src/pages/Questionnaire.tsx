@@ -183,16 +183,22 @@ export default function Questionnaire() {
   const [submitting, setSubmitting] = useState(false)
   const [remainingQuestions, setRemainingQuestions] = useState<number | null>(null)
 
-  // Cascade: pergunta + input só aparecem APÓS voz do sistema (counter + empty state) terminar
-  // de entrar. Disparado uma vez quando phase deixa de ser 'loading'/'transition'.
-  const [contentVisible, setContentVisible] = useState(false)
+  // Cascade: pergunta + input só aparecem APÓS voz do sistema (counter + empty state)
+  // terminar de entrar. Ritmo igual ao warmup (pergunta após ~2700ms, input após 3300ms).
+  // Disparado uma vez quando phase deixa de ser 'loading'/'transition'.
+  const [questionVisible, setQuestionVisible] = useState(false)
+  const [inputVisible, setInputVisible] = useState(false)
   const cascadeArmedRef = useRef(false)
   useEffect(() => {
     if (cascadeArmedRef.current) return
     if (phase === 'loading' || phase === 'transition' || phase === 'done') return
     cascadeArmedRef.current = true
-    const t = window.setTimeout(() => setContentVisible(true), 1500)
-    return () => window.clearTimeout(t)
+    const t1 = window.setTimeout(() => setQuestionVisible(true), 2700)
+    const t2 = window.setTimeout(() => setInputVisible(true), 3300)
+    return () => {
+      window.clearTimeout(t1)
+      window.clearTimeout(t2)
+    }
   }, [phase])
   const [loadingScreenDone, setLoadingScreenDone] = useState(false)
 
@@ -542,12 +548,12 @@ export default function Questionnaire() {
         delayMs={700}
       />
 
-      {/* Pergunta — cascade: aparece após voz sistema (1500ms delay) */}
+      {/* Pergunta — cascade: aparece após voz sistema (~2700ms delay, igual warmup) */}
       <div
         className="r-scroll"
         style={{
           padding: '24px 24px 0',
-          opacity: contentVisible ? 1 : 0,
+          opacity: questionVisible ? 1 : 0,
           transition: 'opacity 500ms ease-in',
         }}
       >
@@ -567,12 +573,12 @@ export default function Questionnaire() {
         <div style={{ height: 24 }} />
       </div>
 
-      {/* Input — mesmo padrão das pills, cascade junto com a pergunta */}
-      <div className="r-line" style={{ opacity: contentVisible ? 1 : 0, transition: 'opacity 500ms ease-in' }} />
+      {/* Input — cascade após pergunta (~3300ms, igual warmup) */}
+      <div className="r-line" style={{ opacity: inputVisible ? 1 : 0, transition: 'opacity 500ms ease-in' }} />
       <div style={{
         padding: '12px 24px 10px',
         flexShrink: 0,
-        opacity: contentVisible ? 1 : 0,
+        opacity: inputVisible ? 1 : 0,
         transition: 'opacity 500ms ease-in',
       }}>
         <InvisibleTextarea

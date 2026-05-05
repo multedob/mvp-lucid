@@ -834,8 +834,8 @@ export default function Context() {
 
   const cycle = cycles[selectedIdx];
   const disclaimerText = userName
-    ? `${userName}, esta é uma leitura estrutural de um momento. Não define quem você é.`
-    : "Esta é uma leitura estrutural de um momento. Não define quem você é.";
+    ? `${userName}, aqui tem histórico de leituras dos seus ciclos e o canal para questionário de terceiros.`
+    : "Aqui tem histórico de leituras dos seus ciclos e o canal para questionário de terceiros.";
 
   return (
     <div className="r-screen">

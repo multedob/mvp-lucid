@@ -101,14 +101,14 @@ export default function Warmup() {
     }
   }, [phase, eco.length]);
 
-  // Cascata — reseta e dispara a cada mudança de phase
+  // Cascata — dispara UMA VEZ por categoria (questions / done).
+  // Evita fade-some-fade-aparece quando phase muda q1→q2 (mesma "categoria").
+  const cascadeArmedQuestionsRef = useRef(false);
+  const cascadeArmedDoneRef = useRef(false);
   useEffect(() => {
-    setShowQuestion(false);
-    setShowInput(false);
-    setShowButton(false);
-    setShowDoneButton(false);
-
     if (phase === "q1" || phase === "q2") {
+      if (cascadeArmedQuestionsRef.current) return; // já armado, não re-roda
+      cascadeArmedQuestionsRef.current = true;
       const t1 = window.setTimeout(() => setShowQuestion(true), CASCADE_QUESTION_MS);
       const t2 = window.setTimeout(() => setShowInput(true), CASCADE_INPUT_MS);
       const t3 = window.setTimeout(() => setShowButton(true), CASCADE_BUTTON_MS);
@@ -120,6 +120,8 @@ export default function Warmup() {
     }
 
     if (phase === "done") {
+      if (cascadeArmedDoneRef.current) return;
+      cascadeArmedDoneRef.current = true;
       const t = window.setTimeout(() => setShowDoneButton(true), CASCADE_DONE_BUTTON_MS);
       return () => window.clearTimeout(t);
     }
