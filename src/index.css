@@ -114,6 +114,8 @@ body {
 
 .r-screen {
   width: 100%;
+  max-width: 440px;
+  margin-inline: auto;
   min-height: 100svh;
   height: 100svh;
   background: var(--r-bg);

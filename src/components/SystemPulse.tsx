@@ -73,13 +73,19 @@ export default function SystemPulse({
 
     const previousColor = el.style.color;
     const previousAnimation = el.style.animation;
+    const previousFontWeight = el.style.fontWeight;
 
-    el.style.color = "var(--r-fn)";
+    // 2026-05-05 — desvio da ONB-7 §1.1 registrado: cor de função usa
+    // var(--r-telha) (mesma da identidade) em vez de var(--r-fn) (roxo).
+    // Distinção identidade vs função vira por peso negrito (700) + animação.
+    el.style.color = "var(--r-telha)";
+    el.style.fontWeight = "700";
     el.style.animation = `${ANIMATION_NAME} 20s ease-in-out infinite`;
 
     return () => {
       el.style.color = previousColor;
       el.style.animation = previousAnimation;
+      el.style.fontWeight = previousFontWeight;
     };
   }, [targetId, active]);
 

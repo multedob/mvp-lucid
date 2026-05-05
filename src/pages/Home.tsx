@@ -1,31 +1,31 @@
 // src/pages/Home.tsx
-// v3.4 — saudação + empty message em cadeia + team_message banner topo (B-S5.F2)
-// Saudação `> {nome}, {período}.` em IBM Plex Mono cinza terminal.
-// Empty message `> comece pela primeira pill.` em cadeia logo abaixo.
-// TeamMessage como banner editorial no topo (acima da saudação) — só
-// renderiza quando há mensagem ativa que user nunca viu (cache 3 visitas).
-// Clique no empty navega pra /pills (CTA via onAction — Bruno d39c861).
+// v3.6 — modo guiado marco-driven (B-S5.G3 + B-S5.H1 light)
 //
-// Fix v3.4: removido fade-in opacity da saudação que escondia o typewriter
-// (typewriter rodava invisível, texto aparecia completo via fade). Agora
-// saudação aparece imediatamente, typewriter visível desde o começo.
+// Sequência de aparição:
+// 1. TeamMessage (banner editorial topo) — só renderiza se houver mensagem ativa
+// 2. Saudação `> {nome}, {período}.` em IBM Plex Mono cinza (delayMs=700)
+// 3. Frase do marco-driven (substitui o EmptyStateMessage anterior)
+// 4. Pulse roxo (single ou rotação) no destino do marco — dispara após frase digitar
+//
+// useHomeGuide() detecta marco atual via Supabase e retorna {frase, target/targets}.
+// Se vem do warmup, NavBottom pulsa a respiração única antes do pulse single-target.
 
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getToday } from "@/lib/api";
 import { useUserName } from "@/hooks/useUserName";
 import NavBottom from "@/components/NavBottom";
-import EmptyStateMessage from "@/components/EmptyStateMessage";
 import SystemTerminalLine from "@/components/SystemTerminalLine";
+import SystemPulse from "@/components/SystemPulse";
+import SystemPulseRotation from "@/components/SystemPulseRotation";
 import TeamMessage from "@/components/TeamMessage";
+import useHomeGuide from "@/hooks/useHomeGuide";
 
 function getGreeting(name: string | null): string | null {
   const hour = new Date().getHours();
 
-  // Sem nome ainda — não saúda
   if (!name) return null;
 
-  // Formato terminal: nome primeiro, período em seguida (ONB-7 §1.7)
   if (hour >= 5 && hour < 12) return `${name}, bom dia.`;
   if (hour >= 12 && hour < 18) return `${name}, boa tarde.`;
   return `${name}, boa noite.`;
@@ -37,16 +37,21 @@ export default function Home() {
   const userName = useUserName();
   const [greeting, setGreeting] = useState<string | null>(null);
 
-  // AFC ONB-6/7 — pulse roxo único na NavBottom quando user vem de /warmup.
-  // Limpa state imediatamente pra não disparar de novo em refresh.
-  const [pulseNavOnce, setPulseNavOnce] = useState(false);
+  // Modo guiado marco-driven
+  const { guide } = useHomeGuide();
+
+  // Pulse só dispara DEPOIS da frase digitar (delayMs 1500 + ~700ms typewriter ≈ 2500ms)
+  const [pulseActive, setPulseActive] = useState(false);
+
   useEffect(() => {
-    const fromWarmup = (location.state as { warmupJustCompleted?: boolean } | null)?.warmupJustCompleted;
+    const fromWarmup = !!(location.state as { warmupJustCompleted?: boolean } | null)?.warmupJustCompleted;
     if (fromWarmup) {
-      setPulseNavOnce(true);
-      // Remove state da history pra evitar re-trigger em F5
       window.history.replaceState({}, document.title);
     }
+    // Single-target pulse depois da frase digitar (não usamos mais respiração única
+    // na NavBottom inteira — substituída por single-target/rotation no destino do marco)
+    const timer = setTimeout(() => setPulseActive(true), 2500);
+    return () => clearTimeout(timer);
   }, [location.state]);
 
   useEffect(() => {
@@ -74,18 +79,29 @@ export default function Home() {
         </div>
       )}
 
-      {/* Empty canvas — em cadeia após saudação terminar de digitar (delayMs=1500) */}
-      <EmptyStateMessage
-        text="comece pela primeira pill."
-        contextKey="home_first_visit"
-        delayMs={1500}
-        onAction={() => navigate("/pills")}
-      />
+      {/* Frase do marco-driven — em cadeia após saudação (delayMs=1500) */}
+      {guide && (
+        <div style={{ padding: "12px 24px 20px" }}>
+          <SystemTerminalLine text={guide.frase} delayMs={1500} />
+        </div>
+      )}
 
       {/* Spacer — restante do canvas vazio */}
       <div style={{ flex: 1 }} />
 
-      <NavBottom active="home" pulseOnce={pulseNavOnce} />
+      {/* Pulse no destino do marco (single ou rotação) — dispara depois da frase digitar */}
+      {guide?.target && pulseActive && (
+        <SystemPulse targetId={guide.target} active={true} />
+      )}
+      {guide?.targets && pulseActive && (
+        <SystemPulseRotation
+          targetIds={guide.targets}
+          perTargetMs={guide.perTargetMs ?? 7000}
+          active={true}
+        />
+      )}
+
+      <NavBottom active="home" />
 
     </div>
   );

@@ -1,60 +1,49 @@
 // src/components/NavBottom.tsx
 // Shared bottom navigation for all pages
-// Mobile: 6 elementos equidistantes, mesma baseline (space-between)
-// Desktop: [reed] ... [pills · questionário · contexto · sistema] ... [○]
+// Layout: 6 elementos equidistantes, mesma baseline (space-between) — em qualquer largura
+// (mobile e desktop usam mesmo layout pra MVP, decisão da Olivia em 2026-05-05).
+//
+// Pulse simplificado:
+// - pulseOnce (TA-S5.4 do Bruno) — respiração breve quando vem do warmup
+//   2026-05-05: cor mudou de roxo para telha (var(--r-telha)) por desvio da ONB-7 §1.1
+// - SystemPulse (single-target em looping) — usado por outros casos via componente
+//   externo, modo guiado canônico.
 
 import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useIsMobile } from '@/hooks/use-mobile'
 
 type ActivePage = 'reed' | 'pills' | 'questionnaire' | 'context' | 'system' | 'home' | 'settings' | 'none'
 
 interface NavBottomProps {
   active?: ActivePage
   /**
-   * AFC ONB-6 §4.2 + ONB-7 §1.5 — quando true, NavBottom recebe respiração breve
-   * em cor de função (#7868B8) por UM único ciclo (3.5s, 100%↔75%, ease-in-out simétrico).
-   * Exceção à regra single-target. Marca cognitivamente que a barra ficou disponível.
+   * AFC ONB-6 §4.2 + ONB-7 §1.4/§1.5 — quando true, NavBottom recebe respiração
+   * breve em cor de identidade telha por UM único ciclo (3.5s, opacidade 100%↔75%,
+   * ease-in-out simétrico). Marca cognitivamente que a barra ficou disponível.
    */
   pulseOnce?: boolean
 }
 
 const PULSE_STYLE_ID = 'rdwth-navbottom-pulse-once'
-// Bruno v3: 6s, 2 ciclos de respiração com variação de tonalidade.
-// Desvia da ONB-7 §1.4 (3.5s, opacity-only, 1 ciclo) — registrado.
-// Tonalidade respira entre canônico #7868B8 (vale) → #9B82F0 (médio) → #B197FC (peak neon).
-const PULSE_DURATION_MS = 6000
+const PULSE_DURATION_MS = 3500
+const PULSE_COLOR = 'var(--r-telha)'
+
 const PULSE_KEYFRAMES = `
 @keyframes rdwth-navbottom-pulse-once {
-  0%, 100% {
-    opacity: 1;
-    color: #9B82F0;
-    text-shadow: 0 0 12px rgba(120, 104, 184, 0.9), 0 0 24px rgba(155, 130, 240, 0.5);
-  }
-  25%, 75% {
-    opacity: 0.5;
-    color: #6E5BAE;
-    text-shadow: 0 0 3px rgba(120, 104, 184, 0.2);
-  }
-  50% {
-    opacity: 1;
-    color: #D4C5FF;
-    text-shadow:
-      0 0 6px #ffffff,
-      0 0 18px rgba(212, 197, 255, 1),
-      0 0 36px rgba(177, 151, 252, 0.95),
-      0 0 54px rgba(155, 130, 240, 0.7),
-      0 0 72px rgba(120, 104, 184, 0.4);
-  }
+  0%   { opacity: 1; }
+  50%  { opacity: 0.75; }
+  100% { opacity: 1; }
 }
 .rdwth-navbottom-pulse-once span {
-  color: #9B82F0 !important;
-  animation: rdwth-navbottom-pulse-once 6s cubic-bezier(0.4, 0, 0.6, 1) 1 !important;
+  color: ${PULSE_COLOR} !important;
+  font-weight: 500 !important;
+  animation: rdwth-navbottom-pulse-once 3.5s ease-in-out 1 !important;
 }
 @media (prefers-reduced-motion: reduce) {
   .rdwth-navbottom-pulse-once span {
     animation: none !important;
-    color: #9B82F0 !important;
+    color: ${PULSE_COLOR} !important;
+    font-weight: 500 !important;
   }
 }
 `
@@ -70,7 +59,6 @@ function injectPulseStyles() {
 
 export default function NavBottom({ active = 'none', pulseOnce = false }: NavBottomProps) {
   const navigate = useNavigate()
-  const isMobile = useIsMobile()
   const fontSize = 'clamp(9px, 2.6vw, 11px)'
 
   // AFC ONB-6/7 — respiração única na transição warmup → home
@@ -93,6 +81,7 @@ export default function NavBottom({ active = 'none', pulseOnce = false }: NavBot
   const renderItem = (label: string, slug: ActivePage, path: string) => (
     <span
       key={slug}
+      id={`nav-${slug}`}
       onClick={() => navigate(path)}
       style={{
         fontFamily: 'var(--r-font-sys)',
@@ -141,30 +130,7 @@ export default function NavBottom({ active = 'none', pulseOnce = false }: NavBot
     { label: 'sistema',       slug: 'system' as ActivePage,        path: '/como-funciona' },
   ]
 
-  // ─── MOBILE: 6 elementos equidistantes, mesma baseline ───
-  if (isMobile) {
-    return (
-      <>
-        <div className="r-line" />
-        <div ref={pulseRef} style={{
-          height: 56,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 12px',
-          flexShrink: 0,
-          minWidth: 0,
-        }}>
-          {renderItem('reed', 'reed', '/reed')}
-          {centerItems.map(({ label, slug, path }) => renderItem(label, slug, path))}
-          {settingsDot}
-        </div>
-      </>
-    )
-  }
-
-  // ─── DESKTOP: layout 3-zonas (inalterado) ───
-  const itemGap = 'clamp(8px, 3vw, 24px)'
+  // Layout único — 6 elementos equidistantes (space-between), mesma baseline
   return (
     <>
       <div className="r-line" />
@@ -173,30 +139,13 @@ export default function NavBottom({ active = 'none', pulseOnce = false }: NavBot
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '0 16px',
-        gap: itemGap,
+        padding: '0 12px',
         flexShrink: 0,
         minWidth: 0,
       }}>
-        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-          {renderItem('reed', 'reed', '/reed')}
-        </div>
-
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: itemGap,
-          flex: 1,
-          justifyContent: 'center',
-          minWidth: 0,
-          overflow: 'hidden',
-        }}>
-          {centerItems.map(({ label, slug, path }) => renderItem(label, slug, path))}
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          {settingsDot}
-        </div>
+        {renderItem('reed', 'reed', '/reed')}
+        {centerItems.map(({ label, slug, path }) => renderItem(label, slug, path))}
+        {settingsDot}
       </div>
     </>
   )
