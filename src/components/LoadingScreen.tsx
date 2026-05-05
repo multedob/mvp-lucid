@@ -56,7 +56,7 @@ const DIABLO_POOL: string[] = [
   "O rdwth não diagnostica. Ele não preescreve.",
   "Você pode apagar tudo a qualquer momento em ajustes.",
   "Reed presta atenção, mas não julga.",
-  "O rdwth não tira a responsabilidade de você."
+  "O rdwth não tira a responsabilidade de você.",
   // Reed
   "Reed é a voz do rdwth. Não é humano, mas escuta com atenção.",
   "Reed lê o que você traz, não o que você não disse.",
