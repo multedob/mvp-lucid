@@ -541,7 +541,6 @@ export default function ThirdParty() {
             onChange={(value) => setEpisodes((prev) => ({ ...prev, [qid]: value }))}
             placeholder="conta a situação aqui (mínimo 30 caracteres) — ou grave em áudio"
             minLength={30}
-            minHeight={80}
             onSend={handleSubmitQuestion}
             recorder={data?.invite_id ? (
               <AudioRecorder

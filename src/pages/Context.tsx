@@ -371,7 +371,17 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   const [loading, setLoading] = useState(true);
   const [loadingScreenDone, setLoadingScreenDone] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [selectedPronoun, setSelectedPronoun] = useState<"ela" | "ele" | "elu">("ela");
+  // Pronome eliminado da UI — inferido do primeiro nome do user.
+  // Heurística PT-BR: termina em 'a' → ela; em 'o' → ele; outros → elu (neutro).
+  function inferPronoun(name: string | null | undefined): "ela" | "ele" | "elu" {
+    if (!name) return "elu";
+    const first = name.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
+    if (!first) return "elu";
+    const last = first[first.length - 1];
+    if (last === "a") return "ela";
+    if (last === "o") return "ele";
+    return "elu";
+  }
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null); // invite_id expandido
   const [errorMsg, setErrorMsg] = useState("");
@@ -432,12 +442,12 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
           apikey: ANON_KEY,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ ipe_cycle_id: ipeCycleId, user_pronoun: selectedPronoun }),
+        body: JSON.stringify({ ipe_cycle_id: ipeCycleId, user_pronoun: inferPronoun(userName) }),
       });
       const d = await r.json();
       if (!r.ok) { setErrorMsg(d.error ?? "erro"); return; }
       setCreatedUrl(d.url);
-      track("third_party_invite_created", { pronoun: selectedPronoun });
+      track("third_party_invite_created", { pronoun: inferPronoun(userName) });
       // Copia automaticamente
       try { await navigator.clipboard.writeText(d.url); } catch {}
       await loadAll();
@@ -508,7 +518,7 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
 
         {/* Painel criar */}
         {!creating && activeCount < 8 && (
-          <div onClick={() => { setCreating(true); setCreatedUrl(null); }}
+          <div onClick={() => { setCreating(true); setCreatedUrl(null); createInvite(); }}
             style={{
               fontFamily: "var(--r-font-sys)", fontSize: 13, padding: "12px 16px",
               background: "var(--r-text)", color: "var(--r-bg)",
@@ -523,24 +533,7 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
           <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "12px 16px", border: "1px solid var(--r-ghost)", maxWidth: 480, marginLeft: "auto", marginRight: "auto", width: "100%" }}>
             {!createdUrl && (
               <>
-                <div className="r-sub">como você quer ser referida pelos terceiros?</div>
-                <div style={{ display: "flex", gap: 16, justifyContent: "center" }}>
-                  {(["ela", "ele", "elu"] as const).map(p => (
-                    <span key={p} onClick={() => setSelectedPronoun(p)}
-                      style={{
-                        fontFamily: "var(--r-font-sys)", fontSize: 13,
-                        padding: "6px 14px", borderRadius: 4, cursor: "pointer",
-                        border: selectedPronoun === p ? "1px solid var(--r-text)" : "1px solid var(--r-ghost)",
-                        color: selectedPronoun === p ? "var(--r-text)" : "var(--r-muted)",
-                      }}>
-                      {p}
-                    </span>
-                  ))}
-                </div>
-                <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", marginTop: 8 }}>
-                  <span onClick={() => setCreating(false)} style={{ fontFamily: "var(--r-font-sys)", fontSize: 12, color: "var(--r-muted)", cursor: "pointer" }}>cancelar</span>
-                  <span onClick={createInvite} style={{ fontFamily: "var(--r-font-sys)", fontSize: 12, color: "var(--r-text)", cursor: "pointer", letterSpacing: "0.04em" }}>gerar link →</span>
-                </div>
+                <div className="r-sub" style={{ fontStyle: "italic" }}>gerando link...</div>
                 {errorMsg && <div style={{ color: "var(--terracota, #b85a3e)", fontSize: 12 }}>{errorMsg}</div>}
               </>
             )}
