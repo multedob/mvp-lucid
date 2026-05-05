@@ -2,6 +2,10 @@
 // AFC ONB-6 — Mini-Eco Warm-up
 // Par A do Banco v0.2 (#1 + #13). Streaming SSE pelo edge function warmup-eco.
 // Estados: q1 → q2 → streaming → done. "decidir depois" no canto inferior direito.
+//
+// Ajuste 2026-05-04 (B-S5.G): cascata sequencial dos elementos em cada fase
+// (sistema → pergunta → textarea → botão), entrando de cima pra baixo um após o outro.
+// Resolve confusão visual da versão anterior onde tudo aparecia simultâneo.
 
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
@@ -32,6 +36,14 @@ const QUESTIONS: [string, string] = [
 const INTRO_TEXT = "para começar, responda as perguntas. quanto mais completas melhor.";
 
 type Phase = "q1" | "q2" | "streaming" | "done";
+
+// Cascata — timing de cada elemento em q1/q2 (after intro typewriter terminar)
+// INTRO_TEXT tem ~70 chars × 38ms = ~2660ms. Pergunta entra após.
+const CASCADE_QUESTION_MS = 2700;
+const CASCADE_INPUT_MS = 3300;
+const CASCADE_BUTTON_MS = 3700;
+// Cascata done — botão continuar após eco terminar
+const CASCADE_DONE_BUTTON_MS = 600;
 
 // Typewriter inline — texto aparece L→R, char por char.
 // Cursor ▌ visível enquanto digita, somem ao terminar.
@@ -64,6 +76,12 @@ export default function Warmup() {
   const [eco, setEco] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  // Cascata sequencial — controla entrada dos elementos de cima pra baixo
+  const [showQuestion, setShowQuestion] = useState(false);
+  const [showInput, setShowInput] = useState(false);
+  const [showButton, setShowButton] = useState(false);
+  const [showDoneButton, setShowDoneButton] = useState(false);
+
   // Telemetria — chegada na tela
   useOnceTrack("warmup_started");
 
@@ -75,6 +93,30 @@ export default function Warmup() {
       track("minieco_revealed", { eco_length: eco.length });
     }
   }, [phase, eco.length]);
+
+  // Cascata — reseta e dispara a cada mudança de phase
+  useEffect(() => {
+    setShowQuestion(false);
+    setShowInput(false);
+    setShowButton(false);
+    setShowDoneButton(false);
+
+    if (phase === "q1" || phase === "q2") {
+      const t1 = window.setTimeout(() => setShowQuestion(true), CASCADE_QUESTION_MS);
+      const t2 = window.setTimeout(() => setShowInput(true), CASCADE_INPUT_MS);
+      const t3 = window.setTimeout(() => setShowButton(true), CASCADE_BUTTON_MS);
+      return () => {
+        window.clearTimeout(t1);
+        window.clearTimeout(t2);
+        window.clearTimeout(t3);
+      };
+    }
+
+    if (phase === "done") {
+      const t = window.setTimeout(() => setShowDoneButton(true), CASCADE_DONE_BUTTON_MS);
+      return () => window.clearTimeout(t);
+    }
+  }, [phase]);
 
   const currentIdx = phase === "q1" ? 0 : phase === "q2" ? 1 : -1;
   const currentAnswer = currentIdx >= 0 ? answers[currentIdx] : "";
@@ -202,6 +244,7 @@ export default function Warmup() {
       <div className="r-scroll" style={{ flex: 1, padding: "24px 24px 64px" }}>
         {(phase === "q1" || phase === "q2") && (
           <>
+            {/* 1. Sistema (topo) — typewriter, sempre visível desde o mount */}
             <div
               style={{
                 fontFamily: "var(--r-font-sys)",
@@ -219,7 +262,14 @@ export default function Warmup() {
               <Typewriter text={INTRO_TEXT} />
             </div>
 
-            <div style={{ marginBottom: 28 }}>
+            {/* 2. Pergunta Reed — fade-in após sistema terminar */}
+            <div
+              style={{
+                marginBottom: 28,
+                opacity: showQuestion ? 1 : 0,
+                transition: "opacity 600ms ease-in",
+              }}
+            >
               <div
                 style={{
                   fontFamily: "var(--r-font-ed)",
@@ -232,25 +282,35 @@ export default function Warmup() {
               >
                 {QUESTIONS[currentIdx]}
               </div>
-              <textarea
-                className="r-textarea"
-                value={currentAnswer}
-                onChange={(e) => {
-                  const next: [string, string] = [...answers] as [string, string];
-                  next[currentIdx] = e.target.value;
-                  setAnswers(next);
+
+              {/* 3. Textarea — fade-in após pergunta */}
+              <div
+                style={{
+                  opacity: showInput ? 1 : 0,
+                  transition: "opacity 600ms ease-in",
                 }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                    e.preventDefault();
-                    handleQuestionContinue();
-                  }
-                }}
-                placeholder="..."
-                rows={3}
-                autoFocus
-                style={{ width: "100%", resize: "none", fontSize: 13 }}
-              />
+              >
+                <textarea
+                  className="r-textarea"
+                  value={currentAnswer}
+                  onChange={(e) => {
+                    const next: [string, string] = [...answers] as [string, string];
+                    next[currentIdx] = e.target.value;
+                    setAnswers(next);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                      e.preventDefault();
+                      handleQuestionContinue();
+                    }
+                  }}
+                  placeholder="..."
+                  rows={3}
+                  autoFocus={showInput}
+                  disabled={!showInput}
+                  style={{ width: "100%", resize: "none", fontSize: 13 }}
+                />
+              </div>
             </div>
 
             {error && (
@@ -267,14 +327,17 @@ export default function Warmup() {
               </div>
             )}
 
+            {/* 4. Botão continuar — fade-in após textarea */}
             <div
-              onClick={canContinueQuestion ? handleQuestionContinue : undefined}
+              onClick={showButton && canContinueQuestion ? handleQuestionContinue : undefined}
               style={{
                 display: "flex",
                 alignItems: "center",
                 gap: 10,
-                cursor: canContinueQuestion ? "pointer" : "default",
-                opacity: canContinueQuestion ? 1 : 0.3,
+                cursor: showButton && canContinueQuestion ? "pointer" : "default",
+                opacity: showButton ? (canContinueQuestion ? 1 : 0.3) : 0,
+                transition: "opacity 600ms ease-in",
+                pointerEvents: showButton && canContinueQuestion ? "auto" : "none",
                 marginTop: 16,
               }}
             >
@@ -344,11 +407,20 @@ export default function Warmup() {
               </div>
             )}
 
+            {/* Botão continuar (done) — fade-in após eco terminar */}
             {phase === "done" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 24 }}>
                 <div
-                  onClick={handleContinueDone}
-                  style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
+                  onClick={showDoneButton ? handleContinueDone : undefined}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    cursor: showDoneButton ? "pointer" : "default",
+                    opacity: showDoneButton ? 1 : 0,
+                    transition: "opacity 600ms ease-in",
+                    pointerEvents: showDoneButton ? "auto" : "none",
+                  }}
                 >
                   <div style={{ width: 1, height: 13, background: "var(--r-telha)", flexShrink: 0 }} />
                   <span

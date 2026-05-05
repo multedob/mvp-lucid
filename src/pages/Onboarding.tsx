@@ -2,20 +2,20 @@
 // Coleta do primeiro nome — fluxo de onboarding
 // Persiste nome em localStorage (cache) + Supabase user_metadata + marca name_set step
 // Pré-popula com primeiro nome do Google quando OAuth (A18)
-// continuar → /home  |  decidir depois → /home (também marca name_set p/ não loopar)
+// continuar → /  (RootRedirect leva para /warmup ou /home conforme estado)
 //
-// Refactor B-S5.D: trecho de apresentação do Reed migrou pra SystemTerminalLine
-// (voz sistema com prefixo "> " e typewriter). "como Reed deve chamar você?"
-// é voz Reed (Urbanist Bold), continua como está MAS aparece com fade-in
-// delayed (~500ms) — em cadeia com o sistema digitando, não antes nem depois.
-// Voz sistema fala primeiro; Reed entra suavemente enquanto sistema ainda digita.
-// "continuar" e "decidir depois →" são labels de ação, não fala do sistema —
-// mantêm tipografia atual. Saudação topo, voz sistema sempre no topo.
+// Refactor B-S5.D: trecho de apresentação do Reed migra pra SystemTerminalLine
+// (voz sistema com prefixo "> " e typewriter).
 //
-// Merge 126eb90 (Bruno): markOnboardingStep("name_set") em ambos handlers
-// (continuar e decidir depois) — single source of truth pra fluxo de redirect.
+// Ajuste 2026-05-04 (B-S5.G): cascata sequencial dos elementos (sistema → pergunta
+// Reed → input → botão continuar → "decidir depois"), entrando de cima pra baixo
+// em cadeia, igual ao Warmup. Substitui o reedReady único anterior.
+//
+// Merge 126eb90 (Bruno): markOnboardingStep("name_set") em ambos handlers + redirect
+// "/home" → "/" pra passar pelo RootRedirect (vai pra /warmup se ainda não fez).
+// Copy da pergunta: "como Reed deve chamar você?" → "como eu devo te chamar?" (primeira pessoa).
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSubmitting } from "@/hooks/useSubmitting";
@@ -24,11 +24,25 @@ import { getToday } from "@/lib/api";
 import { track } from "@/lib/analytics";
 import SystemTerminalLine from "@/components/SystemTerminalLine";
 
+// Cascata — timing de cada elemento, alinhado com Warmup.
+// Sistema typewriter: ~58 chars × 30ms ≈ 1740ms. Pergunta entra após.
+const CASCADE_QUESTION_MS = 1900;
+const CASCADE_INPUT_MS = 2400;
+const CASCADE_BUTTON_MS = 2800;
+const CASCADE_SKIP_MS = 3000;
+
 export default function Onboarding() {
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [submitting, wrap] = useSubmitting();
-  const [reedReady, setReedReady] = useState(false);
+
+  // Cascata sequencial — controla entrada dos elementos de cima pra baixo
+  const [showQuestion, setShowQuestion] = useState(false);
+  const [showInput, setShowInput] = useState(false);
+  const [showButton, setShowButton] = useState(false);
+  const [showSkip, setShowSkip] = useState(false);
+
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // ─── Pré-popular com nome do Google quando OAuth (A18) ─────────
   useEffect(() => {
@@ -56,11 +70,26 @@ export default function Onboarding() {
     prefillFromOAuth();
   }, []);
 
-  // ─── Reed pergunta entra em cadeia (~500ms após sistema começar a digitar) ─
+  // ─── Cascata sequencial — sistema → pergunta → input → botão → skip ─
   useEffect(() => {
-    const timer = setTimeout(() => setReedReady(true), 500);
-    return () => clearTimeout(timer);
+    const t1 = window.setTimeout(() => setShowQuestion(true), CASCADE_QUESTION_MS);
+    const t2 = window.setTimeout(() => setShowInput(true), CASCADE_INPUT_MS);
+    const t3 = window.setTimeout(() => setShowButton(true), CASCADE_BUTTON_MS);
+    const t4 = window.setTimeout(() => setShowSkip(true), CASCADE_SKIP_MS);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.clearTimeout(t3);
+      window.clearTimeout(t4);
+    };
   }, []);
+
+  // Foca o input quando ele aparece (autoFocus não dispara em fade-in delayed)
+  useEffect(() => {
+    if (showInput) {
+      inputRef.current?.focus();
+    }
+  }, [showInput]);
 
   const handleContinue = wrap(async () => {
     if (!name.trim()) return;
@@ -86,6 +115,8 @@ export default function Onboarding() {
     navigate("/");
   });
 
+  const canContinue = !!(name.trim() && !submitting && showButton);
+
   return (
     <div className="r-screen">
       <div className="r-header">
@@ -98,35 +129,37 @@ export default function Onboarding() {
         flex: 1, display: "flex", flexDirection: "column",
         justifyContent: "flex-start", padding: "12px 24px 0",
       }}>
-        {/* Voz sistema — topo */}
+        {/* 1. Sistema (topo) — typewriter, sempre visível desde o mount */}
         <div style={{ marginBottom: 24 }}>
           <SystemTerminalLine
             text={"reed é a voz do rdwth.\nnas pills, no questionário, na conversa."}
           />
         </div>
 
-        {/* Reed pergunta — fade-in delayed (em cadeia com sistema digitando) */}
+        {/* 2. Pergunta Reed — fade-in após sistema terminar */}
         <div style={{
           fontFamily: "var(--r-font-ed)", fontWeight: 800, fontSize: 16,
           lineHeight: 1.6, color: "var(--r-text)", marginBottom: 20,
-          opacity: reedReady ? 1 : 0,
-          transition: "opacity 800ms ease-in",
+          opacity: showQuestion ? 1 : 0,
+          transition: "opacity 600ms ease-in",
         }}>
           como eu devo te chamar?
         </div>
 
+        {/* 3. Input — fade-in após pergunta */}
         <div style={{
           borderBottom: "0.5px solid var(--r-ghost)",
           paddingBottom: 8, marginBottom: 32,
-          opacity: reedReady ? 1 : 0,
-          transition: "opacity 800ms ease-in 100ms",
+          opacity: showInput ? 1 : 0,
+          transition: "opacity 600ms ease-in",
         }}>
           <input
+            ref={inputRef}
             value={name}
             onChange={e => setName(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter") handleContinue(); }}
             placeholder="seu nome"
-            autoFocus
+            disabled={!showInput}
             style={{
               background: "transparent", border: "none", outline: "none",
               fontFamily: "var(--r-font-ed)", fontWeight: 300, fontSize: 14,
@@ -136,14 +169,15 @@ export default function Onboarding() {
           />
         </div>
 
+        {/* 4. Botão continuar — fade-in após input */}
         <div
-          onClick={handleContinue}
+          onClick={canContinue ? handleContinue : undefined}
           style={{
             display: "flex", alignItems: "center", gap: 10,
-            cursor: (name.trim() && !submitting) ? "pointer" : "default",
-            opacity: (name.trim() && !submitting && reedReady) ? 1 : 0.25,
-            transition: "opacity 0.3s",
-            pointerEvents: (name.trim() && !submitting && reedReady) ? "auto" : "none",
+            cursor: canContinue ? "pointer" : "default",
+            opacity: showButton ? (canContinue ? 1 : 0.25) : 0,
+            transition: "opacity 600ms ease-in",
+            pointerEvents: canContinue ? "auto" : "none",
           }}
         >
           <div style={{ width: 1, height: 14, background: "var(--r-telha)", flexShrink: 0 }} />
@@ -155,21 +189,21 @@ export default function Onboarding() {
           </span>
         </div>
 
-        {/* Decidir depois — pula coleta de nome */}
+        {/* 5. Decidir depois — fade-in após botão */}
         <div
-          onClick={async () => {
+          onClick={showSkip ? async () => {
             track("name_deferred");
             localStorage.setItem("rdwth_user_name_deferred", "1");
-            // A2 — marca name_set mesmo sem nome para evitar loop no RootRedirect.
-            // Step "name_set" significa "passou pela tela de nome", não "tem nome".
             await markOnboardingStep("name_set");
             navigate("/");
-          }}
+          } : undefined}
           style={{
             display: "flex", alignItems: "center", gap: 10,
-            cursor: "pointer", marginTop: 24,
-            opacity: reedReady ? 1 : 0,
-            transition: "opacity 800ms ease-in 200ms",
+            cursor: showSkip ? "pointer" : "default",
+            marginTop: 24,
+            opacity: showSkip ? 1 : 0,
+            transition: "opacity 600ms ease-in",
+            pointerEvents: showSkip ? "auto" : "none",
           }}
         >
           <div style={{ width: 1, height: 12, background: "var(--r-ghost)", flexShrink: 0 }} />
