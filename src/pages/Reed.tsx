@@ -591,7 +591,7 @@ export default function Reed() {
             onKeyDown={e => {
               if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
             }}
-            placeholder="qualquer coisa..."
+            placeholder="qualquer coisa. pode ser em áudio."
             rows={1}
             maxRows={5}
             disabled={sending || loading}

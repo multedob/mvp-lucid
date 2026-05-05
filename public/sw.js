@@ -1,13 +1,17 @@
 // public/sw.js
-// Service worker mínimo — habilita PWA install + cache shell básico
-// Estratégia: network-first pra HTML, cache-first pra assets estáticos.
+// Service worker — PWA install + cache shell.
+// v2 (2026-05-05): network-first em tudo (HTML + assets) pra evitar bundle antigo
+// permanente em cache. Cache fica como fallback offline. Bump do CACHE_NAME
+// invalida cache anterior automaticamente em todos os browsers.
 
-const CACHE_NAME = 'rdwth-shell-v1';
+const CACHE_NAME = 'rdwth-shell-v2';
 const SHELL_URLS = ['/', '/index.html', '/icon.svg', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_URLS))
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(SHELL_URLS))
+      .catch(() => {})
   );
   self.skipWaiting();
 });
@@ -26,32 +30,25 @@ self.addEventListener('fetch', (event) => {
   // Só GET. Resto passa direto.
   if (req.method !== 'GET') return;
 
-  // Skip Supabase/PostHog requests (sempre online)
-  const url = new URL(req.url);
+  // Skip Supabase/PostHog requests (sempre online, sem cache)
+  let url;
+  try { url = new URL(req.url); } catch { return; }
   if (url.hostname.includes('supabase.co') || url.hostname.includes('posthog.com')) return;
 
-  // HTML: network-first com fallback de cache
-  if (req.headers.get('accept')?.includes('text/html')) {
-    event.respondWith(
-      fetch(req)
-        .then((res) => {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
-          return res;
-        })
-        .catch(() => caches.match(req).then((cached) => cached || caches.match('/')))
-    );
-    return;
-  }
-
-  // Assets: cache-first
+  // Network-first em TUDO (HTML + assets). Cache fica como fallback offline.
+  // Garante que bundle novo sempre é servido quando há conexão.
   event.respondWith(
-    caches.match(req).then((cached) => cached || fetch(req).then((res) => {
-      if (res.ok && res.type === 'basic') {
-        const clone = res.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
-      }
-      return res;
-    }))
+    fetch(req)
+      .then((res) => {
+        // Cacheia respostas válidas pra fallback offline futuro
+        if (res && res.ok && res.type === 'basic') {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone)).catch(() => {});
+        }
+        return res;
+      })
+      .catch(() =>
+        caches.match(req).then((cached) => cached || caches.match('/') || new Response('', { status: 503 }))
+      )
   );
 });
