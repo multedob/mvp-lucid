@@ -110,7 +110,7 @@ interface QTextareaProps {
   onSend?: () => void
   sendActive?: boolean
 }
-const InvisibleTextarea = forwardRef<HTMLDivElement, QTextareaProps>(({
+const InvisibleTextarea = forwardRef<HTMLDivElement, QTextareaProps & { placeholder?: string }>(({
   value,
   onChange,
   disabled = false,
@@ -118,6 +118,7 @@ const InvisibleTextarea = forwardRef<HTMLDivElement, QTextareaProps>(({
   recorder,
   onSend,
   sendActive = false,
+  placeholder = "se preferir, pressione e grave um áudio",
 }, fwdRef) => {
   const ref = useRef<HTMLTextAreaElement>(null)
 
@@ -144,7 +145,7 @@ const InvisibleTextarea = forwardRef<HTMLDivElement, QTextareaProps>(({
             onCmdEnter?.()
           }
         }}
-        placeholder=""
+        placeholder={placeholder}
         rows={1}
         disabled={disabled}
       />
@@ -185,19 +186,33 @@ export default function Questionnaire() {
 
   // Cascade: pergunta + input só aparecem APÓS voz do sistema (counter + empty state)
   // terminar de entrar. Ritmo igual ao warmup (pergunta após ~2700ms, input após 3300ms).
-  // Disparado uma vez quando phase deixa de ser 'loading'/'transition'.
+  // Bolinha de áudio com 2 pulsos breathing na 1ª entrada (delay 3900ms).
   const [questionVisible, setQuestionVisible] = useState(false)
   const [inputVisible, setInputVisible] = useState(false)
+  const [audioPulseFirst, setAudioPulseFirst] = useState(false)
   const cascadeArmedRef = useRef(false)
+  const AUDIO_PULSE_KEY = 'rdwth_audio_pulse_seen_questionnaire'
   useEffect(() => {
     if (cascadeArmedRef.current) return
     if (phase === 'loading' || phase === 'transition' || phase === 'done') return
     cascadeArmedRef.current = true
     const t1 = window.setTimeout(() => setQuestionVisible(true), 2700)
     const t2 = window.setTimeout(() => setInputVisible(true), 3300)
+
+    // Pulse áudio só 1ª vez no questionário
+    const alreadySeen = typeof window !== 'undefined' && localStorage.getItem(AUDIO_PULSE_KEY) === '1'
+    let t3: number | null = null
+    if (!alreadySeen) {
+      t3 = window.setTimeout(() => {
+        setAudioPulseFirst(true)
+        try { localStorage.setItem(AUDIO_PULSE_KEY, '1') } catch {}
+      }, 3900)
+    }
+
     return () => {
       window.clearTimeout(t1)
       window.clearTimeout(t2)
+      if (t3) window.clearTimeout(t3)
     }
   }, [phase])
   const [loadingScreenDone, setLoadingScreenDone] = useState(false)
@@ -595,6 +610,7 @@ export default function Questionnaire() {
               pillId={currentBlock ?? 'questionnaire'}
               moment="questionnaire"
               language="pt-BR"
+              breathingPulseOnce={audioPulseFirst}
               onLiveTranscript={setAnswer}
               onFinalTranscript={setAnswer}
               disabled={submitting}

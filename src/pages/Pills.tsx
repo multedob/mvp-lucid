@@ -34,6 +34,13 @@ export default function Pills() {
   const [pillsDone, setPillsDone] = useState<Set<PillId>>(new Set());
   const [loading, setLoading] = useState(true);
 
+  // Cascade: voz sistema entra primeiro, lista de pills entra com fade após delay.
+  const [listVisible, setListVisible] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => setListVisible(true), 2700);
+    return () => window.clearTimeout(t);
+  }, []);
+
   useEffect(() => { loadCycle(); }, []);
 
   async function loadCycle() {
@@ -92,8 +99,15 @@ export default function Pills() {
         />
       )}
 
-      {/* Pill list — alinhada ao topo, não centralizada */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "16px 24px 0" }}>
+      {/* Pill list — cascade após voz sistema (~2700ms) */}
+      <div style={{
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        padding: "16px 24px 0",
+        opacity: listVisible ? 1 : 0,
+        transition: "opacity 500ms ease-in",
+      }}>
         {!loading && (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {PILL_ORDER.map(pill => {

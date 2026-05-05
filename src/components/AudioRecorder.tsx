@@ -45,6 +45,8 @@ interface AudioRecorderProps {
   moment: Moment;
   /** BCP-47 locale. Default 'en-US'. Pass 'pt-BR' when user is in PT. */
   language?: string;
+  /** Quando true, anima 2 ciclos breathing fade in/out na cor original — onboarding visual da feature. */
+  breathingPulseOnce?: boolean;
   onLiveTranscript?: (text: string) => void;
   onFinalTranscript?: (text: string) => void;
   onAudioStored?: (info: { path: string; durationMs: number }) => void;
@@ -87,6 +89,7 @@ export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(({
   pillId,
   moment,
   language = "en-US",
+  breathingPulseOnce = false,
   onLiveTranscript,
   onFinalTranscript,
   onAudioStored,
@@ -247,6 +250,14 @@ export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(({
     ? "var(--r-warn, #d49a3a)"
     : "var(--r-telha, #c8553d)";
 
+  // breathingPulseOnce: 2 ciclos fade in/out simétricos pra chamar atenção na 1ª entrada.
+  // Não roda se está gravando/processando (anim audio-pulse já cobre esses estados).
+  const animationProp = isRecording
+    ? `audio-pulse ${isNearLimit ? "0.5s" : "1s"} ease-in-out infinite`
+    : breathingPulseOnce && state === "idle"
+      ? "audio-breathing-once 2.4s ease-in-out 2 forwards"
+      : "none";
+
   return (
     <div ref={fwdRef} style={{ display: "flex", alignItems: "center", gap: 8 }}>
       <button
@@ -268,7 +279,7 @@ export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(({
           transition: "all 0.2s",
           outline: isRecording ? `2px solid ${accentColor}` : "none",
           outlineOffset: "3px",
-          animation: isRecording ? `audio-pulse ${isNearLimit ? "0.5s" : "1s"} ease-in-out infinite` : "none",
+          animation: animationProp,
         }}
       />
       {errorMsg && state === "error" && (
@@ -280,6 +291,10 @@ export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(({
         @keyframes audio-pulse {
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.4; transform: scale(0.75); }
+        }
+        @keyframes audio-breathing-once {
+          0%, 100% { opacity: 1; box-shadow: 0 0 0 0 var(--r-telha); }
+          50% { opacity: 0.55; box-shadow: 0 0 8px 2px var(--r-telha); }
         }
       `}</style>
     </div>

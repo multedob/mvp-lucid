@@ -201,6 +201,13 @@ function ContextDeep({ cycle, onBack, userName }: { cycle: CycleData; onBack: ()
     ? `${userName}, esta é uma leitura estrutural de um momento. Não define quem você é.`
     : "Esta é uma leitura estrutural de um momento. Não define quem você é.";
 
+  // Cascade: voz sistema topo entra primeiro, leitura entra com fade depois.
+  const [bodyVisible, setBodyVisible] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => setBodyVisible(true), 2700);
+    return () => window.clearTimeout(t);
+  }, []);
+
   return (
     <div className="r-screen">
       <div className="r-header">
@@ -215,7 +222,17 @@ function ContextDeep({ cycle, onBack, userName }: { cycle: CycleData; onBack: ()
         <SystemTerminalLine text={disclaimerText} />
       </div>
 
-      <div className="r-scroll" style={{ padding: "20px 24px 16px", display: "flex", flexDirection: "column", gap: 20 }}>
+      <div
+        className="r-scroll"
+        style={{
+          padding: "20px 24px 16px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 20,
+          opacity: bodyVisible ? 1 : 0,
+          transition: "opacity 500ms ease-in",
+        }}
+      >
         <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 9, color: "var(--r-telha)", letterSpacing: "0.12em" }}>
           {cycle.id} — leitura profunda
         </div>
@@ -837,6 +854,13 @@ export default function Context() {
     ? `${userName}, aqui tem histórico de leituras dos seus ciclos e o canal para questionário de terceiros.`
     : "Aqui tem histórico de leituras dos seus ciclos e o canal para questionário de terceiros.";
 
+  // Cascade: voz sistema entra primeiro, canvas (descrição + ações) entra com fade depois.
+  const [canvasVisible, setCanvasVisible] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => setCanvasVisible(true), 2700);
+    return () => window.clearTimeout(t);
+  }, []);
+
   return (
     <div className="r-screen">
 
@@ -865,8 +889,16 @@ export default function Context() {
         </div>
       )}
 
-      {/* Conteúdo principal */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "16px 24px 16px", overflow: "hidden" }}>
+      {/* Conteúdo principal — cascade após voz sistema (~2700ms) */}
+      <div style={{
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        padding: "16px 24px 16px",
+        overflow: "hidden",
+        opacity: canvasVisible ? 1 : 0,
+        transition: "opacity 500ms ease-in",
+      }}>
 
         {/* TOP — leitura atual */}
         {cycle && (
