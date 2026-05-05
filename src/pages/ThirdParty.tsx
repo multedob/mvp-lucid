@@ -124,6 +124,21 @@ export default function ThirdParty() {
   const [revealIdentity, setRevealIdentity] = useState<boolean | null>(null);
   const [miniInsight, setMiniInsight] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Pulse breathing na bolinha — 1ª entrada do terceiro respondendo
+  const [audioPulseFirst, setAudioPulseFirst] = useState(false);
+  const AUDIO_PULSE_TP_KEY = 'rdwth_audio_pulse_seen_thirdparty';
+  useEffect(() => {
+    if (phase !== "question") return;
+    if (currentQIdx !== 0) return;
+    const alreadySeen = typeof window !== 'undefined' && localStorage.getItem(AUDIO_PULSE_TP_KEY) === '1';
+    if (alreadySeen) return;
+    const t = window.setTimeout(() => {
+      setAudioPulseFirst(true);
+      try { localStorage.setItem(AUDIO_PULSE_TP_KEY, '1'); } catch {}
+    }, 3500);
+    return () => window.clearTimeout(t);
+  }, [phase, currentQIdx]);
   const [finalizeLoadingDone, setFinalizeLoadingDone] = useState(false);
 
   const validatedRef = useRef(false);
@@ -524,7 +539,7 @@ export default function ThirdParty() {
           <ResponseInput
             value={episodes[qid] ?? ""}
             onChange={(value) => setEpisodes((prev) => ({ ...prev, [qid]: value }))}
-            placeholder="conta a situação aqui (mínimo 30 caracteres)"
+            placeholder="conta a situação aqui (mínimo 30 caracteres) — ou grave em áudio"
             minLength={30}
             minHeight={80}
             onSend={handleSubmitQuestion}
@@ -535,6 +550,7 @@ export default function ThirdParty() {
                 pillId={qid}
                 moment="third-party"
                 language="pt-BR"
+                breathingPulseOnce={audioPulseFirst && currentQIdx === 0}
                 onLiveTranscript={text => setEpisodes((prev) => ({ ...prev, [qid]: text }))}
                 onFinalTranscript={text => setEpisodes((prev) => ({ ...prev, [qid]: text }))}
                 disabled={submitting}
