@@ -210,15 +210,18 @@ function ContextDeep({ cycle, onBack, userName }: { cycle: CycleData; onBack: ()
       </div>
       <div className="r-line" />
 
-      <div className="r-scroll" style={{ padding: "28px 24px 16px", display: "flex", flexDirection: "column", gap: 24 }}>
+      {/* Voz sistema sempre no topo — posição canônica */}
+      <div style={{ padding: "10px 24px 0", flexShrink: 0 }}>
+        <SystemTerminalLine text={disclaimerText} />
+      </div>
+
+      <div className="r-scroll" style={{ padding: "20px 24px 16px", display: "flex", flexDirection: "column", gap: 20 }}>
         <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 9, color: "var(--r-telha)", letterSpacing: "0.12em" }}>
           {cycle.id} — leitura profunda
         </div>
         <div style={{ fontFamily: "var(--r-font-ed)", fontWeight: 800, fontSize: 16, lineHeight: 1.7, color: "var(--r-text)" }}>
           {cycle.deep}
         </div>
-        <div style={{ height: 1, background: "var(--r-ghost)", opacity: 0.5 }} />
-        <SystemTerminalLine text={disclaimerText} />
       </div>
 
       <div className="r-line" />
