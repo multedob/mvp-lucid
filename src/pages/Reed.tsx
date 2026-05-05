@@ -83,6 +83,62 @@ function Typewriter({ text, charDelayMs = 38, onDone }: { text: string; charDela
   return <>{shown}<span style={{ opacity: shown.length < text.length ? 0.5 : 0 }}>▌</span></>
 }
 
+// BlockReveal — texto em blocos (parágrafos) que aparecem sequencialmente com fade-in.
+// Mesmo padrão visual do eco do warmup. Usado pra welcome multi-parágrafo do Reed.
+function BlockReveal({
+  text,
+  blockDelayMs = 700,
+  fadeMs = 600,
+  blockStyle,
+  onDone,
+}: {
+  text: string
+  blockDelayMs?: number
+  fadeMs?: number
+  blockStyle?: React.CSSProperties
+  onDone?: () => void
+}) {
+  const blocks = text.split(/\n\n+/).filter(b => b.trim().length > 0)
+  const [visibleCount, setVisibleCount] = useState(0)
+  const doneRef = useRef(false)
+
+  useEffect(() => {
+    setVisibleCount(0)
+    doneRef.current = false
+    const timeouts: number[] = []
+    blocks.forEach((_, i) => {
+      const t = window.setTimeout(() => {
+        setVisibleCount(prev => Math.max(prev, i + 1))
+        if (i === blocks.length - 1 && !doneRef.current) {
+          doneRef.current = true
+          // chama onDone após o fade do último bloco terminar
+          window.setTimeout(() => onDone?.(), fadeMs)
+        }
+      }, i * blockDelayMs)
+      timeouts.push(t)
+    })
+    return () => timeouts.forEach(t => window.clearTimeout(t))
+  }, [text, blockDelayMs, fadeMs, blocks.length, onDone])
+
+  return (
+    <>
+      {blocks.map((block, i) => (
+        <p
+          key={i}
+          style={{
+            ...blockStyle,
+            opacity: i < visibleCount ? 1 : 0,
+            transition: `opacity ${fadeMs}ms ease-in`,
+            marginBottom: i < blocks.length - 1 ? 16 : 0,
+          }}
+        >
+          {block}
+        </p>
+      ))}
+    </>
+  )
+}
+
 export default function Reed() {
   const navigate = useNavigate()
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -542,13 +598,12 @@ export default function Reed() {
               whiteSpace: 'pre-wrap', margin: 0,
             }
 
-            // Welcome: typewriter inline. Demais mensagens: render direto.
+            // Welcome: render em blocos (parágrafos sequenciais com fade-in).
+            // Mesmo padrão visual do eco do warmup. Demais mensagens: render direto.
             if (msg.isWelcome) {
               return (
                 <div key={i} style={{ paddingLeft: 0 }}>
-                  <p style={reedStyle}>
-                    <Typewriter text={msg.text} charDelayMs={38} />
-                  </p>
+                  <BlockReveal text={msg.text} blockStyle={reedStyle} blockDelayMs={700} />
                 </div>
               )
             }
