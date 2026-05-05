@@ -72,17 +72,17 @@ export default function Home() {
       {/* TeamMessage — voz fundadores, banner editorial topo (entra primeiro) */}
       <TeamMessage contextKey="home_first_visit" />
 
-      {/* Saudação voz sistema — espera TeamMessage entrar e dar tempo de ler */}
+      {/* Saudação voz sistema — espera TeamMessage ser lida (texto longo dos fundadores) */}
       {greeting && (
         <div style={{ padding: "12px 24px 0" }}>
-          <SystemTerminalLine text={greeting} delayMs={2200} />
+          <SystemTerminalLine text={greeting} delayMs={4500} />
         </div>
       )}
 
-      {/* Frase guide — em cadeia após saudação (cascade total ~4s) */}
+      {/* Frase guide — em cadeia após saudação (cascade total ~7s) */}
       {guide && (
         <div style={{ padding: "12px 24px 20px" }}>
-          <SystemTerminalLine text={guide.frase} delayMs={3700} />
+          <SystemTerminalLine text={guide.frase} delayMs={6500} />
         </div>
       )}
 

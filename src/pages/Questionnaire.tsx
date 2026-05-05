@@ -196,17 +196,17 @@ export default function Questionnaire() {
     if (cascadeArmedRef.current) return
     if (phase === 'loading' || phase === 'transition' || phase === 'done') return
     cascadeArmedRef.current = true
-    const t1 = window.setTimeout(() => setQuestionVisible(true), 2700)
-    const t2 = window.setTimeout(() => setInputVisible(true), 3300)
+    const t1 = window.setTimeout(() => setQuestionVisible(true), 3500)
+    const t2 = window.setTimeout(() => setInputVisible(true), 4200)
 
-    // Pulse áudio só 1ª vez no questionário
+    // Pulse áudio só 1ª vez no questionário (vem após input, dá tempo de ler)
     const alreadySeen = typeof window !== 'undefined' && localStorage.getItem(AUDIO_PULSE_KEY) === '1'
     let t3: number | null = null
     if (!alreadySeen) {
       t3 = window.setTimeout(() => {
         setAudioPulseFirst(true)
         try { localStorage.setItem(AUDIO_PULSE_KEY, '1') } catch {}
-      }, 3900)
+      }, 5000)
     }
 
     return () => {

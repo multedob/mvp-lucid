@@ -131,59 +131,105 @@ export function ContextSystem({ onBack }: { onBack?: () => void }) {
       </div>
       <div className="r-line" />
 
-      <div className="r-scroll" style={{ padding: "24px 24px 24px", display: "flex", flexDirection: "column", gap: 32 }}>
-        {SECTIONS.map(sec => (
-          <div key={sec.section} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-            {/* Header da sub-seção */}
-            <div style={{
-              fontFamily: "var(--r-font-sys)",
-              fontWeight: 400,
-              fontSize: 10,
-              color: "var(--r-telha)",
-              letterSpacing: "0.14em",
-              textTransform: "uppercase",
-              borderBottom: "1px solid var(--r-ghost)",
-              paddingBottom: 6,
-            }}>
-              {sec.section}
-            </div>
-
-            {/* Items da sub-seção */}
-            {sec.items.map(item => (
-              <div key={item.label} style={{ borderLeft: "1px solid var(--r-ghost)", paddingLeft: 16 }}>
-                <div style={{
-                  fontFamily: "var(--r-font-sys)",
-                  fontWeight: 400,
-                  fontSize: 10,
-                  color: "var(--r-sub)",
-                  letterSpacing: "0.1em",
-                  marginBottom: 8,
-                }}>
-                  {item.label}
-                </div>
-                {item.text.map((p, i) => (
-                  <div key={i} style={{
-                    fontFamily: "var(--r-font-sys)",
-                    fontWeight: 300,
-                    fontSize: 11,
-                    color: "var(--r-dim)",
-                    lineHeight: 1.7,
-                    letterSpacing: "0.03em",
-                    marginBottom: i < item.text.length - 1 ? 10 : 0,
-                  }}>
-                    {p}
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
+      <SystemSections sections={SECTIONS} />
 
       <div className="r-line" />
       <div style={{ height: 52, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, flexShrink: 0 }}>
         <span onClick={handleBack} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
       </div>
+    </div>
+  );
+}
+
+// Sub-seções colapsáveis. Cada seção começa fechada; click no header toggle.
+function SystemSections({ sections }: {
+  sections: { section: string; items: { label: string; text: string[] }[] }[]
+}) {
+  const [openIdx, setOpenIdx] = useState<Set<number>>(new Set());
+  const toggle = (i: number) => {
+    setOpenIdx(prev => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+  };
+
+  return (
+    <div className="r-scroll" style={{ padding: "24px 24px 24px", display: "flex", flexDirection: "column", gap: 12 }}>
+      {sections.map((sec, i) => {
+        const isOpen = openIdx.has(i);
+        return (
+          <div key={sec.section} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {/* Header clicável */}
+            <div
+              onClick={() => toggle(i)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                fontFamily: "var(--r-font-sys)",
+                fontWeight: 400,
+                fontSize: 10,
+                color: "var(--r-telha)",
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                borderBottom: "1px solid var(--r-ghost)",
+                paddingBottom: 8,
+                paddingTop: 4,
+                cursor: "pointer",
+                userSelect: "none",
+              }}
+            >
+              <span>{sec.section}</span>
+              <span aria-hidden="true" style={{
+                fontSize: 12,
+                color: "var(--r-muted)",
+                marginLeft: 12,
+                transition: "transform 200ms ease",
+                transform: isOpen ? "rotate(45deg)" : "rotate(0deg)",
+                display: "inline-block",
+                lineHeight: 1,
+              }}>
+                +
+              </span>
+            </div>
+
+            {/* Items — só aparecem quando expandido */}
+            {isOpen && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 18, paddingBottom: 12 }}>
+                {sec.items.map(item => (
+                  <div key={item.label} style={{ borderLeft: "1px solid var(--r-ghost)", paddingLeft: 16 }}>
+                    <div style={{
+                      fontFamily: "var(--r-font-sys)",
+                      fontWeight: 400,
+                      fontSize: 10,
+                      color: "var(--r-sub)",
+                      letterSpacing: "0.1em",
+                      marginBottom: 8,
+                    }}>
+                      {item.label}
+                    </div>
+                    {item.text.map((p, idx) => (
+                      <div key={idx} style={{
+                        fontFamily: "var(--r-font-sys)",
+                        fontWeight: 300,
+                        fontSize: 11,
+                        color: "var(--r-dim)",
+                        lineHeight: 1.7,
+                        letterSpacing: "0.03em",
+                        marginBottom: idx < item.text.length - 1 ? 10 : 0,
+                      }}>
+                        {p}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
