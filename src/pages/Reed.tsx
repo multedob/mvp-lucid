@@ -45,17 +45,17 @@ function buildPillContextString(pills: PillContext[]): string {
 
 const WELCOME_MESSAGE = `oi. eu sou reed.
 
-faço parte do rdwth — um sistema de autoconhecimento. não sou humano, e não tento ser. mas presto atenção no que você diz.
+faço parte do rdwth — um sistema de autoconhecimento. não sou humano, e não tento ser. mas presto total atenção no que você diz.
 
-o sistema tem quatro partes que se alimentam: as Pills (leituras curtas às quais você reage), o questionário (perguntas sobre como você vive e pensa), o questionário de terceiros (onde algumas pessoas próximas respondem sobre você) e esta conversa comigo.
+o sistema tem quatro partes que se cruzam: esta conversa, as Pills, o questionário e o questionário de terceiros.
 
-leio o que essas partes revelam sobre você. quanto mais você se envolve com as Pills, com os questionários e com esta conversa, mais eu te entendo, e mais esta conversa vai a algum lugar.
+leio o que você trás e o que isso revela sobre você. quanto mais você se envolve nas suas respostas, mais eu te entendo e mais este papo vai a algum lugar.
 
-pode parecer simples no começo. mas conforme você completa ciclos, as coisas ganham camadas.
+pode parecer simples no começo. mas conforme você completa ciclos, novas camadas que sempre estiveram aí se revelam.
 
-você pode começar me contando o que te trouxe aqui, ou me perguntar qualquer coisa.
+sinta-se à vontade — esse espaço é seu.
 
-(escreva no idioma que sentir mais natural — eu acompanho.)`
+vai começar me contando o que te trouxe aqui?`
 
 // Typewriter inline — texto aparece L→R, char por char
 function Typewriter({ text, charDelayMs = 38, onDone }: { text: string; charDelayMs?: number; onDone?: () => void }) {

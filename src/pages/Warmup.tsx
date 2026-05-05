@@ -46,12 +46,18 @@ const CASCADE_BUTTON_MS = 3700;
 const CASCADE_DONE_BUTTON_MS = 600;
 
 // Typewriter inline — texto aparece L→R, char por char.
-// Cursor ▌ visível enquanto digita, somem ao terminar.
+// Idempotente: se já animou esse mesmo texto, não re-anima
+// (evita fade-aparece-fade-aparece em strict mode / re-renders).
+// Cursor ▌ visível enquanto digita, some ao terminar.
 function Typewriter({ text, charDelayMs = 38 }: { text: string; charDelayMs?: number }) {
   const [shown, setShown] = useState("");
-  const textRef = useRef(text);
+  const animatedTextRef = useRef<string | null>(null);
+
   useEffect(() => {
-    textRef.current = text;
+    // Idempotência: se já animamos esse text, não reanima.
+    if (animatedTextRef.current === text) return;
+    animatedTextRef.current = text;
+
     setShown("");
     let i = 0;
     const interval = window.setInterval(() => {
@@ -61,6 +67,7 @@ function Typewriter({ text, charDelayMs = 38 }: { text: string; charDelayMs?: nu
     }, charDelayMs);
     return () => window.clearInterval(interval);
   }, [text, charDelayMs]);
+
   return (
     <>
       {shown}

@@ -182,6 +182,18 @@ export default function Questionnaire() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [remainingQuestions, setRemainingQuestions] = useState<number | null>(null)
+
+  // Cascade: pergunta + input só aparecem APÓS voz do sistema (counter + empty state) terminar
+  // de entrar. Disparado uma vez quando phase deixa de ser 'loading'/'transition'.
+  const [contentVisible, setContentVisible] = useState(false)
+  const cascadeArmedRef = useRef(false)
+  useEffect(() => {
+    if (cascadeArmedRef.current) return
+    if (phase === 'loading' || phase === 'transition' || phase === 'done') return
+    cascadeArmedRef.current = true
+    const t = window.setTimeout(() => setContentVisible(true), 1500)
+    return () => window.clearTimeout(t)
+  }, [phase])
   const [loadingScreenDone, setLoadingScreenDone] = useState(false)
 
   // Rotation variants: loaded once after /plan, used for principal question text
@@ -530,8 +542,15 @@ export default function Questionnaire() {
         delayMs={700}
       />
 
-      {/* Pergunta */}
-      <div className="r-scroll" style={{ padding: '24px 24px 0' }}>
+      {/* Pergunta — cascade: aparece após voz sistema (1500ms delay) */}
+      <div
+        className="r-scroll"
+        style={{
+          padding: '24px 24px 0',
+          opacity: contentVisible ? 1 : 0,
+          transition: 'opacity 500ms ease-in',
+        }}
+      >
         <p className="r-question" style={{ whiteSpace: 'pre-line' }}>
           {getDisplayText()}
         </p>
@@ -548,9 +567,14 @@ export default function Questionnaire() {
         <div style={{ height: 24 }} />
       </div>
 
-      {/* Input — mesmo padrão das pills */}
-      <div className="r-line" />
-      <div style={{ padding: '12px 24px 10px', flexShrink: 0 }}>
+      {/* Input — mesmo padrão das pills, cascade junto com a pergunta */}
+      <div className="r-line" style={{ opacity: contentVisible ? 1 : 0, transition: 'opacity 500ms ease-in' }} />
+      <div style={{
+        padding: '12px 24px 10px',
+        flexShrink: 0,
+        opacity: contentVisible ? 1 : 0,
+        transition: 'opacity 500ms ease-in',
+      }}>
         <InvisibleTextarea
           value={answer}
           onChange={setAnswer}
