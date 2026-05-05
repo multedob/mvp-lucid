@@ -18,7 +18,7 @@
 // Uso típico (banner topo da Home):
 //   <TeamMessage contextKey="home_first_visit" />
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface TeamMessageData {
@@ -29,6 +29,9 @@ interface TeamMessageData {
 
 interface TeamMessageProps {
   contextKey: string;
+  /** Disparado quando o componente terminou de carregar (com ou sem mensagem).
+   *  hasMessage=true significa que vai renderizar; false significa que retorna null. */
+  onLoaded?: (hasMessage: boolean) => void;
 }
 
 const STYLE_ID = "rdwth-teammessage-styles";
@@ -80,9 +83,11 @@ function writeSessionCache(storageKey: string, cache: SessionCache): void {
   }
 }
 
-export default function TeamMessage({ contextKey }: TeamMessageProps) {
+export default function TeamMessage({ contextKey, onLoaded }: TeamMessageProps) {
   const [message, setMessage] = useState<TeamMessageData | null>(null);
   const [loading, setLoading] = useState(true);
+  const onLoadedRef = useRef(onLoaded);
+  onLoadedRef.current = onLoaded;
 
   useEffect(() => {
     injectStyles();
@@ -97,8 +102,10 @@ export default function TeamMessage({ contextKey }: TeamMessageProps) {
     if (cached) {
       if (cached.kind === "message") {
         setMessage(cached.data);
+        onLoadedRef.current?.(true);
       } else {
         setMessage(null);
+        onLoadedRef.current?.(false);
       }
       setLoading(false);
       return;
@@ -116,6 +123,7 @@ export default function TeamMessage({ contextKey }: TeamMessageProps) {
         if (error) {
           console.warn("[TeamMessage] fetch error:", error);
           setMessage(null);
+          onLoadedRef.current?.(false);
           // Não cacheia erro — próxima carga tenta de novo
         } else if (data?.text && data?.id) {
           const newMessage: TeamMessageData = {
@@ -124,11 +132,13 @@ export default function TeamMessage({ contextKey }: TeamMessageProps) {
             tone: data.tone ?? null,
           };
           setMessage(newMessage);
+          onLoadedRef.current?.(true);
           // Cache pra resto da sessão (persiste em navegações entre telas)
           writeSessionCache(storageKey, { kind: "message", data: newMessage });
         } else {
           // { message: null } — user já viu todas, ou nenhuma ativa pro contexto
           setMessage(null);
+          onLoadedRef.current?.(false);
           // Cacheia "verificado, sem mensagem" pra evitar refetch na sessão
           writeSessionCache(storageKey, { kind: "empty" });
         }
@@ -136,6 +146,7 @@ export default function TeamMessage({ contextKey }: TeamMessageProps) {
         if (cancelled) return;
         console.warn("[TeamMessage] fetch failed:", err);
         setMessage(null);
+        onLoadedRef.current?.(false);
       } finally {
         if (!cancelled) setLoading(false);
       }

@@ -40,7 +40,17 @@ export default function Home() {
   // Modo guiado marco-driven
   const { guide } = useHomeGuide();
 
-  // Pulse só dispara DEPOIS da frase digitar (delayMs 1500 + ~700ms typewriter ≈ 2500ms)
+  // Cascade depende do TeamMessage (que é async — fetch edge function).
+  // Estados:
+  //   teamLoaded: TeamMessage terminou de carregar (com ou sem mensagem)
+  //   teamHasMessage: tem mensagem editorial ativa
+  //   showGreeting/showGuide: controlam render via setTimeout pós-load
+  const [teamLoaded, setTeamLoaded] = useState(false);
+  const [teamHasMessage, setTeamHasMessage] = useState(false);
+  const [showGreeting, setShowGreeting] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
+
+  // Pulse só dispara DEPOIS da frase digitar
   const [pulseActive, setPulseActive] = useState(false);
 
   useEffect(() => {
@@ -48,16 +58,30 @@ export default function Home() {
     if (fromWarmup) {
       window.history.replaceState({}, document.title);
     }
-    // Single-target pulse depois da frase digitar (não usamos mais respiração única
-    // na NavBottom inteira — substituída por single-target/rotation no destino do marco)
-    const timer = setTimeout(() => setPulseActive(true), 2500);
-    return () => clearTimeout(timer);
   }, [location.state]);
 
   useEffect(() => {
     const text = getGreeting(userName);
     if (text) setGreeting(text);
   }, [userName]);
+
+  // Cascade dinâmico — espera TeamMessage carregar antes de armar saudação/guide.
+  // Com mensagem: 3500ms (lê) → greeting → 2000ms → guide
+  // Sem mensagem: 200ms → greeting → 1500ms → guide
+  useEffect(() => {
+    if (!teamLoaded) return;
+    const greetDelay = teamHasMessage ? 3500 : 200;
+    const guideDelay = teamHasMessage ? 5500 : 1700;
+    const pulseDelay = teamHasMessage ? 7500 : 3500;
+    const t1 = window.setTimeout(() => setShowGreeting(true), greetDelay);
+    const t2 = window.setTimeout(() => setShowGuide(true), guideDelay);
+    const t3 = window.setTimeout(() => setPulseActive(true), pulseDelay);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.clearTimeout(t3);
+    };
+  }, [teamLoaded, teamHasMessage]);
 
   return (
     <div className="r-screen">
@@ -69,20 +93,26 @@ export default function Home() {
       </div>
       <div className="r-line" />
 
-      {/* TeamMessage — voz fundadores, banner editorial topo (entra primeiro) */}
-      <TeamMessage contextKey="home_first_visit" />
+      {/* TeamMessage — voz fundadores. Notifica Home quando carrega (com ou sem msg). */}
+      <TeamMessage
+        contextKey="home_first_visit"
+        onLoaded={(has) => {
+          setTeamHasMessage(has);
+          setTeamLoaded(true);
+        }}
+      />
 
-      {/* Saudação voz sistema — espera TeamMessage ser lida (texto longo dos fundadores) */}
-      {greeting && (
+      {/* Saudação voz sistema — só renderiza após TeamMessage carregar (cascade dinâmico) */}
+      {greeting && showGreeting && (
         <div style={{ padding: "12px 24px 0" }}>
-          <SystemTerminalLine text={greeting} delayMs={4500} />
+          <SystemTerminalLine text={greeting} delayMs={0} />
         </div>
       )}
 
-      {/* Frase guide — em cadeia após saudação (cascade total ~7s) */}
-      {guide && (
+      {/* Frase guide — em cadeia após saudação */}
+      {guide && showGuide && (
         <div style={{ padding: "12px 24px 20px" }}>
-          <SystemTerminalLine text={guide.frase} delayMs={6500} />
+          <SystemTerminalLine text={guide.frase} delayMs={0} />
         </div>
       )}
 
