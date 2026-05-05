@@ -6,11 +6,11 @@
 // created_at ASC), e marca como vista (fire-and-forget).
 //
 // Lifetime de exibição:
-// - Mostra 1 vez por user (backend marca como vista no GET)
-// - Durante a sessão atual, persiste mesmo após navegar entre telas e voltar
-//   (sessionStorage cacheia a resposta)
-// - Quando fecha a aba/navegador → sessão acaba, sessionStorage some, próxima
-//   sessão faz fetch novo (que provavelmente retorna null — já vista)
+// - Mostra 1 vez por user, na primeira renderização. Após primeira aparição,
+//   marca em localStorage e nunca mais aparece (mesmo dentro da mesma sessão
+//   navegando entre telas e voltando).
+// - Trocou de sessionStorage→localStorage pra Bruno não ver mensagem persistir
+//   ao retornar à Home dentro da mesma sessão.
 //
 // Tipografia: voz fundadores (Plex Mono cor de identidade, sem prefixo `> `,
 // sem typewriter — mensagem do time é editorial, não voz sistema falando).
@@ -35,7 +35,8 @@ interface TeamMessageProps {
 }
 
 const STYLE_ID = "rdwth-teammessage-styles";
-const SESSION_KEY_PREFIX = "rdwth_team_message_session_";
+// localStorage por contextKey — uma vez mostrado, nunca mais.
+const LOCAL_KEY_PREFIX = "rdwth_team_message_seen_";
 
 const styles = `
 @keyframes rdwth-teammessage-fade-in {
@@ -59,25 +60,19 @@ function injectStyles() {
   document.head.appendChild(styleEl);
 }
 
-type SessionCache =
-  | { kind: "message"; data: TeamMessageData }
-  | { kind: "empty" };
-
-function readSessionCache(storageKey: string): SessionCache | null {
-  if (typeof window === "undefined") return null;
+function hasBeenSeen(storageKey: string): boolean {
+  if (typeof window === "undefined") return false;
   try {
-    const raw = sessionStorage.getItem(storageKey);
-    if (!raw) return null;
-    return JSON.parse(raw) as SessionCache;
+    return localStorage.getItem(storageKey) === "1";
   } catch {
-    return null;
+    return false;
   }
 }
 
-function writeSessionCache(storageKey: string, cache: SessionCache): void {
+function markAsSeen(storageKey: string): void {
   if (typeof window === "undefined") return;
   try {
-    sessionStorage.setItem(storageKey, JSON.stringify(cache));
+    localStorage.setItem(storageKey, "1");
   } catch {
     // QuotaExceeded ou disabled — silencioso
   }
@@ -95,23 +90,17 @@ export default function TeamMessage({ contextKey, onLoaded }: TeamMessageProps) 
 
   useEffect(() => {
     let cancelled = false;
-    const storageKey = SESSION_KEY_PREFIX + contextKey;
+    const storageKey = LOCAL_KEY_PREFIX + contextKey;
 
-    // 1. Tenta sessionStorage primeiro — persiste durante a sessão atual
-    const cached = readSessionCache(storageKey);
-    if (cached) {
-      if (cached.kind === "message") {
-        setMessage(cached.data);
-        onLoadedRef.current?.(true);
-      } else {
-        setMessage(null);
-        onLoadedRef.current?.(false);
-      }
+    // 1. Já viu mensagem desse contexto antes — não mostra de novo.
+    if (hasBeenSeen(storageKey)) {
+      setMessage(null);
       setLoading(false);
+      onLoadedRef.current?.(false);
       return;
     }
 
-    // 2. Sem cache de sessão — fetch backend
+    // 2. Primeira vez — fetch backend
     async function fetchMessage() {
       try {
         const { data, error } = await supabase.functions.invoke("get-team-message", {
@@ -124,7 +113,6 @@ export default function TeamMessage({ contextKey, onLoaded }: TeamMessageProps) 
           console.warn("[TeamMessage] fetch error:", error);
           setMessage(null);
           onLoadedRef.current?.(false);
-          // Não cacheia erro — próxima carga tenta de novo
         } else if (data?.text && data?.id) {
           const newMessage: TeamMessageData = {
             id: data.id,
@@ -133,14 +121,13 @@ export default function TeamMessage({ contextKey, onLoaded }: TeamMessageProps) 
           };
           setMessage(newMessage);
           onLoadedRef.current?.(true);
-          // Cache pra resto da sessão (persiste em navegações entre telas)
-          writeSessionCache(storageKey, { kind: "message", data: newMessage });
+          // Marca como visto APÓS aparecer — próxima visita não mostra mais
+          markAsSeen(storageKey);
         } else {
-          // { message: null } — user já viu todas, ou nenhuma ativa pro contexto
+          // Sem mensagem ativa — também marca pra não tentar de novo
           setMessage(null);
           onLoadedRef.current?.(false);
-          // Cacheia "verificado, sem mensagem" pra evitar refetch na sessão
-          writeSessionCache(storageKey, { kind: "empty" });
+          markAsSeen(storageKey);
         }
       } catch (err) {
         if (cancelled) return;
