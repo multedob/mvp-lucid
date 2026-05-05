@@ -32,93 +32,92 @@ function capitalizeName(s: string | null | undefined): string {
 }
 
 // LocalStorage keys pra onboardings
-const ONBOARDING_CONTEXT_SEEN = "rdwth_onb_context_seen";
-const ONBOARDING_THIRD_PARTY_SEEN = "rdwth_onb_thirdparty_seen";
-
-// ─── OnboardingOverlay — tela cheia, primeira visita ──────────────
-function OnboardingOverlay({ title, blocks, onClose }: {
-  title: string;
-  blocks: Array<{ label?: string; text: string | string[] }>;
-  onClose: () => void;
-}) {
-  return (
-    <div style={{
-      position: "fixed", inset: 0, background: "var(--r-bg)", zIndex: 100,
-      display: "flex", flexDirection: "column",
-      animation: "fadeIn 300ms ease",
-    }}>
-      <style>{`@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
-      <div className="r-scroll" style={{ padding: "60px 24px 24px", display: "flex", flexDirection: "column", gap: 24 }}>
-        <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 9, color: "var(--r-telha)", letterSpacing: "0.12em" }}>
-          primeira visita
-        </div>
-        <div style={{ fontFamily: "var(--r-font-ed)", fontWeight: 800, fontSize: 22, lineHeight: 1.4, color: "var(--r-text)", maxWidth: 600, marginLeft: "auto", marginRight: "auto" }}>
-          {title}
-        </div>
-        {blocks.map((b, i) => (
-          <div key={i} style={{ borderLeft: "1px solid var(--r-ghost)", paddingLeft: 16, maxWidth: 600, marginLeft: "auto", marginRight: "auto", width: "100%" }}>
-            {b.label && (
-              <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 10, color: "var(--r-sub)", letterSpacing: "0.1em", marginBottom: 8 }}>
-                {b.label}
-              </div>
-            )}
-            {(Array.isArray(b.text) ? b.text : [b.text]).map((p, j) => (
-              <div key={j} style={{ fontFamily: "var(--r-font-ed)", fontSize: 14, lineHeight: 1.7, color: "var(--r-text)", marginBottom: 8 }}>
-                {p}
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-      <div className="r-line" />
-      <div style={{ height: 56, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 24px", flexShrink: 0 }}>
-        <span onClick={onClose} style={{
-          fontFamily: "var(--r-font-sys)", fontSize: 13, color: "var(--r-text)",
-          cursor: "pointer", letterSpacing: "0.06em",
-          padding: "8px 24px", border: "1px solid var(--r-text)",
-        }}>
-          entendi →
-        </span>
-      </div>
-    </div>
-  );
-}
+// Item #7 (consolidação Sistema) — removidos:
+// - ONBOARDING_CONTEXT_SEEN / ONBOARDING_THIRD_PARTY_SEEN (localStorage flags)
+// - OnboardingOverlay (componente de tela cheia primeira-visita)
+// O conteúdo dos overlays foi migrado pra ContextSystem com sub-seções.
 
 // ─── ContextSystem — "Como o rdwth funciona" ──────────────────────
 export function ContextSystem({ onBack }: { onBack?: () => void }) {
   const navigate = useNavigate();
   const handleBack = onBack ?? (() => navigate(-1 as any));
-  const ITEMS = [
+
+  // Estrutura em sub-seções (consolidação dos onboardings — item #7).
+  // Cada seção agrupa items relacionados; cada item tem label + text[].
+  const SECTIONS: { section: string; items: { label: string; text: string[] }[] }[] = [
     {
-      label: "O que é isso",
-      text: ["O rdwth mapeia padrões estruturais de como você organiza experiência. Não quem você é — como você organiza no momento."],
-    },
-    {
-      label: "Leitura",
-      text: ["Cada ciclo produz uma leitura estrutural baseada nas suas respostas. A leitura descreve padrões predominantes — não identidade, não diagnóstico, não direção."],
-    },
-    {
-      label: "Ciclos",
-      text: ["Um ciclo é um conjunto completo de respostas. Cada ciclo é independente. Com o tempo, padrões recorrentes ficam visíveis. A recorrência é observada, não prescrita."],
-    },
-    {
-      label: "Natureza provisória",
-      text: ["Uma única leitura é hipótese, não conclusão. Vai ficando mais legível ao longo do tempo."],
-    },
-    {
-      label: "Por que linguagem, não números",
-      text: ["Números não trazem clareza aqui — trazem ruído. A interface mostra linguagem porque padrões estruturais se leem melhor em palavras do que em pontuação."],
-    },
-    {
-      label: "Reed",
-      text: [
-        "Reed traduz a saída estrutural em linguagem. Ele não improvisa — as respostas vêm da leitura estrutural do seu ciclo, não das suas respostas brutas.",
-        "Ele usa uma biblioteca curada de obras de psicologia, filosofia e teoria organizacional. Ele não acessa a internet. Ele não gera opinião.",
+      section: "Como o rdwth funciona",
+      items: [
+        {
+          label: "O que é isso",
+          text: ["O rdwth mapeia padrões estruturais de como você organiza experiência. Não quem você é — como você organiza no momento."],
+        },
+        {
+          label: "Por que linguagem, não números",
+          text: ["Números não trazem clareza aqui — trazem ruído. A interface mostra linguagem porque padrões estruturais se leem melhor em palavras do que em pontuação."],
+        },
+        {
+          label: "Sem direção",
+          text: ["O sistema não sugere o que você deve fazer com o que mostra. A leitura é sua. A interpretação é sua."],
+        },
       ],
     },
     {
-      label: "Sem direção",
-      text: ["O sistema não sugere o que você deve fazer com o que mostra. A leitura é sua. A interpretação é sua.",
+      section: "As quatro partes",
+      items: [
+        {
+          label: "Reed",
+          text: [
+            "Reed é a voz do rdwth nas conversas. Traduz a saída estrutural em linguagem. Não improvisa — as respostas vêm da leitura estrutural do seu ciclo, não das suas respostas brutas.",
+            "Usa uma biblioteca curada de obras de psicologia, filosofia e teoria organizacional. Não acessa a internet. Não gera opinião.",
+          ],
+        },
+        {
+          label: "Pills",
+          text: ["Leituras curtas em 6 dimensões — você reage a cada uma e o sistema lê padrões em como você responde. Cada pill cobre uma tensão: Eu↔Pertencimento, Eu↔Papel, Presença↔Distância, Clareza↔Ação, Dentro↔Fora, Movimento↔Pausa."],
+        },
+        {
+          label: "Questionário",
+          text: ["Blocos de perguntas distribuídos em 4 dimensões. Você responde no seu ritmo — pode pausar e voltar. Junto com as pills, alimenta a leitura estrutural do ciclo."],
+        },
+        {
+          label: "Questionário de terceiros",
+          text: [
+            "Você gera um link único e envia pra pessoas próximas. 5 perguntas curtas, 5-10 minutos pra responder. A perspectiva externa traz coisas que de dentro ficam invisíveis.",
+            "Anonimato é decisão do terceiro — ele escolhe se você enxerga quem respondeu. Você pode convidar até 8 pessoas por ciclo.",
+            "No primeiro ciclo: opcional. A partir do segundo: você precisa de pelo menos 2 perspectivas externas pra fechar.",
+          ],
+        },
+      ],
+    },
+    {
+      section: "Sua leitura",
+      items: [
+        {
+          label: "Ciclos",
+          text: ["Um ciclo é um conjunto completo de respostas — pills, questionário e perspectivas de pessoas próximas. Cada ciclo é independente. Com o tempo, padrões recorrentes ficam visíveis. A recorrência é observada, não prescrita."],
+        },
+        {
+          label: "Leitura por ciclo",
+          text: ["Cada ciclo produz sua própria leitura estrutural. Descreve padrões predominantes naquele momento — não identidade, não diagnóstico, não direção."],
+        },
+        {
+          label: "Leitura profunda",
+          text: ["A leitura profunda integra pills, questionário e terceiros do ciclo. Não é diagnóstico, não é prescrição — é devolução estruturada do que você compartilhou."],
+        },
+        {
+          label: "Natureza provisória",
+          text: ["Uma única leitura é hipótese, não conclusão. Vai ficando mais legível ao longo dos ciclos."],
+        },
+      ],
+    },
+    {
+      section: "Sobre se mostrar",
+      items: [
+        {
+          label: "Um ato de coragem",
+          text: ["Pedir que alguém te descreva é um ato de coragem — não há como fazer isso sem se expor um pouco. E é justo aí que algo se abre: a perspectiva interna não ocupa dois lugares ao mesmo tempo, então o que escolhemos esconder de nós mesmos costuma ser exatamente o que um outro olhar entrega de volta sem peso."],
+        },
       ],
     },
   ];
@@ -132,19 +131,49 @@ export function ContextSystem({ onBack }: { onBack?: () => void }) {
       </div>
       <div className="r-line" />
 
-      <div className="r-scroll" style={{ padding: "28px 24px 24px", display: "flex", flexDirection: "column", gap: 24 }}>
-        <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 9, color: "var(--r-telha)", letterSpacing: "0.12em" }}>
-          Como o rdwth funciona
-        </div>
-
-        {ITEMS.map(item => (
-          <div key={item.label} style={{ borderLeft: "1px solid var(--r-ghost)", paddingLeft: 16 }}>
-            <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 400, fontSize: 10, color: "var(--r-sub)", letterSpacing: "0.1em", marginBottom: 8 }}>
-              {item.label}
+      <div className="r-scroll" style={{ padding: "24px 24px 24px", display: "flex", flexDirection: "column", gap: 32 }}>
+        {SECTIONS.map(sec => (
+          <div key={sec.section} style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+            {/* Header da sub-seção */}
+            <div style={{
+              fontFamily: "var(--r-font-sys)",
+              fontWeight: 400,
+              fontSize: 10,
+              color: "var(--r-telha)",
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              borderBottom: "1px solid var(--r-ghost)",
+              paddingBottom: 6,
+            }}>
+              {sec.section}
             </div>
-            {item.text.map((p, i) => (
-              <div key={i} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-dim)", lineHeight: 1.7, letterSpacing: "0.03em", marginBottom: i < item.text.length - 1 ? 10 : 0 }}>
-                {p}
+
+            {/* Items da sub-seção */}
+            {sec.items.map(item => (
+              <div key={item.label} style={{ borderLeft: "1px solid var(--r-ghost)", paddingLeft: 16 }}>
+                <div style={{
+                  fontFamily: "var(--r-font-sys)",
+                  fontWeight: 400,
+                  fontSize: 10,
+                  color: "var(--r-sub)",
+                  letterSpacing: "0.1em",
+                  marginBottom: 8,
+                }}>
+                  {item.label}
+                </div>
+                {item.text.map((p, i) => (
+                  <div key={i} style={{
+                    fontFamily: "var(--r-font-sys)",
+                    fontWeight: 300,
+                    fontSize: 11,
+                    color: "var(--r-dim)",
+                    lineHeight: 1.7,
+                    letterSpacing: "0.03em",
+                    marginBottom: i < item.text.length - 1 ? 10 : 0,
+                  }}>
+                    {p}
+                  </div>
+                ))}
               </div>
             ))}
           </div>
@@ -615,44 +644,22 @@ export default function Context() {
   const [showThirdParty, setShowThirdParty] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingScreenDone, setLoadingScreenDone] = useState(false);
-  const [showOnbContext, setShowOnbContext] = useState(false);
-  const [showOnbThirdParty, setShowOnbThirdParty] = useState(false);
 
-  // Onboarding /contexto: primeira visita ao /context
-  useEffect(() => {
-    try {
-      if (!localStorage.getItem(ONBOARDING_CONTEXT_SEEN)) {
-        setShowOnbContext(true);
-      }
-    } catch {}
-  }, []);
-
-  const dismissOnbContext = () => {
-    track("context_onboarding_dismissed", { which: "context" });
-    try { localStorage.setItem(ONBOARDING_CONTEXT_SEEN, "true"); } catch {}
-    setShowOnbContext(false);
-  };
-
-  // Click em "terceiros": abre onboarding na primeira vez, depois vai direto
+  // Onboardings consolidados em /sistema (item #7) — sem overlays primeira-visita.
   const handleOpenThirdParty = () => {
     track("context_third_party_panel_opened");
-    try {
-      if (!localStorage.getItem(ONBOARDING_THIRD_PARTY_SEEN)) {
-        setShowOnbThirdParty(true);
-        return;
-      }
-    } catch {}
-    setShowThirdParty(true);
-  };
-
-  const dismissOnbThirdParty = () => {
-    track("context_onboarding_dismissed", { which: "third_party" });
-    try { localStorage.setItem(ONBOARDING_THIRD_PARTY_SEEN, "true"); } catch {}
-    setShowOnbThirdParty(false);
     setShowThirdParty(true);
   };
 
   useEffect(() => { loadCycles(); }, []);
+
+  // Cascade: voz sistema entra primeiro, canvas (descrição + ações) entra com fade depois.
+  // IMPORTANTE: hooks DEVEM estar antes de qualquer return condicional (regra dos hooks).
+  const [canvasVisible, setCanvasVisible] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => setCanvasVisible(true), 2700);
+    return () => window.clearTimeout(t);
+  }, []);
 
   async function loadCycles() {
     try {
@@ -749,64 +756,6 @@ export default function Context() {
     }
   }
 
-  // Onboardings (overlays primeira-visita)
-  if (showOnbContext) {
-    return <OnboardingOverlay
-      onClose={dismissOnbContext}
-      title={userName ? `${capitalizeName(userName)}, este é o seu Contexto.` : "Este é o seu Contexto."}
-      blocks={[
-        {
-          label: "o que você encontra aqui",
-          text: "Cada ciclo do rdwth produz uma leitura estrutural — um retrato dos padrões que aparecem no que você compartilha. Aqui você acessa essa leitura, navega entre ciclos passados e vê como as coisas se desenham ao longo do tempo.",
-        },
-        {
-          label: "ciclos",
-          text: "Um ciclo é um conjunto completo de respostas — pills, questionário e perspectivas de pessoas próximas. Cada ciclo gera sua própria leitura. O sistema amadurece com você ao longo deles.",
-        },
-        {
-          label: "terceiros",
-          text: "Você também pode convidar pessoas próximas pra responder um questionário curto sobre como veem você. A perspectiva externa traz coisas que de dentro ficam invisíveis.",
-        },
-        {
-          label: "leitura profunda",
-          text: "A leitura se constrói conforme você responde. Não é diagnóstico, não é prescrição. É devolução estruturada do que você compartilhou.",
-        },
-      ]}
-    />;
-  }
-  if (showOnbThirdParty) {
-    return <OnboardingOverlay
-      onClose={dismissOnbThirdParty}
-      title="Sobre o questionário de pessoas próximas"
-      blocks={[
-        {
-          label: "por que isso importa",
-          text: "A forma como alguém de fora observa traz dados que você sozinho não enxerga. O rdwth integra essas perspectivas à sua leitura estrutural, principalmente em dimensões internas onde o olhar externo é fundamental.",
-        },
-        {
-          label: "como funciona",
-          text: "Você gera um link único por convite e envia para quem você quiser (5-10 minutos pra responder). A pessoa responde 5 perguntas curtas, e ajuda o sistema a enxergar padrões antes invisíveis.",
-        },
-        {
-          label: "primeiro ciclo: opcional",
-          text: "No seu primeiro ciclo, você pode fechar a leitura só com suas respostas. Convidar terceiros é encorajado, mas não obrigatório.",
-        },
-        {
-          label: "a partir do segundo ciclo: necessário",
-          text: "Pra fechar ciclos seguintes (2 em diante), você precisará de pelo menos 2 perspectivas externas. Isso é parte do amadurecimento da leitura — quanto mais entradas, mais nuance.",
-        },
-        {
-          label: "limite",
-          text: "Você pode convidar até 8 pessoas por ciclo. Anonimato é decisão do terceiro: ele escolhe se você enxerga as respostas e quem respondeu.",
-        },
-        {
-          label: "um ato de coragem",
-          text: "Pedir que alguém te descreva é um ato de coragem — não há como fazer isso sem se expor um pouco. E é justo aí que algo se abre: a perspectiva interna não consegue ocupar dois lugares ao mesmo tempo, então o que escolhemos esconder de nós mesmos costuma ser exatamente o que um outro olhar entrega de volta sem peso.",
-        },
-      ]}
-    />;
-  }
-
   // Loading inicial — overlay com identidade rdwth (mostra enquanto carrega
   // E também durante phase 3 + fade out, controlado por loadingScreenDone)
   if (!loadingScreenDone) {
@@ -853,13 +802,6 @@ export default function Context() {
   const disclaimerText = userName
     ? `${userName}, aqui tem histórico de leituras dos seus ciclos e o canal para questionário de terceiros.`
     : "Aqui tem histórico de leituras dos seus ciclos e o canal para questionário de terceiros.";
-
-  // Cascade: voz sistema entra primeiro, canvas (descrição + ações) entra com fade depois.
-  const [canvasVisible, setCanvasVisible] = useState(false);
-  useEffect(() => {
-    const t = window.setTimeout(() => setCanvasVisible(true), 2700);
-    return () => window.clearTimeout(t);
-  }, []);
 
   return (
     <div className="r-screen">

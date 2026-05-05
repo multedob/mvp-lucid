@@ -250,13 +250,12 @@ export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(({
     ? "var(--r-warn, #d49a3a)"
     : "var(--r-telha, #c8553d)";
 
-  // breathingPulseOnce: 2 ciclos fade in/out simétricos pra chamar atenção na 1ª entrada.
-  // Não roda se está gravando/processando (anim audio-pulse já cobre esses estados).
+  // breathingPulseOnce: 2 pulsos visíveis (background telha + scale + glow) pra
+  // chamar atenção na 1ª entrada. Não roda se está gravando/processando.
+  const useBreathing = breathingPulseOnce && state === "idle";
   const animationProp = isRecording
     ? `audio-pulse ${isNearLimit ? "0.5s" : "1s"} ease-in-out infinite`
-    : breathingPulseOnce && state === "idle"
-      ? "audio-breathing-once 2.4s ease-in-out 2 forwards"
-      : "none";
+    : "none";
 
   return (
     <div ref={fwdRef} style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -266,6 +265,7 @@ export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(({
         disabled={disabled || isProcessing || state === "error"}
         aria-label={isRecording ? "parar gravação" : "começar gravação"}
         title={isRecording ? "parar gravação" : "falar resposta"}
+        className={useBreathing ? "audio-breathing-once" : ""}
         style={{
           width: 6,
           height: 6,
@@ -292,9 +292,20 @@ export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(({
           0%, 100% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.4; transform: scale(0.75); }
         }
-        @keyframes audio-breathing-once {
-          0%, 100% { opacity: 1; box-shadow: 0 0 0 0 var(--r-telha); }
-          50% { opacity: 0.55; box-shadow: 0 0 8px 2px var(--r-telha); }
+        /* Breathing once — preenchimento sólido pulsando, mesma cor de quando recording.
+           Sem outline externo, sem scale. Apenas background trocando entre transparent e telha. */
+        @keyframes audio-breathing-once-kf {
+          0%, 50%, 100% {
+            background-color: transparent !important;
+            border-color: var(--r-ghost) !important;
+          }
+          25%, 75% {
+            background-color: var(--r-telha) !important;
+            border-color: var(--r-telha) !important;
+          }
+        }
+        .audio-breathing-once {
+          animation: audio-breathing-once-kf 4.8s cubic-bezier(0.4, 0, 0.6, 1) 1 forwards !important;
         }
       `}</style>
     </div>

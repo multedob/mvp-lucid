@@ -69,20 +69,20 @@ export default function Home() {
       </div>
       <div className="r-line" />
 
-      {/* TeamMessage — banner editorial topo (só renderiza se houver mensagem ativa) */}
+      {/* TeamMessage — voz fundadores, banner editorial topo (entra primeiro) */}
       <TeamMessage contextKey="home_first_visit" />
 
-      {/* Saudação voz sistema — espera TeamMessage aparecer (delayMs=700) */}
+      {/* Saudação voz sistema — espera TeamMessage entrar e dar tempo de ler */}
       {greeting && (
         <div style={{ padding: "12px 24px 0" }}>
-          <SystemTerminalLine text={greeting} delayMs={700} />
+          <SystemTerminalLine text={greeting} delayMs={2200} />
         </div>
       )}
 
-      {/* Frase do marco-driven — em cadeia após saudação (delayMs=1500) */}
+      {/* Frase guide — em cadeia após saudação (cascade total ~4s) */}
       {guide && (
         <div style={{ padding: "12px 24px 20px" }}>
-          <SystemTerminalLine text={guide.frase} delayMs={1500} />
+          <SystemTerminalLine text={guide.frase} delayMs={3700} />
         </div>
       )}
 

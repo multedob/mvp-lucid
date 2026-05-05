@@ -285,10 +285,24 @@ InvisibleTextarea.displayName = "InvisibleTextarea";
 
 // ─── Main ─────────────────────────────────────────────────────────
 
+const AUDIO_PULSE_PILL_KEY = 'rdwth_audio_pulse_seen_pill';
+
 export default function PillFlow() {
   const navigate = useNavigate();
   const { pillId: rawPillId } = useParams<{ pillId: string }>();
   const pillId: PillId = (rawPillId && rawPillId in FALLBACK_PILLS) ? rawPillId as PillId : "PI";
+
+  // Pulse breathing na bolinha de áudio — 1ª pill aberta
+  const [audioPulseFirst, setAudioPulseFirst] = useState(false);
+  useEffect(() => {
+    const alreadySeen = typeof window !== 'undefined' && localStorage.getItem(AUDIO_PULSE_PILL_KEY) === '1';
+    if (alreadySeen) return;
+    const t = window.setTimeout(() => {
+      setAudioPulseFirst(true);
+      try { localStorage.setItem(AUDIO_PULSE_PILL_KEY, '1'); } catch {}
+    }, 3500);
+    return () => window.clearTimeout(t);
+  }, []);
   const [state, setState] = useState<State>({
     pillId, moment: "M1", ipeCycleId: "", cycleDisplay: "",
     pillResponseId: null, variationKey: null, variationContent: null,
@@ -748,6 +762,7 @@ export default function PillFlow() {
           sendActive={state.reviewMode || (!state.loading && !!state.m2Input.trim())}
           recorder={!state.reviewMode && state.userId && state.ipeCycleId ? (
             <AudioRecorder userId={state.userId} cycleId={state.ipeCycleId} pillId={state.pillId} moment="m2" language={state.audioLocale}
+              breathingPulseOnce={audioPulseFirst}
               onLiveTranscript={text => setState(s => ({ ...s, m2Input: text, m2TranscriptionLive: text }))}
               onFinalTranscript={text => setState(s => ({ ...s, m2Input: text, m2TranscriptionFinal: text }))}
               onAudioStored={info => setState(s => ({ ...s, m2AudioPath: info.path, m2AudioDurationMs: info.durationMs }))}

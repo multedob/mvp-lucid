@@ -100,6 +100,19 @@ export default function Reed() {
   const [error, setError] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
 
+  // Pulse breathing na bolinha de áudio — 1ª visita ao Reed
+  const [audioPulseFirst, setAudioPulseFirst] = useState(false)
+  const AUDIO_PULSE_REED_KEY = 'rdwth_audio_pulse_seen_reed'
+  useEffect(() => {
+    const alreadySeen = typeof window !== 'undefined' && localStorage.getItem(AUDIO_PULSE_REED_KEY) === '1'
+    if (alreadySeen) return
+    const t = window.setTimeout(() => {
+      setAudioPulseFirst(true)
+      try { localStorage.setItem(AUDIO_PULSE_REED_KEY, '1') } catch {}
+    }, 3500)
+    return () => window.clearTimeout(t)
+  }, [])
+
   useEffect(() => { init() }, [])
 
   // Cleanup abort ao desmontar
@@ -605,6 +618,7 @@ export default function Reed() {
           {userId && cycleId && (
             <AudioRecorder
               userId={userId} cycleId={cycleId} pillId="reed" moment="reed" language="pt-BR"
+              breathingPulseOnce={audioPulseFirst}
               onLiveTranscript={text => setInput(text)}
               onFinalTranscript={text => setInput(text)}
               disabled={sending || loading}
