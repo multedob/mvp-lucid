@@ -154,8 +154,17 @@ export function LoadingScreen({ phrases, loadComplete = true, onDone }: Props) {
         opacity: fadingOut ? 0 : 1,
         transition: `opacity ${FADE_MS}ms ease`,
         animation: "rdwth-ls-fade-in 400ms ease-out",
+        display: "flex",
+        justifyContent: "center",
       }}
     >
+      {/* Container centralizado — mesma largura mobile no desktop */}
+      <div style={{
+        position: "relative",
+        width: "100%",
+        maxWidth: 480,
+        height: "100%",
+      }}>
       <style>{`
         @keyframes rdwth-ls-fade-in {
           from { opacity: 0; }
@@ -248,6 +257,7 @@ export function LoadingScreen({ phrases, loadComplete = true, onDone }: Props) {
             </div>
           ))}
         </div>
+      </div>
       </div>
     </div>
   );

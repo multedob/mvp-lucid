@@ -47,11 +47,11 @@ const WELCOME_MESSAGE = `oi. eu sou reed.
 
 faço parte do rdwth — um sistema de autoconhecimento. não sou humano, e não tento ser. mas presto total atenção no que você diz.
 
-o sistema tem quatro partes que se cruzam: esta conversa, as Pills, o questionário e o questionário de terceiros.
+o sistema tem quatro partes que se cruzam: esta conversa, as pills, o questionário e o questionário de terceiros.
 
-leio o que você trás e o que isso revela sobre você. quanto mais você se envolve nas suas respostas, mais eu te entendo e mais este papo vai a algum lugar.
+leio o que você trás e o que isso mostra. quanto mais se envolve nas suas respostas, mais eu te entendo e mais este papo vai a algum lugar.
 
-pode parecer simples no começo. mas conforme você completa ciclos, novas camadas que sempre estiveram aí se revelam.
+pode parecer simples, mas conforme você completa ciclos, novas camadas suas e mais profundas se revelam.
 
 sinta-se à vontade — esse espaço é seu.
 
