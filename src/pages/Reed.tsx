@@ -45,7 +45,7 @@ function buildPillContextString(pills: PillContext[]): string {
 
 const WELCOME_MESSAGE = `oi. eu sou reed.
 
-faço parte do rdwth — um sistema de autoconhecimento. não sou humano, e não tento ser. mas presto total atenção no que você diz.
+faço parte do rdwth. não sou humano, e não tento ser. mas presto total atenção no que você diz.
 
 o sistema tem quatro partes que se cruzam: esta conversa, as pills, o questionário e o questionário de terceiros.
 
