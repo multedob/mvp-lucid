@@ -167,7 +167,7 @@ export function LoadingScreen({ phrases, loadComplete = true, onDone }: Props) {
         }
         @keyframes rdwth-ls-diablo-in {
           from { opacity: 0; }
-          to { opacity: 0.7; }
+          to { opacity: 1; }
         }
         .rdwth-ls-line {
           animation: rdwth-ls-line-in ${FADE_LINE_MS}ms ease-out forwards;
@@ -177,12 +177,12 @@ export function LoadingScreen({ phrases, loadComplete = true, onDone }: Props) {
         }
       `}</style>
 
-      {/* Voz sistema — topo-esquerda, mesma margem 24px lateral das outras telas */}
+      {/* Voz sistema — topo-esquerda, margens apertadas (igual r-header) */}
       <div style={{
         position: "absolute",
-        top: 16,
-        left: 24,
-        right: 24,
+        top: 14,
+        left: 16,
+        right: 16,
         display: "flex",
         flexDirection: "column",
         gap: 4,
@@ -208,7 +208,7 @@ export function LoadingScreen({ phrases, loadComplete = true, onDone }: Props) {
       </div>
 
       {/* Centro: Wordmark + Diablo phrases logo abaixo (flex column).
-          Mesmo layout em desktop e mobile. */}
+          Mesmo layout em desktop e mobile. Margens laterais apertadas. */}
       <div style={{
         position: "absolute",
         inset: 0,
@@ -216,12 +216,13 @@ export function LoadingScreen({ phrases, loadComplete = true, onDone }: Props) {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        gap: 28,
-        padding: "0 24px",
+        gap: 24,
+        padding: "0 16px",
       }}>
         <AnimatedWordmark fontSize="clamp(40px, 8vw, 80px)" />
 
-        {/* Frases Diablo logo abaixo da logo, centralizadas */}
+        {/* Frases Diablo logo abaixo da logo, centralizadas. Contraste aumentado
+            (voice-sys cor canônica WCAG AA + opacity 1). */}
         <div style={{
           display: "flex",
           flexDirection: "column",
@@ -234,14 +235,13 @@ export function LoadingScreen({ phrases, loadComplete = true, onDone }: Props) {
               className="rdwth-ls-diablo"
               style={{
                 fontFamily: "var(--r-font-sys, 'IBM Plex Mono', monospace)",
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: 300,
-                color: "var(--r-muted)",
+                color: "var(--r-voice-sys, #585860)",
                 letterSpacing: "0.04em",
                 lineHeight: 1.6,
                 textAlign: "center",
                 maxWidth: 420,
-                opacity: 0.7,
               }}
             >
               {phrase}
