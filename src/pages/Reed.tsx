@@ -45,13 +45,13 @@ function buildPillContextString(pills: PillContext[]): string {
 
 const WELCOME_MESSAGE = `oi. eu sou reed.
 
-faço parte do rdwth. não sou humano, e não tento ser. mas presto total atenção no que você diz.
+faço parte do rdwth. não sou humano, e não tento ser. mas presto total atenção em você.
 
 o sistema tem quatro partes que se cruzam: esta conversa, as pills, o questionário e o questionário de terceiros.
 
 leio o que você trás e o que isso mostra. quanto mais se envolve nas suas respostas, mais eu te entendo e mais este papo vai a algum lugar.
 
-pode parecer simples, mas conforme você completa ciclos, novas camadas suas e mais profundas se revelam.
+pode parecer simples, mas conforme você completa ciclos, novas camadas suas mais profundas se revelam.
 
 sinta-se à vontade — esse espaço é seu.
 
