@@ -171,7 +171,7 @@ function SystemSections({ sections }: {
                 fontFamily: "var(--r-font-sys)",
                 fontWeight: 400,
                 fontSize: 10,
-                color: "var(--r-telha)",
+                color: "var(--r-text)",
                 letterSpacing: "0.14em",
                 textTransform: "uppercase",
                 borderBottom: "1px solid var(--r-ghost)",

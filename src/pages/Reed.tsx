@@ -11,6 +11,7 @@ import { callEdgeFunction, getCurrentUserVersion, getToday } from '@/lib/api'
 import NavBottom from '@/components/NavBottom'
 import { AudioRecorder } from '@/components/AudioRecorder'
 import { AutoResizeTextarea } from '@/components/AutoResizeTextarea'
+import { LoadingScreen } from '@/components/LoadingScreen'
 import { track } from '@/lib/analytics'
 
 interface Message { role: 'user' | 'reed'; text: string; isWelcome?: boolean }
@@ -148,6 +149,7 @@ export default function Reed() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(true)
+  const [loadingScreenDone, setLoadingScreenDone] = useState(false)
   const [sending, setSending] = useState(false)
   const [cycleId, setCycleId] = useState<string | null>(null)
   const [baseVersion, setBaseVersion] = useState<number | null>(null)
@@ -554,12 +556,16 @@ export default function Reed() {
     setTimeout(() => inputRef.current?.focus(), 100)
   }
 
-  if (loading) return (
-    <div className="r-screen" style={{ justifyContent: 'center', alignItems: 'center' }}>
-      <span style={{ fontFamily: 'var(--r-font-sys)', fontWeight: 300, fontSize: '0.75rem', letterSpacing: '0.08em', color: 'var(--r-muted)' }}>
-        carregando
-      </span>
-    </div>
+  if (!loadingScreenDone) return (
+    <LoadingScreen
+      phrases={[
+        "preparando o espaço...",
+        "afinando o tom...",
+        "pronto.",
+      ]}
+      loadComplete={!loading}
+      onDone={() => setLoadingScreenDone(true)}
+    />
   )
 
   return (

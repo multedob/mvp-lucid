@@ -22,7 +22,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatedWordmark } from "./AnimatedWordmark";
 
 const LINE_DELAY_MS = 1500;       // tempo entre frase 1 → 2
-const MIN_BEFORE_DONE_MS = 3000;  // tempo mínimo total antes de mostrar "pronto."
+const MIN_BEFORE_DONE_MS = 4500;  // tempo mínimo total antes de mostrar "pronto." — dá tempo de ler 1 frase Diablo
 const READY_HOLD_MS = 1200;       // quanto "pronto." fica visível antes de fade
 const FADE_MS = 400;
 const DIABLO_ROTATE_MS = 5000;    // a cada 5s, troca 1 das 2 frases visíveis
