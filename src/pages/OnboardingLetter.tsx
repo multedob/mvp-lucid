@@ -9,20 +9,53 @@ import { getToday } from "@/lib/api";
 import { track } from "@/lib/analytics";
 import { markOnboardingStep } from "@/hooks/useOnboardingState";
 
-// Typewriter inline — voz sistema (charDelayMs 38 — mesmo padrão Warmup/Reed)
-function Typewriter({ text, charDelayMs = 38 }: { text: string; charDelayMs?: number }) {
+// Typewriter inline — voz sistema com 3 fases:
+//   pre:    cursor piscando, texto vazio (preDelay)
+//   typing: cursor estático (sólido), texto entrando char a char
+//   done:   cursor piscando após texto inteiro (hideCursorAfter ms até sumir)
+function Typewriter({ text, charDelayMs = 70, preDelay = 0, hideCursorAfter }: {
+  text: string;
+  charDelayMs?: number;
+  preDelay?: number;
+  hideCursorAfter?: number;
+}) {
   const [shown, setShown] = useState("");
+  const [phase, setPhase] = useState<"pre" | "typing" | "done" | "hidden">("pre");
+
   useEffect(() => {
     setShown("");
-    let i = 0;
-    const interval = window.setInterval(() => {
-      i++;
-      setShown(text.slice(0, i));
-      if (i >= text.length) window.clearInterval(interval);
-    }, charDelayMs);
-    return () => window.clearInterval(interval);
-  }, [text, charDelayMs]);
-  return <>{shown}<span style={{ opacity: shown.length < text.length ? 0.5 : 0 }}>▌</span></>;
+    setPhase("pre");
+    let interval: number | undefined;
+    let hideTimer: number | undefined;
+    const preTimer = window.setTimeout(() => {
+      setPhase("typing");
+      let i = 0;
+      interval = window.setInterval(() => {
+        i++;
+        setShown(text.slice(0, i));
+        if (i >= text.length) {
+          if (interval) window.clearInterval(interval);
+          setPhase("done");
+          if (hideCursorAfter !== undefined) {
+            hideTimer = window.setTimeout(() => setPhase("hidden"), hideCursorAfter);
+          }
+        }
+      }, charDelayMs);
+    }, preDelay);
+
+    return () => {
+      window.clearTimeout(preTimer);
+      if (interval) window.clearInterval(interval);
+      if (hideTimer) window.clearTimeout(hideTimer);
+    };
+  }, [text, charDelayMs, preDelay, hideCursorAfter]);
+
+  const cursorClass =
+    phase === "typing" ? "tw-cursor-static" :
+    phase === "hidden" ? "tw-cursor-gone"   :
+    "tw-cursor-blink";
+
+  return <>{shown}<span className={cursorClass}>▌</span></>;
 }
 
 type LetterKey = "r" | "d" | "w" | "t" | "h";
@@ -107,26 +140,36 @@ export default function OnboardingLetter() {
   const lettersRef = useRef<Partial<Record<LetterKey, HTMLSpanElement | null>>>({});
   const stateRef   = useRef<Record<LetterKey, number>>({ r: 0, d: 0, w: 0, t: 0, h: 0 });
   const cyclesRef  = useRef<Record<LetterKey, number>>({ r: 0, d: 0, w: 0, t: 0, h: 0 });
+  const frozenRef  = useRef(false); // morph para totalmente quando true (antes da saudação)
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const stoppedRef  = useRef(false);
 
-  // Cascata sequencial: wordmark → sistema → fundadores → citação → link → começar
-  const [showGreeting, setShowGreeting] = useState(false);
-  const [showCarta, setShowCarta]       = useState(false);
-  const [showCitacao, setShowCitacao]   = useState(false);
-  const [showLink, setShowLink]         = useState(false);
-  const [showComecar, setShowComecar]   = useState(false);
+  // Cascata sequencial respirada — ritmo de respiração calma.
+  // Ordem: wordmark/morph (estabiliza em 2.2s) → saudação > [typewriter]
+  //        → carta em 4 parágrafos (cada um respeitando tempo de leitura do anterior)
+  //        → citação + link (juntos) → começar
+  const [showGreeting, setShowGreeting]       = useState(false);
+  const [showCarta1, setShowCarta1]           = useState(false); // "oi."
+  const [showCarta2, setShowCarta2]           = useState(false); // parágrafo principal
+  const [showCarta3, setShowCarta3]           = useState(false); // "primeiro a gente te conhece..."
+  const [showCarta4, setShowCarta4]           = useState(false); // assinatura
+  const [showCitacaoLink, setShowCitacaoLink] = useState(false); // citação + link juntos
+  const [showComecar, setShowComecar]         = useState(false);
   const cascadeArmedRef = useRef(false);
 
   useEffect(() => {
     if (cascadeArmedRef.current) return;
     cascadeArmedRef.current = true;
     const timers: ReturnType<typeof setTimeout>[] = [];
-    timers.push(setTimeout(() => setShowGreeting(true),  600));   // saudação + typewriter
-    timers.push(setTimeout(() => setShowCarta(true),    1500));   // carta fundadores
-    timers.push(setTimeout(() => setShowCitacao(true),  3000));   // citação
-    timers.push(setTimeout(() => setShowLink(true),     3700));   // link manifesto
-    timers.push(setTimeout(() => setShowComecar(true),  4400));   // começar
+    // Total ~8s — cascata como teatro de entrada; após 8s tudo está visível pra leitura tranquila.
+    timers.push(setTimeout(() => setShowGreeting(true),     1200));   // morph parou em 1000
+    // typewriter pre 300ms + 10 chars × 60ms = 600ms → termina em ~2100ms; blink+fade até ~2900ms
+    timers.push(setTimeout(() => setShowCarta1(true),       2500));   // "oi."
+    timers.push(setTimeout(() => setShowCarta2(true),       3300));   // parágrafo principal
+    timers.push(setTimeout(() => setShowCarta3(true),       4300));   // "primeiro a gente..."
+    timers.push(setTimeout(() => setShowCarta4(true),       5300));   // assinatura
+    timers.push(setTimeout(() => setShowCitacaoLink(true),  6300));   // citação + link (juntos)
+    timers.push(setTimeout(() => setShowComecar(true),      7500));   // começar
     return () => { timers.forEach(clearTimeout); };
   }, []);
 
@@ -158,7 +201,7 @@ export default function OnboardingLetter() {
 
     function morphLetter(letter: LetterKey) {
       const el = lettersRef.current[letter];
-      if (!el || stoppedRef.current) return;
+      if (!el || stoppedRef.current || frozenRef.current) return;
       const pool = FONT_POOLS[letter];
       let nextIdx: number;
       do { nextIdx = Math.floor(Math.random() * pool.length); }
@@ -166,7 +209,7 @@ export default function OnboardingLetter() {
 
       let step = 0;
       function runStep() {
-        if (stoppedRef.current || !el) return;
+        if (stoppedRef.current || frozenRef.current || !el) return;
         const filterId = MORPH_IDS[step];
         if (filterId === null) { el.style.filter = "none"; return; }
         el.style.filter = `url(#${filterId})`;
@@ -182,18 +225,28 @@ export default function OnboardingLetter() {
     }
 
     function scheduleMorph(letter: LetterKey) {
-      if (stoppedRef.current) return;
+      if (stoppedRef.current || frozenRef.current) return;
       if (cyclesRef.current[letter] >= MAX_MORPH_CYCLES) return; // estabiliza após N ciclos
       const base = LETTER_RHYTHM[letter];
       const delay = base + Math.random() * base;
       const t = setTimeout(() => {
-        if (stoppedRef.current) return;
+        if (stoppedRef.current || frozenRef.current) return;
         morphLetter(letter);
         cyclesRef.current[letter] += 1;
         scheduleMorph(letter);
       }, delay);
       timeoutsRef.current.push(t);
     }
+
+    // Freeze do morph antes da saudação entrar — limpa filtros e congela fontes atuais.
+    const freezeTimer = setTimeout(() => {
+      frozenRef.current = true;
+      (Object.keys(lettersRef.current) as LetterKey[]).forEach(k => {
+        const el = lettersRef.current[k];
+        if (el) el.style.filter = "none";
+      });
+    }, 1000);
+    timeoutsRef.current.push(freezeTimer);
 
     (Object.keys(FONT_POOLS) as LetterKey[]).forEach(letter => {
       applyFont(letter, FONT_POOLS[letter][0]);
@@ -296,7 +349,18 @@ export default function OnboardingLetter() {
           </div>
         </div>
 
-        {/* Saudação por hora do dia — voz sistema, typewriter */}
+        {/* Estilos do cursor — pisca em pre/done, sólido em typing, oculto em hidden */}
+        <style>{`
+          @keyframes tw-cursor-blink-anim {
+            0%, 50% { opacity: 0.6; }
+            51%, 100% { opacity: 0; }
+          }
+          .tw-cursor-blink { animation: tw-cursor-blink-anim 1s step-end infinite; }
+          .tw-cursor-static { opacity: 0.6; }
+          .tw-cursor-gone { opacity: 0; transition: opacity 600ms ease-out; }
+        `}</style>
+
+        {/* Saudação por hora do dia — voz sistema, typewriter c/ cursor blink antes/depois */}
         <div
           style={{
             fontFamily: "var(--r-font-sys)",
@@ -304,21 +368,26 @@ export default function OnboardingLetter() {
             fontSize: 10,
             color: "var(--r-muted)",
             letterSpacing: "0.06em",
-            marginBottom: 18,
+            marginBottom: 22,
             minHeight: 18,
             opacity: showGreeting ? 1 : 0,
-            transition: "opacity 400ms ease-in",
+            transition: "opacity 500ms ease-in",
           }}
         >
           {showGreeting && (
             <>
               <span aria-hidden="true">{"> "}</span>
-              <Typewriter text={greeting()} />
+              <Typewriter
+                text={greeting()}
+                charDelayMs={60}
+                preDelay={300}
+                hideCursorAfter={800}
+              />
             </>
           )}
         </div>
 
-        {/* Carta — voz fundadores (magenta IBM Plex) */}
+        {/* Carta — voz fundadores (magenta IBM Plex), 4 parágrafos cascateados */}
         <div
           style={{
             fontFamily: "var(--r-font-sys)",
@@ -327,47 +396,69 @@ export default function OnboardingLetter() {
             lineHeight: 1.9,
             color: "var(--r-telha)",
             letterSpacing: "0.03em",
-            opacity: showCarta ? 1 : 0,
-            transition: "opacity 700ms ease-in",
           }}
         >
-          oi.
-          <br /><br />
-          a gente fez o rdwth pra ler com você<br />
-          seus padrões, suas tensões e o que se repete —<br />
-          sem diagnóstico, sem prescrição, apenas observação.
-          <br /><br />
-          primeiro a gente te conhece.<br />
-          ~4 minutos.
-          <br /><br />
-          — bruno + olivia
-        </div>
-
-        {/* Citação destacada — proposição do manifesto, voz fundadores */}
-        <div
-          style={{
-            fontFamily: "var(--r-font-ed)",
-            fontWeight: 800,
-            fontSize: 16,
-            lineHeight: 1.7,
-            color: "var(--r-text)",
-            letterSpacing: "0.01em",
-            marginTop: 32,
-            marginBottom: 12,
-            opacity: showCitacao ? 1 : 0,
+          {/* §1 oi. */}
+          <div style={{
+            marginBottom: 18,
+            opacity: showCarta1 ? 1 : 0,
             transition: "opacity 700ms ease-in",
-          }}
-        >
-          “ver com mais precisão<br />
-          o que já está ali.”
+          }}>
+            oi.
+          </div>
+
+          {/* §2 parágrafo principal */}
+          <div style={{
+            marginBottom: 18,
+            opacity: showCarta2 ? 1 : 0,
+            transition: "opacity 700ms ease-in",
+          }}>
+            a gente fez o rdwth pra ler com você<br />
+            seus padrões, suas tensões e o que se repete —<br />
+            sem diagnóstico, sem prescrição, apenas observação.
+          </div>
+
+          {/* §3 primeiro a gente te conhece */}
+          <div style={{
+            marginBottom: 18,
+            opacity: showCarta3 ? 1 : 0,
+            transition: "opacity 700ms ease-in",
+          }}>
+            primeiro a gente te conhece.<br />
+            ~4 minutos.
+          </div>
+
+          {/* §4 assinatura */}
+          <div style={{
+            opacity: showCarta4 ? 1 : 0,
+            transition: "opacity 700ms ease-in",
+          }}>
+            — bruno + olivia
+          </div>
         </div>
 
-        {/* Link: ler manifesto completo */}
+        {/* Citação + link aparecem juntos, fade lento */}
         <div style={{
+          opacity: showCitacaoLink ? 1 : 0,
+          transition: "opacity 1000ms ease-in",
+          marginTop: 32,
           marginBottom: 32,
-          opacity: showLink ? 1 : 0,
-          transition: "opacity 600ms ease-in",
         }}>
+          <div
+            style={{
+              fontFamily: "var(--r-font-ed)",
+              fontWeight: 800,
+              fontSize: 16,
+              lineHeight: 1.7,
+              color: "var(--r-text)",
+              letterSpacing: "0.01em",
+              marginBottom: 16,
+            }}
+          >
+            “ver com mais precisão<br />
+            o que já está ali.”
+          </div>
+
           <Link
             to="/sobre"
             onClick={() => track("letter_manifesto_clicked")}
