@@ -3,11 +3,27 @@
 // Persiste em user_onboarding_state.letter_seen_at (substituiu localStorage flag)
 // Após "começar" → /onboarding (coleta de nome)
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getToday } from "@/lib/api";
 import { track } from "@/lib/analytics";
 import { markOnboardingStep } from "@/hooks/useOnboardingState";
+
+// Typewriter inline — voz sistema (charDelayMs 38 — mesmo padrão Warmup/Reed)
+function Typewriter({ text, charDelayMs = 38 }: { text: string; charDelayMs?: number }) {
+  const [shown, setShown] = useState("");
+  useEffect(() => {
+    setShown("");
+    let i = 0;
+    const interval = window.setInterval(() => {
+      i++;
+      setShown(text.slice(0, i));
+      if (i >= text.length) window.clearInterval(interval);
+    }, charDelayMs);
+    return () => window.clearInterval(interval);
+  }, [text, charDelayMs]);
+  return <>{shown}<span style={{ opacity: shown.length < text.length ? 0.5 : 0 }}>▌</span></>;
+}
 
 type LetterKey = "r" | "d" | "w" | "t" | "h";
 interface FontDef { f: string; w: number; sz?: number }
@@ -77,13 +93,42 @@ const MORPH_IDS = ["morph-ltr-0","morph-ltr-1","morph-ltr-2","morph-ltr-3","morp
 const STEP_MS = 28;
 const BASE_SIZE = 36; // px
 const WORDMARK_HEIGHT = BASE_SIZE * 1.5; // 54px — espaço seguro pra ascenders/descenders das fontes rotacionadas
+const MAX_MORPH_CYCLES = 2; // morph estabiliza após 2 ciclos por letra — não distrai durante leitura
+
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h >= 6 && h < 12) return "bom dia.";
+  if (h >= 12 && h < 18) return "boa tarde.";
+  return "boa noite.";
+}
 
 export default function OnboardingLetter() {
   const navigate = useNavigate();
   const lettersRef = useRef<Partial<Record<LetterKey, HTMLSpanElement | null>>>({});
   const stateRef   = useRef<Record<LetterKey, number>>({ r: 0, d: 0, w: 0, t: 0, h: 0 });
+  const cyclesRef  = useRef<Record<LetterKey, number>>({ r: 0, d: 0, w: 0, t: 0, h: 0 });
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const stoppedRef  = useRef(false);
+
+  // Cascata sequencial: wordmark → sistema → fundadores → citação → link → começar
+  const [showGreeting, setShowGreeting] = useState(false);
+  const [showCarta, setShowCarta]       = useState(false);
+  const [showCitacao, setShowCitacao]   = useState(false);
+  const [showLink, setShowLink]         = useState(false);
+  const [showComecar, setShowComecar]   = useState(false);
+  const cascadeArmedRef = useRef(false);
+
+  useEffect(() => {
+    if (cascadeArmedRef.current) return;
+    cascadeArmedRef.current = true;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    timers.push(setTimeout(() => setShowGreeting(true),  600));   // saudação + typewriter
+    timers.push(setTimeout(() => setShowCarta(true),    1500));   // carta fundadores
+    timers.push(setTimeout(() => setShowCitacao(true),  3000));   // citação
+    timers.push(setTimeout(() => setShowLink(true),     3700));   // link manifesto
+    timers.push(setTimeout(() => setShowComecar(true),  4400));   // começar
+    return () => { timers.forEach(clearTimeout); };
+  }, []);
 
   useEffect(() => {
     if (!document.querySelector(`link[href*="Bodoni+Moda"]`)) {
@@ -138,11 +183,13 @@ export default function OnboardingLetter() {
 
     function scheduleMorph(letter: LetterKey) {
       if (stoppedRef.current) return;
+      if (cyclesRef.current[letter] >= MAX_MORPH_CYCLES) return; // estabiliza após N ciclos
       const base = LETTER_RHYTHM[letter];
       const delay = base + Math.random() * base;
       const t = setTimeout(() => {
         if (stoppedRef.current) return;
         morphLetter(letter);
+        cyclesRef.current[letter] += 1;
         scheduleMorph(letter);
       }, delay);
       timeoutsRef.current.push(t);
@@ -211,7 +258,7 @@ export default function OnboardingLetter() {
       >
 
         {/* Wordmark animado + tagline — height fixa pra evitar layout shift quando fontes rotacionam */}
-        <div style={{ marginBottom: 32 }}>
+        <div style={{ marginBottom: 28 }}>
           <div style={{
             display: "flex",
             alignItems: "flex-end",
@@ -249,23 +296,54 @@ export default function OnboardingLetter() {
           </div>
         </div>
 
-        {/* Manifesto */}
+        {/* Saudação por hora do dia — voz sistema, typewriter */}
         <div
           style={{
             fontFamily: "var(--r-font-sys)",
             fontWeight: 300,
-            fontSize: 11,
-            lineHeight: 1.9,
-            color: "var(--r-dim)",
-            letterSpacing: "0.03em",
+            fontSize: 10,
+            color: "var(--r-muted)",
+            letterSpacing: "0.06em",
+            marginBottom: 18,
+            minHeight: 18,
+            opacity: showGreeting ? 1 : 0,
+            transition: "opacity 400ms ease-in",
           }}
         >
-          rdwth não diagnostica.<br />
-          não prescreve.<br />
-          não conclui.
+          {showGreeting && (
+            <>
+              <span aria-hidden="true">{"> "}</span>
+              <Typewriter text={greeting()} />
+            </>
+          )}
         </div>
 
-        {/* Proposição — destaque */}
+        {/* Carta — voz fundadores (magenta IBM Plex) */}
+        <div
+          style={{
+            fontFamily: "var(--r-font-sys)",
+            fontWeight: 300,
+            fontSize: 12,
+            lineHeight: 1.9,
+            color: "var(--r-telha)",
+            letterSpacing: "0.03em",
+            opacity: showCarta ? 1 : 0,
+            transition: "opacity 700ms ease-in",
+          }}
+        >
+          oi.
+          <br /><br />
+          a gente fez o rdwth pra ler com você<br />
+          seus padrões, suas tensões e o que se repete —<br />
+          sem diagnóstico, sem prescrição, apenas observação.
+          <br /><br />
+          primeiro a gente te conhece.<br />
+          ~4 minutos.
+          <br /><br />
+          — bruno + olivia
+        </div>
+
+        {/* Citação destacada — proposição do manifesto, voz fundadores */}
         <div
           style={{
             fontFamily: "var(--r-font-ed)",
@@ -274,16 +352,22 @@ export default function OnboardingLetter() {
             lineHeight: 1.7,
             color: "var(--r-text)",
             letterSpacing: "0.01em",
-            marginTop: 20,
-            marginBottom: 32,
+            marginTop: 32,
+            marginBottom: 12,
+            opacity: showCitacao ? 1 : 0,
+            transition: "opacity 700ms ease-in",
           }}
         >
-          ver com mais precisão<br />
-          o que já está ali.
+          “ver com mais precisão<br />
+          o que já está ali.”
         </div>
 
         {/* Link: ler manifesto completo */}
-        <div style={{ marginTop: 8, marginBottom: 32 }}>
+        <div style={{
+          marginBottom: 32,
+          opacity: showLink ? 1 : 0,
+          transition: "opacity 600ms ease-in",
+        }}>
           <Link
             to="/sobre"
             onClick={() => track("letter_manifesto_clicked")}
@@ -313,6 +397,9 @@ export default function OnboardingLetter() {
           alignItems: "center",
           padding: "0 24px",
           flexShrink: 0,
+          opacity: showComecar ? 1 : 0,
+          transition: "opacity 600ms ease-in",
+          pointerEvents: showComecar ? "auto" : "none",
         }}
       >
         <div
