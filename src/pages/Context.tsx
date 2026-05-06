@@ -50,15 +50,15 @@ export function ContextSystem({ onBack }: { onBack?: () => void }) {
       items: [
         {
           label: "O que é isso",
-          text: ["O rdwth mapeia padrões estruturais de como você organiza experiência. Não quem você é — como você organiza no momento."],
+          text: ["O rdwth mapeia como você organiza experiência. Não quem você é — a forma que você dá pro que vive, agora."],
         },
         {
           label: "Por que linguagem, não números",
-          text: ["Números não trazem clareza aqui — trazem ruído. A interface mostra linguagem porque padrões estruturais se leem melhor em palavras do que em pontuação."],
+          text: ["A leitura é em palavras, não em escala. O que você é não cabe num número."],
         },
         {
           label: "Sem direção",
-          text: ["O sistema não sugere o que você deve fazer com o que mostra. A leitura é sua. A interpretação é sua."],
+          text: ["O sistema mostra. Não diz o que fazer com isso. A leitura é sua."],
         },
       ],
     },
@@ -67,25 +67,22 @@ export function ContextSystem({ onBack }: { onBack?: () => void }) {
       items: [
         {
           label: "Reed",
-          text: [
-            "Reed é a voz do rdwth nas conversas. Traduz a saída estrutural em linguagem. Não improvisa — as respostas vêm da leitura estrutural do seu ciclo, não das suas respostas brutas.",
-            "Usa uma biblioteca curada de obras de psicologia, filosofia e teoria organizacional. Não acessa a internet. Não gera opinião.",
-          ],
+          text: ["Reed é a voz do rdwth nas conversas. Traduz a saída estrutural em linguagem. Sua referência é uma biblioteca curada de psicologia, filosofia e teoria organizacional. Sem internet, sem opinião própria."],
         },
         {
           label: "Pills",
-          text: ["Leituras curtas em 6 dimensões — você reage a cada uma e o sistema lê padrões em como você responde. Cada pill cobre uma tensão: Eu↔Pertencimento, Eu↔Papel, Presença↔Distância, Clareza↔Ação, Dentro↔Fora, Movimento↔Pausa."],
+          text: ["Seis leituras curtas, uma por dimensão. Você reage; a forma da reação é o sinal. As tensões: Eu↔Pertencimento, Eu↔Papel, Presença↔Distância, Clareza↔Ação, Dentro↔Fora, Movimento↔Pausa."],
         },
         {
           label: "Questionário",
-          text: ["Blocos de perguntas distribuídos em 4 dimensões. Você responde no seu ritmo — pode pausar e voltar. Junto com as pills, alimenta a leitura estrutural do ciclo."],
+          text: ["Perguntas em 4 dimensões. No seu ritmo — pode pausar e voltar. Com as pills, forma a base da leitura."],
         },
         {
           label: "Questionário de terceiros",
           text: [
-            "Você gera um link único e envia pra pessoas próximas. 5 perguntas curtas, 5-10 minutos pra responder. A perspectiva externa traz coisas que de dentro ficam invisíveis.",
-            "Anonimato é decisão do terceiro — ele escolhe se você enxerga quem respondeu. Você pode convidar até 8 pessoas por ciclo.",
-            "No primeiro ciclo: opcional. A partir do segundo: você precisa de pelo menos 2 perspectivas externas pra fechar.",
+            "Um link único pra pessoas próximas. 5 perguntas curtas, 5-10 minutos do lado delas. O olhar de fora vê o que de dentro escapa.",
+            "O anonimato é decisão de quem responde — você só vê quem aceitou aparecer. Limite: 8 convites por ciclo.",
+            "No 1º ciclo, opcional. Do 2º em diante, precisa de ao menos 2 respostas pra fechar.",
           ],
         },
       ],
@@ -95,7 +92,7 @@ export function ContextSystem({ onBack }: { onBack?: () => void }) {
       items: [
         {
           label: "Ciclos",
-          text: ["Um ciclo é um conjunto completo de respostas — pills, questionário e perspectivas de pessoas próximas. Cada ciclo é independente. Com o tempo, padrões recorrentes ficam visíveis. A recorrência é observada, não prescrita."],
+          text: ["Um ciclo é um momento fechado: pills, questionário e olhar de fora. Cada um se sustenta sozinho. Conforme se acumulam, padrões emergem por si — o sistema observa, não impõe."],
         },
         {
           label: "Leitura por ciclo",
@@ -103,11 +100,11 @@ export function ContextSystem({ onBack }: { onBack?: () => void }) {
         },
         {
           label: "Leitura profunda",
-          text: ["A leitura profunda integra pills, questionário e terceiros do ciclo. Não é diagnóstico, não é prescrição — é devolução estruturada do que você compartilhou."],
+          text: ["Integra pills, questionário e terceiros num só lugar. Não diagnostica, não prescreve — devolve forma ao que você trouxe."],
         },
         {
           label: "Natureza provisória",
-          text: ["Uma única leitura é hipótese, não conclusão. Vai ficando mais legível ao longo dos ciclos."],
+          text: ["Toda leitura é provisória. Sozinha, é hipótese; somada, vira mapa."],
         },
       ],
     },
@@ -116,7 +113,7 @@ export function ContextSystem({ onBack }: { onBack?: () => void }) {
       items: [
         {
           label: "Um ato de coragem",
-          text: ["Pedir que alguém te descreva é um ato de coragem — não há como fazer isso sem se expor um pouco. E é justo aí que algo se abre: a perspectiva interna não ocupa dois lugares ao mesmo tempo, então o que escolhemos esconder de nós mesmos costuma ser exatamente o que um outro olhar entrega de volta sem peso."],
+          text: ["Pedir que alguém te descreva exige coragem — não dá pra fazer isso sem se expor. E é aí que algo se abre: o olhar de dentro não cabe em dois lugares. O que mais resistimos em ver costuma voltar sem peso, no olhar do outro."],
         },
       ],
     },
