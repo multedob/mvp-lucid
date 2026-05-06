@@ -177,10 +177,10 @@ export function LoadingScreen({ phrases, loadComplete = true, onDone }: Props) {
         }
       `}</style>
 
-      {/* Voz sistema — topo-esquerda, frases empilhadas */}
+      {/* Voz sistema — topo-esquerda, mesma margem 24px lateral das outras telas */}
       <div style={{
         position: "absolute",
-        top: 24,
+        top: 16,
         left: 24,
         right: 24,
         display: "flex",
@@ -207,47 +207,47 @@ export function LoadingScreen({ phrases, loadComplete = true, onDone }: Props) {
         ))}
       </div>
 
-      {/* Wordmark — centro */}
+      {/* Centro: Wordmark + Diablo phrases logo abaixo (flex column).
+          Mesmo layout em desktop e mobile. */}
       <div style={{
         position: "absolute",
         inset: 0,
         display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}>
-        <AnimatedWordmark fontSize="clamp(40px, 8vw, 80px)" />
-      </div>
-
-      {/* Frases Diablo — embaixo, 2 visíveis rotacionando */}
-      <div style={{
-        position: "absolute",
-        bottom: 32,
-        left: 24,
-        right: 24,
-        display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: 8,
+        justifyContent: "center",
+        gap: 28,
+        padding: "0 24px",
       }}>
-        {diabloPair.map((phrase, i) => (
-          <div
-            key={`${i}-${phrase}`}
-            className="rdwth-ls-diablo"
-            style={{
-              fontFamily: "var(--r-font-sys, 'IBM Plex Mono', monospace)",
-              fontSize: 10,
-              fontWeight: 300,
-              color: "var(--r-muted)",
-              letterSpacing: "0.04em",
-              lineHeight: 1.6,
-              textAlign: "center",
-              maxWidth: 420,
-              opacity: 0.7,
-            }}
-          >
-            {phrase}
-          </div>
-        ))}
+        <AnimatedWordmark fontSize="clamp(40px, 8vw, 80px)" />
+
+        {/* Frases Diablo logo abaixo da logo, centralizadas */}
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 6,
+        }}>
+          {diabloPair.map((phrase, i) => (
+            <div
+              key={`${i}-${phrase}`}
+              className="rdwth-ls-diablo"
+              style={{
+                fontFamily: "var(--r-font-sys, 'IBM Plex Mono', monospace)",
+                fontSize: 10,
+                fontWeight: 300,
+                color: "var(--r-muted)",
+                letterSpacing: "0.04em",
+                lineHeight: 1.6,
+                textAlign: "center",
+                maxWidth: 420,
+                opacity: 0.7,
+              }}
+            >
+              {phrase}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
