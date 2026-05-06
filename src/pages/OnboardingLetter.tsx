@@ -9,20 +9,37 @@ import { getToday } from "@/lib/api";
 import { track } from "@/lib/analytics";
 import { markOnboardingStep } from "@/hooks/useOnboardingState";
 
+// Flag de sessão — quando usuário sai pra /sobre e volta, cascata não roda de novo.
+// Persiste só na sessão (não localStorage): se fechar a aba, próxima visita reanima.
+const CASCADE_FLAG_KEY = "rdwth_letter_cascade_done";
+function isCascadeAlreadyDone(): boolean {
+  if (typeof window === "undefined") return false;
+  try { return sessionStorage.getItem(CASCADE_FLAG_KEY) === "1"; } catch { return false; }
+}
+
 // Typewriter inline — voz sistema com 3 fases:
 //   pre:    cursor piscando, texto vazio (preDelay)
 //   typing: cursor estático (sólido), texto entrando char a char
 //   done:   cursor piscando após texto inteiro (hideCursorAfter ms até sumir)
-function Typewriter({ text, charDelayMs = 70, preDelay = 0, hideCursorAfter }: {
+//   instant=true → mostra texto inteiro de uma vez, sem cursor (volta do /sobre)
+function Typewriter({ text, charDelayMs = 70, preDelay = 0, hideCursorAfter, instant = false }: {
   text: string;
   charDelayMs?: number;
   preDelay?: number;
   hideCursorAfter?: number;
+  instant?: boolean;
 }) {
-  const [shown, setShown] = useState("");
-  const [phase, setPhase] = useState<"pre" | "typing" | "done" | "hidden">("pre");
+  const [shown, setShown] = useState(instant ? text : "");
+  const [phase, setPhase] = useState<"pre" | "typing" | "done" | "hidden">(
+    instant ? "hidden" : "pre"
+  );
 
   useEffect(() => {
+    if (instant) {
+      setShown(text);
+      setPhase("hidden");
+      return;
+    }
     setShown("");
     setPhase("pre");
     let interval: number | undefined;
@@ -140,26 +157,30 @@ export default function OnboardingLetter() {
   const lettersRef = useRef<Partial<Record<LetterKey, HTMLSpanElement | null>>>({});
   const stateRef   = useRef<Record<LetterKey, number>>({ r: 0, d: 0, w: 0, t: 0, h: 0 });
   const cyclesRef  = useRef<Record<LetterKey, number>>({ r: 0, d: 0, w: 0, t: 0, h: 0 });
-  const frozenRef  = useRef(false); // morph para totalmente quando true (antes da saudação)
+  // Se cascata já rodou nesta sessão (usuário voltou de /sobre), morph já entra parado.
+  const cascadeAlreadyDone = isCascadeAlreadyDone();
+  const frozenRef  = useRef(cascadeAlreadyDone); // morph para totalmente quando true
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const stoppedRef  = useRef(false);
 
   // Cascata sequencial respirada — ritmo de respiração calma.
-  // Ordem: wordmark/morph (estabiliza em 2.2s) → saudação > [typewriter]
+  // Ordem: wordmark/morph (estabiliza em 1s) → saudação > [typewriter]
   //        → carta em 4 parágrafos (cada um respeitando tempo de leitura do anterior)
   //        → citação + link (juntos) → começar
-  const [showGreeting, setShowGreeting]       = useState(false);
-  const [showCarta1, setShowCarta1]           = useState(false); // "oi."
-  const [showCarta2, setShowCarta2]           = useState(false); // parágrafo principal
-  const [showCarta3, setShowCarta3]           = useState(false); // "primeiro a gente te conhece..."
-  const [showCarta4, setShowCarta4]           = useState(false); // assinatura
-  const [showCitacaoLink, setShowCitacaoLink] = useState(false); // citação + link juntos
-  const [showComecar, setShowComecar]         = useState(false);
+  // Se cascadeAlreadyDone: todos os shows iniciam em true (sem cascata).
+  const [showGreeting, setShowGreeting]       = useState(cascadeAlreadyDone);
+  const [showCarta1, setShowCarta1]           = useState(cascadeAlreadyDone); // "oi."
+  const [showCarta2, setShowCarta2]           = useState(cascadeAlreadyDone); // parágrafo principal
+  const [showCarta3, setShowCarta3]           = useState(cascadeAlreadyDone); // "primeiro a gente te conhece..."
+  const [showCarta4, setShowCarta4]           = useState(cascadeAlreadyDone); // assinatura
+  const [showCitacaoLink, setShowCitacaoLink] = useState(cascadeAlreadyDone); // citação + link juntos
+  const [showComecar, setShowComecar]         = useState(cascadeAlreadyDone);
   const cascadeArmedRef = useRef(false);
 
   useEffect(() => {
     if (cascadeArmedRef.current) return;
     cascadeArmedRef.current = true;
+    if (cascadeAlreadyDone) return; // volta do /sobre — não dispara cascata
     const timers: ReturnType<typeof setTimeout>[] = [];
     // Total ~8s — cascata como teatro de entrada; após 8s tudo está visível pra leitura tranquila.
     timers.push(setTimeout(() => setShowGreeting(true),     1200));   // morph parou em 1000
@@ -169,9 +190,12 @@ export default function OnboardingLetter() {
     timers.push(setTimeout(() => setShowCarta3(true),       4300));   // "primeiro a gente..."
     timers.push(setTimeout(() => setShowCarta4(true),       5300));   // assinatura
     timers.push(setTimeout(() => setShowCitacaoLink(true),  6300));   // citação + link (juntos)
-    timers.push(setTimeout(() => setShowComecar(true),      7500));   // começar
+    timers.push(setTimeout(() => {
+      setShowComecar(true);
+      try { sessionStorage.setItem(CASCADE_FLAG_KEY, "1"); } catch {}
+    }, 7500));
     return () => { timers.forEach(clearTimeout); };
-  }, []);
+  }, [cascadeAlreadyDone]);
 
   useEffect(() => {
     if (!document.querySelector(`link[href*="Bodoni+Moda"]`)) {
@@ -382,6 +406,7 @@ export default function OnboardingLetter() {
                 charDelayMs={60}
                 preDelay={300}
                 hideCursorAfter={800}
+                instant={cascadeAlreadyDone}
               />
             </>
           )}
