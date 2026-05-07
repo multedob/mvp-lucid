@@ -33,6 +33,7 @@ type Phase =
   | "error"
   | "revoked"
   | "submitted"
+  | "intro"
   | "onboarding"
   | "email"
   | "calibration"
@@ -130,13 +131,20 @@ export default function ThirdParty() {
 
   // Cascade — sequência de aparição dos blocos de cada fase.
   // Ritmo "respiração calma" (700ms entre blocos). Reset a cada mudança de fase ou pergunta.
-  // useLayoutEffect: reset acontece ANTES do paint, evitando flash com cascadeStep alto da fase anterior.
+  //
+  // Solução do flash entre fases: calcular `effectiveCascadeStep` no render.
+  // No 1º render da nova fase, cascadePhaseRef ainda tem a key antiga (só é atualizada
+  // dentro do useLayoutEffect). Como não há match, effectiveCascadeStep=0 já no primeiro
+  // paint — blocos da nova fase nascem invisíveis sem flash, e sem fade-out (porque já
+  // estavam invisíveis quando o componente renderizou).
   const [cascadeStep, setCascadeStep] = useState(0);
   const cascadePhaseRef = useRef<string | null>(null);
+  const expectedCascadeKey = `${phase}:${currentQIdx}`;
+  const effectiveCascadeStep = cascadePhaseRef.current === expectedCascadeKey ? cascadeStep : 0;
+
   useLayoutEffect(() => {
-    const key = `${phase}:${currentQIdx}`;
-    if (cascadePhaseRef.current === key) return;
-    cascadePhaseRef.current = key;
+    if (cascadePhaseRef.current === expectedCascadeKey) return;
+    cascadePhaseRef.current = expectedCascadeKey;
     setCascadeStep(0);
     const startDelay = 250;
     const stepInterval = 700;
@@ -148,12 +156,16 @@ export default function ThirdParty() {
       }, startDelay + (i - 1) * stepInterval));
     }
     return () => { timers.forEach(clearTimeout); };
-  }, [phase, currentQIdx]);
+  }, [expectedCascadeKey]);
+
+  // Quando a phase é "nova" (ref ainda não atualizada), transition: none.
+  // Isso evita que React reusando elementos DOM entre phases dispare fade-out
+  // ao trocar opacity:1 → opacity:0. Render 1: transition:none + opacity:0 (instantâneo).
+  // Render 2+ (após useLayoutEffect atualizar ref): transition normal pra cascade.
+  const isCascadeFresh = cascadePhaseRef.current !== expectedCascadeKey;
   const cascade = (n: number) => ({
-    opacity: cascadeStep >= n ? 1 : 0,
-    // ease-in só pra fade-IN. Quando cascadeStep volta a 0 (mudança de phase),
-    // useLayoutEffect já reseta antes do paint — não há fade-out visível.
-    transition: "opacity 600ms ease-in",
+    opacity: effectiveCascadeStep >= n ? 1 : 0,
+    transition: isCascadeFresh ? "none" : "opacity 600ms ease-in",
   });
   const AUDIO_PULSE_TP_KEY = 'rdwth_audio_pulse_seen_thirdparty';
   useEffect(() => {
@@ -201,7 +213,7 @@ export default function ThirdParty() {
           setCalibRelationship(parts[0] ?? "");
           setCalibDuration(parts[1] ?? "");
         }
-        setPhase(res.responder?.email ? "calibration" : "onboarding");
+        setPhase(res.responder?.email ? "calibration" : "intro");
       } catch (err: any) {
         const msg = err?.message ?? String(err);
         track("third_party_link_error", { reason: msg.includes("revoked") ? "revoked" : msg.includes("submitted") ? "already_submitted" : "invalid" });
@@ -287,6 +299,7 @@ export default function ThirdParty() {
     if (phase === "question" && currentQIdx === 0) { setPhase("calibration"); return; }
     if (phase === "calibration") { setPhase("email"); return; }
     if (phase === "email") { setPhase("onboarding"); return; }
+    if (phase === "onboarding") { setPhase("intro"); return; }
     if (phase === "reveal") { setCurrentQIdx(coreQuestions.length - 1); setPhase("question"); return; }
   };
 
@@ -447,6 +460,41 @@ export default function ThirdParty() {
     );
   };
 
+  // ─── INTRO — porta de entrada com wordmark + read with ────
+  if (phase === "intro") {
+    return (
+      <div className="r-screen">
+        <div className="r-scroll" style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "0 24px",
+          gap: 14,
+        }}>
+          <div style={cascade(1)}>
+            <AnimatedWordmark fontSize="clamp(56px, 11vw, 120px)" />
+          </div>
+          <div
+            style={{
+              fontFamily: "'Barlow', 'IBM Plex Mono', sans-serif",
+              fontWeight: 700,
+              fontSize: 12,
+              color: "var(--r-telha)",
+              letterSpacing: "0.06em",
+              lineHeight: 1.8,
+              ...cascade(2),
+            }}
+          >
+            read with
+          </div>
+        </div>
+        <Footer onContinue={() => setPhase("onboarding")} continueLabel="continuar" />
+      </div>
+    );
+  }
+
   // ─── ONBOARDING ───────────────────────────────────────────
   if (phase === "onboarding") {
     return (
@@ -485,7 +533,7 @@ export default function ThirdParty() {
             Sugestão: procure um lugar com calma pra responder. Sua atenção pelos próximos minutos é parte do presente que você vai dar para {capitalizeName(data?.user_name)}.
           </div>
         </div>
-        <Footer onContinue={handleStartOnboarding} continueLabel="começar" />
+        <Footer onContinue={handleStartOnboarding} continueLabel="começar" onBack={handleBack} />
       </div>
     );
   }
