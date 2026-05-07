@@ -285,16 +285,13 @@ export default function ThirdParty() {
     opacity: effectiveCascadeStep >= n ? 1 : 0,
     transition: isCascadeFresh ? "none" : "opacity 600ms ease-in",
   });
-  const AUDIO_PULSE_TP_KEY = 'rdwth_audio_pulse_seen_thirdparty';
+  // Pulse breathing dispara SEMPRE que o terceiro entra na 1ª pergunta
+  // (sem flag de localStorage — terceiros costumam responder uma única vez,
+  //  faz sentido sempre indicar a possibilidade de áudio).
   useEffect(() => {
     if (phase !== "question") return;
     if (currentQIdx !== 0) return;
-    const alreadySeen = typeof window !== 'undefined' && localStorage.getItem(AUDIO_PULSE_TP_KEY) === '1';
-    if (alreadySeen) return;
-    const t = window.setTimeout(() => {
-      setAudioPulseFirst(true);
-      try { localStorage.setItem(AUDIO_PULSE_TP_KEY, '1'); } catch {}
-    }, 3500);
+    const t = window.setTimeout(() => setAudioPulseFirst(true), 3500);
     return () => window.clearTimeout(t);
   }, [phase, currentQIdx]);
   const [finalizeLoadingDone, setFinalizeLoadingDone] = useState(false);
