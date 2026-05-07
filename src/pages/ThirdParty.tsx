@@ -716,7 +716,18 @@ export default function ThirdParty() {
 
           {errorMsg && <div style={{ color: "var(--terracota, #b85a3e)", fontSize: 13 }}>{errorMsg}</div>}
         </div>
-        <Footer onBack={handleBack} submitting={submitting} />
+        <Footer
+          onBack={handleBack}
+          onContinue={handleSubmitQuestion}
+          continueLabel={isLastQuestion ? "enviar" : "continuar"}
+          disabled={
+            scales[qid] === null ||
+            scales[qid] === undefined ||
+            (episodes[qid] ?? "").trim().length < 30 ||
+            (opens[qid] ?? "").trim().length < 5
+          }
+          submitting={submitting}
+        />
       </div>
     );
   }
