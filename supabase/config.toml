@@ -1,1 +1,4 @@
 project_id = "tomtximafvrhmuchjyqt"
+
+[functions.third-party-upload-audio-url]
+verify_jwt = false

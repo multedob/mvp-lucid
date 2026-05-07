@@ -147,10 +147,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // ─── 1. Auth ───
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return json({ error: "unauthorized" }, 401);
-
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const groqKey     = Deno.env.get("GROQ_API_KEY");
@@ -160,20 +156,33 @@ Deno.serve(async (req) => {
       return json({ error: "no_provider_configured" }, 500);
     }
 
-    const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user }, error: userErr } = await userClient.auth.getUser();
-    if (userErr || !user) return json({ error: "unauthorized" }, 401);
-
-    // ─── 2. Parse + validate ───
-    const body = await req.json() as TranscribeRequest;
+    // Parse body — agora aceita third_party_token opcional
+    const body = await req.json() as TranscribeRequest & { third_party_token?: string };
     if (!body.audio_path || typeof body.audio_path !== "string") {
       return json({ error: "audio_path_required" }, 400);
     }
     const firstSegment = body.audio_path.split("/")[0];
-    if (firstSegment !== user.id) {
-      return json({ error: "forbidden_path" }, 403);
+
+    // Auth: dois caminhos — usuário autenticado OU terceiro com token
+    if (body.third_party_token) {
+      const adminClient = createClient(supabaseUrl, serviceKey);
+      const { data: invite, error: invErr } = await adminClient
+        .from("third_party_invites")
+        .select("id, status")
+        .eq("token", body.third_party_token)
+        .single();
+      if (invErr || !invite) return json({ error: "invalid_token" }, 401);
+      if (invite.status === "revoked") return json({ error: "revoked" }, 403);
+      if (firstSegment !== invite.id) return json({ error: "forbidden_path" }, 403);
+    } else {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader) return json({ error: "unauthorized" }, 401);
+      const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: { user }, error: userErr } = await userClient.auth.getUser();
+      if (userErr || !user) return json({ error: "unauthorized" }, 401);
+      if (firstSegment !== user.id) return json({ error: "forbidden_path" }, 403);
     }
 
     // ─── 3. Download audio ───
