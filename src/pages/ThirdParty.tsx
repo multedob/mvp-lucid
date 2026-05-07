@@ -466,12 +466,21 @@ export default function ThirdParty() {
           <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 14, lineHeight: 1.75, color: "var(--r-text)", maxWidth: 600, marginLeft: "auto", marginRight: "auto", ...cascade(3) }}>
             Pessoas próximas veem coisas que a própria pessoa não consegue ver. Sua perspectiva externa é parte importante dessa leitura.
           </div>
-          <div className="r-sub" style={{ marginTop: 8, ...cascade(4) }}>
-            <strong>Anonimato:</strong> no final você decide se {capitalizeName(data?.user_name)} vê seu nome. Se preferir ficar no anonimato, {capitalizeName(data?.user_name)} só verá que houve resposta — suas palavras continuam alimentando a leitura.
-          </div>
-          <div className="r-sub" style={cascade(5)}>
-            <strong>Tempo:</strong> ~10 minutos, 5 perguntas curtas.
-          </div>
+          {(() => {
+            const p = data?.user_pronoun ?? "ela";
+            const ele = p === "ela" ? "ela" : p === "ele" ? "ele" : "ele/ela";
+            const dele = p === "ela" ? "dela" : p === "ele" ? "dele" : "dele/dela";
+            return (
+              <>
+                <div className="r-sub" style={{ marginTop: 8, ...cascade(4) }}>
+                  <strong>Anonimato:</strong> no final você decide se {capitalizeName(data?.user_name)} vê seu nome. Se preferir assim, {ele} só verá que houve resposta — suas palavras continuam alimentando a leitura {dele}.
+                </div>
+                <div className="r-sub" style={cascade(5)}>
+                  <strong>Tempo:</strong> ~10 minutos, 5 perguntas curtas.
+                </div>
+              </>
+            );
+          })()}
           <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 13, fontStyle: "italic", lineHeight: 1.7, color: "var(--r-muted)", maxWidth: 600, marginLeft: "auto", marginRight: "auto", marginTop: 16, paddingTop: 16, borderTop: "0.5px solid var(--r-ghost)", ...cascade(6) }}>
             Sugestão: procure um lugar com calma pra responder. Sua atenção pelos próximos minutos é parte do presente que você vai dar para {capitalizeName(data?.user_name)}.
           </div>
