@@ -227,8 +227,15 @@ async function executeLlmLanguage(
   user_name: string | null,
 ): Promise<string> {
   const { system, user_content } = buildLanguagePrompt(
-    hago_state, response_type, movement_primary, movement_secondary,
-    node_selection, nodes_corpus, user_text, pill_context, user_name,
+    hago_state,
+    response_type,
+    movement_primary,
+    movement_secondary,
+    node_selection,
+    nodes_corpus,
+    user_text,
+    pill_context,
+    user_name,
   );
 
   const response = await anthropic.messages.create({
@@ -259,8 +266,15 @@ function streamLanguageResponse(
   user_name: string | null,
 ): Response {
   const { system, user_content } = buildLanguagePrompt(
-    hago_state, response_type, movement_primary, movement_secondary,
-    node_selection, nodes_corpus, user_text, pill_context, user_name,
+    hago_state,
+    response_type,
+    movement_primary,
+    movement_secondary,
+    node_selection,
+    nodes_corpus,
+    user_text,
+    pill_context,
+    user_name,
   );
 
   const stream = new ReadableStream({
@@ -292,7 +306,11 @@ function streamLanguageResponse(
         console.error("STREAM_LANGUAGE_ERROR:", err);
         controller.enqueue(encodeSSE({ type: "error", message: errMsg }));
         if (fullText) {
-          await supabase.from("cycles").update({ llm_response: fullText }).eq("id", cycle_id).catch(() => {});
+          await supabase
+            .from("cycles")
+            .update({ llm_response: fullText })
+            .eq("id", cycle_id)
+            .catch(() => {});
         }
       } finally {
         controller.close();
@@ -305,7 +323,7 @@ function streamLanguageResponse(
       ...CORS_HEADERS,
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
-      "Connection": "keep-alive",
+      Connection: "keep-alive",
       "X-Accel-Buffering": "no",
     },
   });
@@ -321,10 +339,18 @@ async function classifyInput(user_text: string, anthropic: Anthropic): Promise<I
   if (/\b(suicid|me matar|me machucar|me ferir|violência|matar|morrer|acabar com|me jogar)\b/.test(text)) {
     return "C7_RISCO_HUMANO";
   }
-  if (/\b(me diz(a|e) o que fazer|o que (eu )?devo|como (eu )?devo|como (eu )?(fa[cç]o|posso|consigo) para|preciso saber como|me ensina|me explica como|qual o passo|o que fazer|como (ser|ficar|me tornar)|como melhorar)\b/.test(text)) {
+  if (
+    /\b(me diz(a|e) o que fazer|o que (eu )?devo|como (eu )?devo|como (eu )?(fa[cç]o|posso|consigo) para|preciso saber como|me ensina|me explica como|qual o passo|o que fazer|como (ser|ficar|me tornar)|como melhorar)\b/.test(
+      text,
+    )
+  ) {
     return "C5_PEDIDO_PRESCRITIVO";
   }
-  if (/\b(quem (eu )?sou|minha identidade|sou (uma pessoa|alguém)|isso define|isso me define|isso faz de mim)\b/.test(text)) {
+  if (
+    /\b(quem (eu )?sou|minha identidade|sou (uma pessoa|alguém)|isso define|isso me define|isso faz de mim)\b/.test(
+      text,
+    )
+  ) {
     return "C6_VALIDACAO_IDENTITARIA";
   }
 
@@ -396,9 +422,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   const FORBIDDEN = [
-    "user_id", "structural_model_version", "CGG", "stage_base",
-    "input_hash", "structural_hash", "input_classification",
-    "response_type", "movement_primary", "movement_secondary",
+    "user_id",
+    "structural_model_version",
+    "CGG",
+    "stage_base",
+    "input_hash",
+    "structural_hash",
+    "input_classification",
+    "response_type",
+    "movement_primary",
+    "movement_secondary",
   ];
   for (const f of FORBIDDEN) {
     if (f in body) {
@@ -446,7 +479,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
     apiKey: Deno.env.get("ANTHROPIC_API_KEY")!,
   });
 
-  const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
   if (authError || !user) {
     return json({ error: "UNAUTHORIZED", message: "Invalid token" }, 401);
   }
@@ -458,7 +494,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
       return json({ error: "INTERNAL_ERROR", message: `RUNTIME_VERSION_NOT_IMPLEMENTED: ${bound_version}` }, 500);
     }
 
-    const { snapshot: previous_snapshot, cycle_id: base_cycle_id } = await resolveSnapshot(supabase, user_id, base_version);
+    const { snapshot: previous_snapshot, cycle_id: base_cycle_id } = await resolveSnapshot(
+      supabase,
+      user_id,
+      base_version,
+    );
     const previous_node = await resolvePreviousNode(supabase, base_cycle_id);
 
     const [historical_memory, previous_hago_state, previousLines] = await Promise.all([
@@ -499,10 +539,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
       bound_version,
     );
 
-    if (!core_output.input_hash || core_output.input_hash.length !== 64) throw new Error("INTEGRITY_ERROR: invalid input_hash");
-    if (!core_output.structural_hash || core_output.structural_hash.length !== 64) throw new Error("INTEGRITY_ERROR: invalid structural_hash");
-    if (!cycle_integrity_hash || cycle_integrity_hash.length !== 64) throw new Error("INTEGRITY_ERROR: invalid cycle_integrity_hash");
-    if (core_output.structural_model_version !== bound_version) throw new Error("INTEGRITY_ERROR: structural_model_version mismatch");
+    if (!core_output.input_hash || core_output.input_hash.length !== 64)
+      throw new Error("INTEGRITY_ERROR: invalid input_hash");
+    if (!core_output.structural_hash || core_output.structural_hash.length !== 64)
+      throw new Error("INTEGRITY_ERROR: invalid structural_hash");
+    if (!cycle_integrity_hash || cycle_integrity_hash.length !== 64)
+      throw new Error("INTEGRITY_ERROR: invalid cycle_integrity_hash");
+    if (core_output.structural_model_version !== bound_version)
+      throw new Error("INTEGRITY_ERROR: structural_model_version mismatch");
 
     const { cycle_id, current_version } = await persistCycle(supabase, {
       user_id,
@@ -536,11 +580,19 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // ─── A24 — Streaming branch (Reed only)
     if (want_stream) {
       return streamLanguageResponse(
-        anthropic, supabase, cycle_id, current_version,
-        core_output.hago_state, post_core.response_type,
-        post_core.movement_primary, post_core.movement_secondary,
+        anthropic,
+        supabase,
+        cycle_id,
+        current_version,
+        core_output.hago_state,
+        post_core.response_type,
+        post_core.movement_primary,
+        post_core.movement_secondary,
         core_output.node_selection as unknown as Array<Record<string, unknown>>,
-        ragCorpus as RagNode[], user_text, pill_context, user_name,
+        ragCorpus as RagNode[],
+        user_text,
+        pill_context,
+        user_name,
       );
     }
 
@@ -548,12 +600,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
     let llm_response = "";
     try {
       llm_response = await executeLlmLanguage(
-        anthropic, bound_version,
+        anthropic,
+        bound_version,
         core_output.structural_snapshot as unknown as Record<string, unknown>,
         core_output.node_selection as unknown as Array<Record<string, unknown>>,
-        core_output.hago_state, post_core.response_type,
-        post_core.movement_primary, post_core.movement_secondary,
-        ragCorpus as RagNode[], user_text, pill_context, user_name,
+        core_output.hago_state,
+        post_core.response_type,
+        post_core.movement_primary,
+        post_core.movement_secondary,
+        ragCorpus as RagNode[],
+        user_text,
+        pill_context,
+        user_name,
       );
     } catch (langErr) {
       console.error("LANGUAGE_EXECUTION_ERROR:", langErr);
