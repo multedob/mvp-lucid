@@ -12,6 +12,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Copy, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { getToday } from "@/lib/api";
 import { useUserName } from "@/hooks/useUserName";
@@ -380,8 +381,26 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
     return "elu";
   }
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null); // invite_id expandido
   const [errorMsg, setErrorMsg] = useState("");
+
+  // Quando link é gerado (e auto-copiado), mostra check brevemente — depois reseta pra ícone copy.
+  useEffect(() => {
+    if (!createdUrl) { setLinkCopied(false); return; }
+    setLinkCopied(true);
+    const t = window.setTimeout(() => setLinkCopied(false), 2200);
+    return () => window.clearTimeout(t);
+  }, [createdUrl]);
+
+  const copyCreatedUrl = async () => {
+    if (!createdUrl) return;
+    try {
+      await navigator.clipboard.writeText(createdUrl);
+      setLinkCopied(true);
+      window.setTimeout(() => setLinkCopied(false), 2200);
+    } catch {}
+  };
 
   const headerText = userName
     ? `${capitalizeName(userName)}, convide até 8 pessoas próximas que conhecem você. As respostas delas alimentam suas leituras com perspectiva externa.`
@@ -537,8 +556,51 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
             {createdUrl && (
               <>
                 <div className="r-sub">link gerado e copiado pra área de transferência:</div>
-                <div style={{ fontFamily: "monospace", fontSize: 11, padding: 8, background: "var(--r-bg)", border: "1px dashed var(--r-ghost)", wordBreak: "break-all" }}>
+                <div style={{ position: "relative", fontFamily: "monospace", fontSize: 11, padding: "8px 36px 8px 8px", background: "var(--r-bg)", border: "1px dashed var(--r-ghost)", wordBreak: "break-all" }}>
                   {createdUrl}
+                  <button
+                    type="button"
+                    onClick={copyCreatedUrl}
+                    aria-label={linkCopied ? "copiado" : "copiar link"}
+                    title={linkCopied ? "copiado" : "copiar link"}
+                    style={{
+                      position: "absolute",
+                      top: 6,
+                      right: 6,
+                      width: 24,
+                      height: 24,
+                      background: "transparent",
+                      border: 0,
+                      padding: 0,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <span style={{ position: "relative", width: 14, height: 14, display: "inline-block" }}>
+                      <Copy
+                        size={14}
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          opacity: linkCopied ? 0 : 1,
+                          transition: "opacity 220ms ease",
+                          color: "var(--r-muted-dk, #585860)",
+                        }}
+                      />
+                      <Check
+                        size={14}
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          opacity: linkCopied ? 1 : 0,
+                          transition: "opacity 220ms ease",
+                          color: "var(--r-text)",
+                        }}
+                      />
+                    </span>
+                  </button>
                 </div>
                 <div className="r-sub" style={{ fontStyle: "italic" }}>
                   envie esse link pra quem você quer que responda.

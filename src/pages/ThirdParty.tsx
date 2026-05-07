@@ -10,7 +10,7 @@
 // Ao finalizar: chama finalize → recebe mini-insight → mostra com CTA pro rdwth.
 // ============================================================
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getToday } from "@/lib/api";
 import { AnimatedWordmark } from "@/components/AnimatedWordmark";
@@ -130,9 +130,10 @@ export default function ThirdParty() {
 
   // Cascade — sequência de aparição dos blocos de cada fase.
   // Ritmo "respiração calma" (700ms entre blocos). Reset a cada mudança de fase ou pergunta.
+  // useLayoutEffect: reset acontece ANTES do paint, evitando flash com cascadeStep alto da fase anterior.
   const [cascadeStep, setCascadeStep] = useState(0);
   const cascadePhaseRef = useRef<string | null>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const key = `${phase}:${currentQIdx}`;
     if (cascadePhaseRef.current === key) return;
     cascadePhaseRef.current = key;
@@ -150,6 +151,8 @@ export default function ThirdParty() {
   }, [phase, currentQIdx]);
   const cascade = (n: number) => ({
     opacity: cascadeStep >= n ? 1 : 0,
+    // ease-in só pra fade-IN. Quando cascadeStep volta a 0 (mudança de phase),
+    // useLayoutEffect já reseta antes do paint — não há fade-out visível.
     transition: "opacity 600ms ease-in",
   });
   const AUDIO_PULSE_TP_KEY = 'rdwth_audio_pulse_seen_thirdparty';
@@ -464,10 +467,10 @@ export default function ThirdParty() {
             Pessoas próximas veem coisas que a própria pessoa não consegue ver. Sua perspectiva externa é parte importante dessa leitura.
           </div>
           <div className="r-sub" style={{ marginTop: 8, ...cascade(4) }}>
-            <strong>Sobre anonimato:</strong> ao final você escolhe se {capitalizeName(data?.user_name)} pode ver suas respostas com seu nome, ou se prefere ficar anônimo/a — nesse caso, suas palavras não aparecem para {capitalizeName(data?.user_name)}, mas continuam sendo lidas pelo sistema na composição da leitura profunda.
+            <strong>Anonimato:</strong> no final você decide se {capitalizeName(data?.user_name)} vê seu nome. Se preferir ficar no anonimato, {capitalizeName(data?.user_name)} só verá que houve resposta — suas palavras continuam alimentando a leitura.
           </div>
           <div className="r-sub" style={cascade(5)}>
-            <strong>Tempo:</strong> ~10 minutos. 5 perguntas curtas. Não tem resposta certa.
+            <strong>Tempo:</strong> ~10 minutos, 5 perguntas curtas.
           </div>
           <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 13, fontStyle: "italic", lineHeight: 1.7, color: "var(--r-muted)", maxWidth: 600, marginLeft: "auto", marginRight: "auto", marginTop: 16, paddingTop: 16, borderTop: "0.5px solid var(--r-ghost)", ...cascade(6) }}>
             Sugestão: procure um lugar com calma pra responder. Sua atenção pelos próximos minutos é parte do presente que você vai dar para {capitalizeName(data?.user_name)}.
