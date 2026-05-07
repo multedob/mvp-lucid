@@ -119,35 +119,11 @@ function RootRedirect() {
         return;
       }
 
-      // ── Redireciona por estado do ciclo IPE ──────────────────────
-      const { data: cycle } = await supabase
-        .from("ipe_cycles")
-        .select("status")
-        .eq("user_id", session.user.id)
-        .order("started_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (cycle) {
-        switch (cycle.status) {
-          case "pills":
-            setRedirectTo("/pills");
-            break;
-          case "questionnaire":
-            setRedirectTo("/questionnaire");
-            break;
-          case "complete":
-            setRedirectTo("/reed");
-            break;
-          case "abandoned":
-            setRedirectTo("/home");
-            break;
-          default:
-            setRedirectTo("/home");
-        }
-      }
-      // Se não tem ciclo → /home (default)
-
+      // Onboarding completo → SEMPRE /home no retorno.
+      // (Antes redirecionava por status do ciclo IPE — pills/questionnaire/reed.
+      //  Decisão: usuário que volta ao app deve cair no portal central da home,
+      //  e de lá decidir o que continuar fazendo.)
+      setRedirectTo("/home");
       setChecking(false);
     }
 

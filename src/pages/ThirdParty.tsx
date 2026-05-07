@@ -101,6 +101,112 @@ function isValidEmail(s: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+// Componentes top-level (estáveis entre re-renders do ThirdParty).
+// Definir dentro do componente quebrava: cada render criava função nova,
+// React desmontava e remontava o subtree → input perdia foco a cada keystroke,
+// AudioRecorder reiniciava → áudio só pegava 1ª palavra.
+// ────────────────────────────────────────────────────────────────────────────
+
+function Header({ subtitle, onLabelClick }: { subtitle?: string; onLabelClick: () => void }) {
+  return (
+    <>
+      <div className="r-header">
+        <span className="r-header-label" onClick={onLabelClick} style={{ cursor: "pointer" }}>rdwth</span>
+        <span className="r-header-section">{subtitle || "convite"}</span>
+        <span className="r-header-date">{getToday()}</span>
+      </div>
+      <div className="r-line" />
+    </>
+  );
+}
+
+function Footer({
+  onContinue,
+  continueLabel = "continuar",
+  onBack,
+  disabled = false,
+  submitting = false,
+}: {
+  onContinue?: () => void;
+  continueLabel?: string;
+  onBack?: () => void;
+  disabled?: boolean;
+  submitting?: boolean;
+}) {
+  return (
+    <>
+      <div className="r-line" />
+      <div style={{ height: 56, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, flexShrink: 0 }}>
+        {onBack && (
+          <span onClick={onBack} style={{ fontFamily: "var(--r-font-sys)", fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
+        )}
+        {onContinue && (
+          <span
+            onClick={!disabled && !submitting ? onContinue : undefined}
+            style={{
+              marginLeft: "auto",
+              fontFamily: "var(--r-font-sys)", fontSize: 13,
+              color: disabled || submitting ? "var(--r-ghost)" : "var(--r-text)",
+              cursor: disabled || submitting ? "default" : "pointer",
+              letterSpacing: "0.04em",
+            }}
+          >
+            {submitting ? "..." : continueLabel}
+          </span>
+        )}
+      </div>
+    </>
+  );
+}
+
+function ResponseInput({
+  value,
+  onChange,
+  placeholder,
+  minLength,
+  onSend,
+  recorder,
+  minHeight,
+  submitting = false,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  minLength: number;
+  onSend: () => void;
+  recorder?: ReactNode;
+  minHeight?: number;
+  submitting?: boolean;
+}) {
+  const active = value.trim().length >= minLength && !submitting;
+  return (
+    <div className="r-input-wrap" style={minHeight ? { alignItems: "flex-end" } : undefined}>
+      <AutoResizeTextarea
+        className="r-textarea"
+        style={minHeight ? { minHeight } : undefined}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) onSend();
+        }}
+        placeholder={placeholder}
+        rows={1}
+        maxRows={5}
+      />
+      {recorder}
+      <button
+        type="button"
+        className={`r-send-dot${active ? " active" : ""}`}
+        onClick={active ? onSend : undefined}
+        disabled={!active}
+        aria-label="enviar"
+        style={{ cursor: active ? "pointer" : "default" }}
+      />
+    </div>
+  );
+}
+
 export default function ThirdParty() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
@@ -379,98 +485,9 @@ export default function ThirdParty() {
     );
   }
 
-  // Header reusable
-  const Header = ({ subtitle }: { subtitle?: string }) => (
-    <>
-      <div className="r-header">
-        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
-        <span className="r-header-section">{subtitle || "convite"}</span>
-        <span className="r-header-date">{getToday()}</span>
-      </div>
-      <div className="r-line" />
-    </>
-  );
-
-  // Footer reusable (back + continue)
-  const Footer = ({
-    onContinue,
-    continueLabel = "continuar",
-    onBack,
-    disabled = false,
-  }: {
-    onContinue?: () => void;
-    continueLabel?: string;
-    onBack?: () => void;
-    disabled?: boolean;
-  }) => (
-    <>
-      <div className="r-line" />
-      <div style={{ height: 56, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, flexShrink: 0 }}>
-        {onBack && (
-          <span onClick={onBack} style={{ fontFamily: "var(--r-font-sys)", fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
-        )}
-        {onContinue && (
-          <span
-            onClick={!disabled && !submitting ? onContinue : undefined}
-            style={{
-              marginLeft: "auto",
-              fontFamily: "var(--r-font-sys)", fontSize: 13,
-              color: disabled || submitting ? "var(--r-ghost)" : "var(--r-text)",
-              cursor: disabled || submitting ? "default" : "pointer",
-              letterSpacing: "0.04em",
-            }}
-          >
-            {submitting ? "..." : continueLabel}
-          </span>
-        )}
-      </div>
-    </>
-  );
-
-  const ResponseInput = ({
-    value,
-    onChange,
-    placeholder,
-    minLength,
-    onSend,
-    recorder,
-    minHeight,
-  }: {
-    value: string;
-    onChange: (value: string) => void;
-    placeholder: string;
-    minLength: number;
-    onSend: () => void;
-    recorder?: ReactNode;
-    minHeight?: number;
-  }) => {
-    const active = value.trim().length >= minLength && !submitting;
-    return (
-      <div className="r-input-wrap" style={minHeight ? { alignItems: "flex-end" } : undefined}>
-        <AutoResizeTextarea
-          className="r-textarea"
-          style={minHeight ? { minHeight } : undefined}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) onSend();
-          }}
-          placeholder={placeholder}
-          rows={1}
-          maxRows={5}
-        />
-        {recorder}
-        <button
-          type="button"
-          className={`r-send-dot${active ? " active" : ""}`}
-          onClick={active ? onSend : undefined}
-          disabled={!active}
-          aria-label="enviar"
-          style={{ cursor: active ? "pointer" : "default" }}
-        />
-      </div>
-    );
-  };
+  // (Header, Footer, ResponseInput foram movidos pro top-level do arquivo —
+  //  componentes definidos dentro do componente eram re-criados a cada render,
+  //  causando desmount/mount a cada keystroke → input perdia foco e AudioRecorder parava)
 
   // ─── INTRO — porta de entrada com wordmark + read with ────
   if (phase === "intro") {
@@ -502,7 +519,7 @@ export default function ThirdParty() {
             read with
           </div>
         </div>
-        <Footer onContinue={() => setPhase("onboarding")} continueLabel="continuar" />
+        <Footer onContinue={() => setPhase("onboarding")} continueLabel="continuar" submitting={submitting} />
       </div>
     );
   }
@@ -511,7 +528,7 @@ export default function ThirdParty() {
   if (phase === "onboarding") {
     return (
       <div className="r-screen">
-        <Header />
+        <Header onLabelClick={() => navigate("/home")} />
         <div key="scroll-onboarding" className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 24 }}>
           <div className="r-question" style={{ fontSize: 18, ...cascade(1) }}>
             {(() => {
@@ -545,7 +562,7 @@ export default function ThirdParty() {
             Sugestão: procure um lugar com calma pra responder. Sua atenção pelos próximos minutos é parte do presente que você vai dar para {capitalizeName(data?.user_name)}.
           </div>
         </div>
-        <Footer onContinue={handleStartOnboarding} continueLabel="começar" onBack={handleBack} />
+        <Footer onContinue={handleStartOnboarding} continueLabel="começar" onBack={handleBack} submitting={submitting} />
       </div>
     );
   }
@@ -554,7 +571,7 @@ export default function ThirdParty() {
   if (phase === "email") {
     return (
       <div className="r-screen">
-        <Header />
+        <Header onLabelClick={() => navigate("/home")} />
         <div key="scroll-email" className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
           <div className="r-question" style={cascade(1)}>como você se chama?</div>
           <div className="r-input-wrap" style={cascade(2)}>
@@ -579,7 +596,7 @@ export default function ThirdParty() {
           <div className="r-sub" style={cascade(5)}>usado pra confirmar sua resposta. {capitalizeName(data?.user_name)} só verá se você decidir revelar no final.</div>
           {errorMsg && <div style={{ color: "var(--terracota, #b85a3e)", fontSize: 13 }}>{errorMsg}</div>}
         </div>
-        <Footer onContinue={handleSubmitEmail} onBack={handleBack} disabled={!isValidEmail(email) || !name.trim()} />
+        <Footer onContinue={handleSubmitEmail} onBack={handleBack} disabled={!isValidEmail(email) || !name.trim()} submitting={submitting} />
       </div>
     );
   }
@@ -590,7 +607,7 @@ export default function ThirdParty() {
     if (!calib) return null;
     return (
       <div className="r-screen">
-        <Header subtitle={`sobre ${capitalizeName(data?.user_name)}`} />
+        <Header onLabelClick={() => navigate("/home")} subtitle={`sobre ${capitalizeName(data?.user_name)}`} />
         <div key="scroll-calibration" className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
           <div className="r-question" style={{ textAlign: "center", ...cascade(1) }}>{calib.title.replace("[Nome]", capitalizeName(data?.user_name) ?? "")}</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 420, marginLeft: "auto", marginRight: "auto", width: "100%", alignItems: "flex-start", ...cascade(2) }}>
@@ -612,7 +629,7 @@ export default function ThirdParty() {
           </div>
           {errorMsg && <div style={{ color: "var(--terracota, #b85a3e)", fontSize: 13 }}>{errorMsg}</div>}
         </div>
-        <Footer onContinue={handleSubmitCalibration} onBack={handleBack} disabled={!calibRelationship || !calibDuration} />
+        <Footer onContinue={handleSubmitCalibration} onBack={handleBack} disabled={!calibRelationship || !calibDuration} submitting={submitting} />
       </div>
     );
   }
@@ -628,7 +645,7 @@ export default function ThirdParty() {
       .replace(/@/g, adjEnd);
     return (
       <div className="r-screen">
-        <Header subtitle={`pergunta ${currentQIdx + 1} de ${coreQuestions.length}`} />
+        <Header onLabelClick={() => navigate("/home")} subtitle={`pergunta ${currentQIdx + 1} de ${coreQuestions.length}`} />
         <div key={`scroll-question-${currentQIdx}`} className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
           <div className="r-sub" style={{ fontStyle: "italic", ...cascade(1) }}>{replaceName(currentQ.stem)}</div>
           <div className="r-question" style={cascade(2)}>{replaceName(currentQ.episode_prompt)}</div>
@@ -639,6 +656,7 @@ export default function ThirdParty() {
               placeholder="conta a situação aqui (mínimo 30 caracteres) — ou grave em áudio"
               minLength={30}
               onSend={handleSubmitQuestion}
+              submitting={submitting}
               recorder={data?.invite_id ? (
                 <AudioRecorder
                   userId={data.invite_id}
@@ -680,6 +698,7 @@ export default function ThirdParty() {
               placeholder="uma frase"
               minLength={5}
               onSend={handleSubmitQuestion}
+              submitting={submitting}
               recorder={data?.invite_id ? (
                 <AudioRecorder
                   userId={data.invite_id}
@@ -697,7 +716,7 @@ export default function ThirdParty() {
 
           {errorMsg && <div style={{ color: "var(--terracota, #b85a3e)", fontSize: 13 }}>{errorMsg}</div>}
         </div>
-        <Footer onBack={handleBack} />
+        <Footer onBack={handleBack} submitting={submitting} />
       </div>
     );
   }
@@ -706,7 +725,7 @@ export default function ThirdParty() {
   if (phase === "reveal") {
     return (
       <div className="r-screen">
-        <Header subtitle="último passo" />
+        <Header onLabelClick={() => navigate("/home")} subtitle="último passo" />
         <div key="scroll-reveal" className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
           <div className="r-question" style={cascade(1)}>
             suas respostas vão ajudar {capitalizeName(data?.user_name)} a se ver com mais clareza.
@@ -742,7 +761,7 @@ export default function ThirdParty() {
 
           {errorMsg && <div style={{ color: "var(--terracota, #b85a3e)", fontSize: 13 }}>{errorMsg}</div>}
         </div>
-        <Footer onContinue={handleFinalize} onBack={handleBack} continueLabel="enviar" disabled={revealIdentity === null} />
+        <Footer onContinue={handleFinalize} onBack={handleBack} continueLabel="enviar" disabled={revealIdentity === null} submitting={submitting} />
       </div>
     );
   }
