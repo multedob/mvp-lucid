@@ -142,13 +142,25 @@ export default function ThirdParty() {
   const expectedCascadeKey = `${phase}:${currentQIdx}`;
   const effectiveCascadeStep = cascadePhaseRef.current === expectedCascadeKey ? cascadeStep : 0;
 
+  // Quantos blocos cada phase tem — evita timers desnecessários (que continuariam
+  // disparando re-renders durante typing).
+  const PHASE_BLOCK_COUNT: Partial<Record<Phase, number>> = {
+    intro: 2,
+    onboarding: 6,
+    email: 5,
+    calibration: 4,
+    question: 7,
+    reveal: 3,
+  };
+
   useLayoutEffect(() => {
     if (cascadePhaseRef.current === expectedCascadeKey) return;
     cascadePhaseRef.current = expectedCascadeKey;
     setCascadeStep(0);
     const startDelay = 250;
     const stepInterval = 700;
-    const maxSteps = 8;
+    const maxSteps = PHASE_BLOCK_COUNT[phase] ?? 0;
+    if (maxSteps === 0) return;
     const timers: ReturnType<typeof setTimeout>[] = [];
     for (let i = 1; i <= maxSteps; i++) {
       timers.push(setTimeout(() => {
@@ -156,7 +168,7 @@ export default function ThirdParty() {
       }, startDelay + (i - 1) * stepInterval));
     }
     return () => { timers.forEach(clearTimeout); };
-  }, [expectedCascadeKey]);
+  }, [expectedCascadeKey, phase]);
 
   // Quando a phase é "nova" (ref ainda não atualizada), transition: none.
   // Isso evita que React reusando elementos DOM entre phases dispare fade-out
@@ -464,7 +476,7 @@ export default function ThirdParty() {
   if (phase === "intro") {
     return (
       <div className="r-screen">
-        <div className="r-scroll" style={{
+        <div key="scroll-intro" className="r-scroll" style={{
           flex: 1,
           display: "flex",
           flexDirection: "column",
@@ -500,7 +512,7 @@ export default function ThirdParty() {
     return (
       <div className="r-screen">
         <Header />
-        <div className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 24 }}>
+        <div key="scroll-onboarding" className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 24 }}>
           <div className="r-question" style={{ fontSize: 18, ...cascade(1) }}>
             {(() => {
               const p = data?.user_pronoun ?? "ela";
@@ -543,7 +555,7 @@ export default function ThirdParty() {
     return (
       <div className="r-screen">
         <Header />
-        <div className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
+        <div key="scroll-email" className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
           <div className="r-question" style={cascade(1)}>como você se chama?</div>
           <div className="r-input-wrap" style={cascade(2)}>
             <input
@@ -552,7 +564,6 @@ export default function ThirdParty() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="seu nome"
-              autoFocus={cascadeStep >= 2}
             />
           </div>
           <div className="r-question" style={{ marginTop: 16, ...cascade(3) }}>seu email</div>
@@ -580,7 +591,7 @@ export default function ThirdParty() {
     return (
       <div className="r-screen">
         <Header subtitle={`sobre ${capitalizeName(data?.user_name)}`} />
-        <div className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
+        <div key="scroll-calibration" className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
           <div className="r-question" style={{ textAlign: "center", ...cascade(1) }}>{calib.title.replace("[Nome]", capitalizeName(data?.user_name) ?? "")}</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 420, marginLeft: "auto", marginRight: "auto", width: "100%", alignItems: "flex-start", ...cascade(2) }}>
             {calib.relationship_options.map((opt) => (
@@ -618,7 +629,7 @@ export default function ThirdParty() {
     return (
       <div className="r-screen">
         <Header subtitle={`pergunta ${currentQIdx + 1} de ${coreQuestions.length}`} />
-        <div className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
+        <div key={`scroll-question-${currentQIdx}`} className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
           <div className="r-sub" style={{ fontStyle: "italic", ...cascade(1) }}>{replaceName(currentQ.stem)}</div>
           <div className="r-question" style={cascade(2)}>{replaceName(currentQ.episode_prompt)}</div>
           <div style={cascade(3)}>
@@ -696,7 +707,7 @@ export default function ThirdParty() {
     return (
       <div className="r-screen">
         <Header subtitle="último passo" />
-        <div className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
+        <div key="scroll-reveal" className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
           <div className="r-question" style={cascade(1)}>
             suas respostas vão ajudar {capitalizeName(data?.user_name)} a se ver com mais clareza.
           </div>
