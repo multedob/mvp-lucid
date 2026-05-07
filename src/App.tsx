@@ -22,6 +22,7 @@ import Questionnaire from "./pages/Questionnaire";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Sobre from "./pages/Sobre";
+import ResetPassword from "./pages/ResetPassword";
 import ThirdParty from "./pages/ThirdParty";
 import NotFound from "./pages/NotFound";
 import { trackPageView, identifyUser, resetUser } from "./lib/analytics";
@@ -213,6 +214,7 @@ const App = () => (
           <Route path="/terms" element={<Terms />} />
           <Route path="/terms-of-use" element={<Terms />} />
           <Route path="/sobre" element={<Sobre />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           {/* W20.2 — Third-party questionnaire (público, sem auth do app) */}
           <Route path="/third-party/:token" element={<ThirdParty />} />
           <Route path="/test" element={<Navigate to="/home" replace />} />

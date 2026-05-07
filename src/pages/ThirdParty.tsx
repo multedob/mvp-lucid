@@ -127,6 +127,31 @@ export default function ThirdParty() {
 
   // Pulse breathing na bolinha — 1ª entrada do terceiro respondendo
   const [audioPulseFirst, setAudioPulseFirst] = useState(false);
+
+  // Cascade — sequência de aparição dos blocos de cada fase.
+  // Ritmo "respiração calma" (700ms entre blocos). Reset a cada mudança de fase ou pergunta.
+  const [cascadeStep, setCascadeStep] = useState(0);
+  const cascadePhaseRef = useRef<string | null>(null);
+  useEffect(() => {
+    const key = `${phase}:${currentQIdx}`;
+    if (cascadePhaseRef.current === key) return;
+    cascadePhaseRef.current = key;
+    setCascadeStep(0);
+    const startDelay = 250;
+    const stepInterval = 700;
+    const maxSteps = 8;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    for (let i = 1; i <= maxSteps; i++) {
+      timers.push(setTimeout(() => {
+        setCascadeStep((s) => Math.max(s, i));
+      }, startDelay + (i - 1) * stepInterval));
+    }
+    return () => { timers.forEach(clearTimeout); };
+  }, [phase, currentQIdx]);
+  const cascade = (n: number) => ({
+    opacity: cascadeStep >= n ? 1 : 0,
+    transition: "opacity 600ms ease-in",
+  });
   const AUDIO_PULSE_TP_KEY = 'rdwth_audio_pulse_seen_thirdparty';
   useEffect(() => {
     if (phase !== "question") return;
@@ -425,26 +450,26 @@ export default function ThirdParty() {
       <div className="r-screen">
         <Header />
         <div className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 24 }}>
-          <div className="r-question" style={{ fontSize: 18 }}>
+          <div className="r-question" style={{ fontSize: 18, ...cascade(1) }}>
             {(() => {
               const p = data?.user_pronoun ?? "ela";
               const direct = p === "ela" ? "a vê" : p === "ele" ? "o vê" : `vê ${capitalizeName(data?.user_name)}`;
               return `${capitalizeName(data?.user_name)} te pediu pra responder algumas perguntas sobre como você ${direct}.`;
             })()}
           </div>
-          <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 14, lineHeight: 1.75, color: "var(--r-text)", maxWidth: 600, marginLeft: "auto", marginRight: "auto" }}>
+          <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 14, lineHeight: 1.75, color: "var(--r-text)", maxWidth: 600, marginLeft: "auto", marginRight: "auto", ...cascade(2) }}>
             O <strong>rdwth</strong> é uma ferramenta de auto-conhecimento estrutural. Ajuda a pessoa a observar padrões de como ela organiza experiência — não é diagnóstico, não é coach, não prescreve nada. É uma leitura.
           </div>
-          <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 14, lineHeight: 1.75, color: "var(--r-text)", maxWidth: 600, marginLeft: "auto", marginRight: "auto" }}>
+          <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 14, lineHeight: 1.75, color: "var(--r-text)", maxWidth: 600, marginLeft: "auto", marginRight: "auto", ...cascade(3) }}>
             Pessoas próximas veem coisas que a própria pessoa não consegue ver. Sua perspectiva externa é parte importante dessa leitura.
           </div>
-          <div className="r-sub" style={{ marginTop: 8 }}>
+          <div className="r-sub" style={{ marginTop: 8, ...cascade(4) }}>
             <strong>Sobre anonimato:</strong> ao final você escolhe se {capitalizeName(data?.user_name)} pode ver suas respostas com seu nome, ou se prefere ficar anônimo/a — nesse caso, suas palavras não aparecem para {capitalizeName(data?.user_name)}, mas continuam sendo lidas pelo sistema na composição da leitura profunda.
           </div>
-          <div className="r-sub">
+          <div className="r-sub" style={cascade(5)}>
             <strong>Tempo:</strong> ~10 minutos. 5 perguntas curtas. Não tem resposta certa.
           </div>
-          <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 13, fontStyle: "italic", lineHeight: 1.7, color: "var(--r-muted)", maxWidth: 600, marginLeft: "auto", marginRight: "auto", marginTop: 16, paddingTop: 16, borderTop: "0.5px solid var(--r-ghost)" }}>
+          <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 13, fontStyle: "italic", lineHeight: 1.7, color: "var(--r-muted)", maxWidth: 600, marginLeft: "auto", marginRight: "auto", marginTop: 16, paddingTop: 16, borderTop: "0.5px solid var(--r-ghost)", ...cascade(6) }}>
             Sugestão: procure um lugar com calma pra responder. Sua atenção pelos próximos minutos é parte do presente que você vai dar para {capitalizeName(data?.user_name)}.
           </div>
         </div>
@@ -459,19 +484,19 @@ export default function ThirdParty() {
       <div className="r-screen">
         <Header />
         <div className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
-          <div className="r-question">como você se chama?</div>
-          <div className="r-input-wrap">
+          <div className="r-question" style={cascade(1)}>como você se chama?</div>
+          <div className="r-input-wrap" style={cascade(2)}>
             <input
               type="text"
               className="r-textarea"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="seu nome"
-              autoFocus
+              autoFocus={cascadeStep >= 2}
             />
           </div>
-          <div className="r-question" style={{ marginTop: 16 }}>seu email</div>
-          <div className="r-input-wrap">
+          <div className="r-question" style={{ marginTop: 16, ...cascade(3) }}>seu email</div>
+          <div className="r-input-wrap" style={cascade(4)}>
             <input
               type="email"
               className="r-textarea"
@@ -480,7 +505,7 @@ export default function ThirdParty() {
               placeholder="email@exemplo.com"
             />
           </div>
-          <div className="r-sub">usado pra confirmar sua resposta. {capitalizeName(data?.user_name)} só verá se você decidir revelar no final.</div>
+          <div className="r-sub" style={cascade(5)}>usado pra confirmar sua resposta. {capitalizeName(data?.user_name)} só verá se você decidir revelar no final.</div>
           {errorMsg && <div style={{ color: "var(--terracota, #b85a3e)", fontSize: 13 }}>{errorMsg}</div>}
         </div>
         <Footer onContinue={handleSubmitEmail} onBack={handleBack} disabled={!isValidEmail(email) || !name.trim()} />
@@ -496,8 +521,8 @@ export default function ThirdParty() {
       <div className="r-screen">
         <Header subtitle={`sobre ${capitalizeName(data?.user_name)}`} />
         <div className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
-          <div className="r-question" style={{ textAlign: "center" }}>{calib.title.replace("[Nome]", capitalizeName(data?.user_name) ?? "")}</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 420, marginLeft: "auto", marginRight: "auto", width: "100%", alignItems: "flex-start" }}>
+          <div className="r-question" style={{ textAlign: "center", ...cascade(1) }}>{calib.title.replace("[Nome]", capitalizeName(data?.user_name) ?? "")}</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 420, marginLeft: "auto", marginRight: "auto", width: "100%", alignItems: "flex-start", ...cascade(2) }}>
             {calib.relationship_options.map((opt) => (
               <div key={opt} className="r-choice" style={{ cursor: "pointer", alignSelf: "stretch", justifyContent: "flex-start" }} onClick={() => setCalibRelationship(opt)}>
                 <span className={`r-choice-dot${calibRelationship === opt ? " selected" : ""}`} />
@@ -505,8 +530,8 @@ export default function ThirdParty() {
               </div>
             ))}
           </div>
-          <div className="r-question" style={{ marginTop: 20, textAlign: "center" }}>há quanto tempo conhece?</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 420, marginLeft: "auto", marginRight: "auto", width: "100%", alignItems: "flex-start" }}>
+          <div className="r-question" style={{ marginTop: 20, textAlign: "center", ...cascade(3) }}>há quanto tempo conhece?</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 420, marginLeft: "auto", marginRight: "auto", width: "100%", alignItems: "flex-start", ...cascade(4) }}>
             {calib.duration_options.map((opt) => (
               <div key={opt} className="r-choice" style={{ cursor: "pointer", alignSelf: "stretch", justifyContent: "flex-start" }} onClick={() => setCalibDuration(opt)}>
                 <span className={`r-choice-dot${calibDuration === opt ? " selected" : ""}`} />
@@ -534,30 +559,32 @@ export default function ThirdParty() {
       <div className="r-screen">
         <Header subtitle={`pergunta ${currentQIdx + 1} de ${coreQuestions.length}`} />
         <div className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
-          <div className="r-sub" style={{ fontStyle: "italic" }}>{replaceName(currentQ.stem)}</div>
-          <div className="r-question">{replaceName(currentQ.episode_prompt)}</div>
-          <ResponseInput
-            value={episodes[qid] ?? ""}
-            onChange={(value) => setEpisodes((prev) => ({ ...prev, [qid]: value }))}
-            placeholder="conta a situação aqui (mínimo 30 caracteres) — ou grave em áudio"
-            minLength={30}
-            onSend={handleSubmitQuestion}
-            recorder={data?.invite_id ? (
-              <AudioRecorder
-                userId={data.invite_id}
-                cycleId={token ?? "third-party"}
-                pillId={qid}
-                moment="third-party"
-                language="pt-BR"
-                breathingPulseOnce={audioPulseFirst && currentQIdx === 0}
-                onLiveTranscript={text => setEpisodes((prev) => ({ ...prev, [qid]: text }))}
-                onFinalTranscript={text => setEpisodes((prev) => ({ ...prev, [qid]: text }))}
-                disabled={submitting}
-              />
-            ) : undefined}
-          />
-          <div className="r-sub" style={{ marginTop: 16 }}>{replaceName(currentQ.scale_label)}</div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "8px 0", maxWidth: 600, marginLeft: "auto", marginRight: "auto", width: "100%" }}>
+          <div className="r-sub" style={{ fontStyle: "italic", ...cascade(1) }}>{replaceName(currentQ.stem)}</div>
+          <div className="r-question" style={cascade(2)}>{replaceName(currentQ.episode_prompt)}</div>
+          <div style={cascade(3)}>
+            <ResponseInput
+              value={episodes[qid] ?? ""}
+              onChange={(value) => setEpisodes((prev) => ({ ...prev, [qid]: value }))}
+              placeholder="conta a situação aqui (mínimo 30 caracteres) — ou grave em áudio"
+              minLength={30}
+              onSend={handleSubmitQuestion}
+              recorder={data?.invite_id ? (
+                <AudioRecorder
+                  userId={data.invite_id}
+                  cycleId={token ?? "third-party"}
+                  pillId={qid}
+                  moment="third-party"
+                  language="pt-BR"
+                  breathingPulseOnce={audioPulseFirst && currentQIdx === 0}
+                  onLiveTranscript={text => setEpisodes((prev) => ({ ...prev, [qid]: text }))}
+                  onFinalTranscript={text => setEpisodes((prev) => ({ ...prev, [qid]: text }))}
+                  disabled={submitting}
+                />
+              ) : undefined}
+            />
+          </div>
+          <div className="r-sub" style={{ marginTop: 16, ...cascade(4) }}>{replaceName(currentQ.scale_label)}</div>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "8px 0", maxWidth: 600, marginLeft: "auto", marginRight: "auto", width: "100%", ...cascade(5) }}>
             <div style={{ display: "flex", gap: 16, padding: "8px 0" }}>
               {[1, 2, 3, 4, 5].map((n) => (
                 <span
@@ -574,26 +601,28 @@ export default function ThirdParty() {
             </div>
           </div>
 
-          <div className="r-sub" style={{ marginTop: 16 }}>{replaceName(currentQ.open_prompt)}</div>
-          <ResponseInput
-            value={opens[qid] ?? ""}
-            onChange={(value) => setOpens((prev) => ({ ...prev, [qid]: value }))}
-            placeholder="uma frase"
-            minLength={5}
-            onSend={handleSubmitQuestion}
-            recorder={data?.invite_id ? (
-              <AudioRecorder
-                userId={data.invite_id}
-                cycleId={token ?? "third-party"}
-                pillId={`${qid}_open`}
-                moment="third-party"
-                language="pt-BR"
-                onLiveTranscript={text => setOpens((prev) => ({ ...prev, [qid]: text }))}
-                onFinalTranscript={text => setOpens((prev) => ({ ...prev, [qid]: text }))}
-                disabled={submitting}
-              />
-            ) : undefined}
-          />
+          <div className="r-sub" style={{ marginTop: 16, ...cascade(6) }}>{replaceName(currentQ.open_prompt)}</div>
+          <div style={cascade(7)}>
+            <ResponseInput
+              value={opens[qid] ?? ""}
+              onChange={(value) => setOpens((prev) => ({ ...prev, [qid]: value }))}
+              placeholder="uma frase"
+              minLength={5}
+              onSend={handleSubmitQuestion}
+              recorder={data?.invite_id ? (
+                <AudioRecorder
+                  userId={data.invite_id}
+                  cycleId={token ?? "third-party"}
+                  pillId={`${qid}_open`}
+                  moment="third-party"
+                  language="pt-BR"
+                  onLiveTranscript={text => setOpens((prev) => ({ ...prev, [qid]: text }))}
+                  onFinalTranscript={text => setOpens((prev) => ({ ...prev, [qid]: text }))}
+                  disabled={submitting}
+                />
+              ) : undefined}
+            />
+          </div>
 
           {errorMsg && <div style={{ color: "var(--terracota, #b85a3e)", fontSize: 13 }}>{errorMsg}</div>}
         </div>
@@ -608,14 +637,14 @@ export default function ThirdParty() {
       <div className="r-screen">
         <Header subtitle="último passo" />
         <div className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
-          <div className="r-question">
+          <div className="r-question" style={cascade(1)}>
             suas respostas vão ajudar {capitalizeName(data?.user_name)} a se ver com mais clareza.
           </div>
-          <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 14, lineHeight: 1.75, color: "var(--r-text)", maxWidth: 600, marginLeft: "auto", marginRight: "auto" }}>
+          <div style={{ fontFamily: "var(--r-font-ed)", fontSize: 14, lineHeight: 1.75, color: "var(--r-text)", maxWidth: 600, marginLeft: "auto", marginRight: "auto", ...cascade(2) }}>
             Como você quer que sua contribuição apareça?
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: 600, marginLeft: "auto", marginRight: "auto", width: "100%", marginTop: 8 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: 600, marginLeft: "auto", marginRight: "auto", width: "100%", marginTop: 8, ...cascade(3) }}>
             <div className="r-choice" style={{ cursor: "pointer", flexDirection: "column", alignItems: "flex-start", gap: 6 }} onClick={() => setRevealIdentity(true)}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <span className={`r-choice-dot${revealIdentity === true ? " selected" : ""}`} />
