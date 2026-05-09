@@ -16,6 +16,8 @@ interface SystemTerminalCounterProps {
   fontSize?: number;
   charDelayMs?: number;
   showCursor?: boolean;
+  /** ms a esperar antes de começar a digitar (default 0). Igual SystemTerminalLine. */
+  delayMs?: number;
 }
 
 const STYLE_ID = "rdwth-systemterminalcounter-styles";
@@ -54,10 +56,12 @@ export default function SystemTerminalCounter({
   fontSize = DEFAULT_FONT_SIZE,
   charDelayMs = DEFAULT_CHAR_DELAY,
   showCursor = true,
+  delayMs = 0,
 }: SystemTerminalCounterProps) {
   const valueStr = String(value);
   const [displayedPrefix, setDisplayedPrefix] = useState("");
   const [displayedValue, setDisplayedValue] = useState("");
+  const [started, setStarted] = useState(false);
   const [done, setDone] = useState(false);
 
   const lastValueRef = useRef<string>(valueStr);
@@ -67,7 +71,7 @@ export default function SystemTerminalCounter({
     injectStyles();
   }, []);
 
-  // Primeiro mount: digita prefix + value
+  // Primeiro mount: aguarda delayMs, então digita prefix + value char por char
   useEffect(() => {
     if (initializedRef.current) return;
     initializedRef.current = true;
@@ -75,32 +79,43 @@ export default function SystemTerminalCounter({
     if (prefersReducedMotion()) {
       setDisplayedPrefix(prefix);
       setDisplayedValue(valueStr);
+      setStarted(true);
       setDone(true);
       return;
     }
 
     setDisplayedPrefix("");
     setDisplayedValue("");
+    setStarted(false);
     setDone(false);
 
-    let i = 0;
-    const fullLength = prefix.length + valueStr.length;
-    const interval = setInterval(() => {
-      i++;
-      if (i >= fullLength) {
-        setDisplayedPrefix(prefix);
-        setDisplayedValue(valueStr);
-        setDone(true);
-        clearInterval(interval);
-      } else if (i <= prefix.length) {
-        setDisplayedPrefix(prefix.slice(0, i));
-        setDisplayedValue("");
-      } else {
-        setDisplayedPrefix(prefix);
-        setDisplayedValue(valueStr.slice(0, i - prefix.length));
-      }
-    }, charDelayMs);
-    return () => clearInterval(interval);
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    const startTimer = setTimeout(() => {
+      setStarted(true);
+      let i = 0;
+      const fullLength = prefix.length + valueStr.length;
+      interval = setInterval(() => {
+        i++;
+        if (i >= fullLength) {
+          setDisplayedPrefix(prefix);
+          setDisplayedValue(valueStr);
+          setDone(true);
+          if (interval) clearInterval(interval);
+        } else if (i <= prefix.length) {
+          setDisplayedPrefix(prefix.slice(0, i));
+          setDisplayedValue("");
+        } else {
+          setDisplayedPrefix(prefix);
+          setDisplayedValue(valueStr.slice(0, i - prefix.length));
+        }
+      }, charDelayMs);
+    }, delayMs);
+
+    return () => {
+      clearTimeout(startTimer);
+      if (interval) clearInterval(interval);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -159,23 +174,27 @@ export default function SystemTerminalCounter({
         minHeight: `${Math.round(fontSize * 1.7)}px`,
       }}
     >
-      <span aria-hidden="true">{"> "}</span>
-      {displayedPrefix}
-      {displayedValue}
-      {showCursor && (
-        <span
-          aria-hidden="true"
-          style={{
-            display: "inline-block",
-            marginLeft: 2,
-            opacity: 1,
-            animation: done
-              ? "rdwth-systemterminalcounter-cursor 0.6s steps(2) 2 forwards"
-              : "none",
-          }}
-        >
-          █
-        </span>
+      {started && (
+        <>
+          <span aria-hidden="true">{"> "}</span>
+          {displayedPrefix}
+          {displayedValue}
+          {showCursor && (
+            <span
+              aria-hidden="true"
+              style={{
+                display: "inline-block",
+                marginLeft: 2,
+                opacity: 1,
+                animation: done
+                  ? "rdwth-systemterminalcounter-cursor 0.6s steps(2) 2 forwards"
+                  : "none",
+              }}
+            >
+              █
+            </span>
+          )}
+        </>
       )}
     </div>
   );

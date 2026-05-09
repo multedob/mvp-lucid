@@ -1,28 +1,25 @@
 // src/components/LoadingScreen.tsx
 // ============================================================
-// Loading screen v3 — TUDO no campo da voz do sistema (topo-esquerda).
-// Sem nada no centro do canvas. Morph = sistema dizendo "carregando".
+// Loading screen v4 — TUDO no campo da voz do sistema (topo-esquerda).
+// Cada linha é um SystemTerminalLine (typewriter + cursor quadrado).
 //
-// Sequência de 4 linhas empilhadas:
-//   > [rdwth morph animado]   ← linha 1 (sistema "se escrevendo")
-//   > frase Diablo 1           ← linha 2 (educação sobre o produto)
-//   > frase Diablo 2           ← linha 3 (educação)
-//   > pronto.                  ← linha 4 (só quando loadComplete)
+// Sequência de 3 linhas empilhadas (o morph foi removido em v4):
+//   > frase Diablo 1           ← linha 1 (entra imediato)
+//   > frase Diablo 2           ← linha 2 (entra após LINE_DELAY_MS)
+//   > pronto.                  ← linha 3 (só quando loadComplete + tempo mínimo)
 //
-// Frases Diablo são SORTEADAS do pool (não rotacionam — entram uma vez cada).
-// As 2 são distintas. Após "pronto.", fade out e onDone.
+// Frases Diablo são SORTEADAS do pool e distintas. Após "pronto." → fade + onDone.
 // ============================================================
 
 import { useEffect, useRef, useState } from "react";
-import { AnimatedWordmark } from "./AnimatedWordmark";
 import AppHeader from "./AppHeader";
 import NavBottom, { type ActivePage } from "./NavBottom";
+import SystemTerminalLine from "./SystemTerminalLine";
 
 const LINE_DELAY_MS = 2500;       // tempo entre cada linha — ~ritmo de leitura
-const MIN_BEFORE_DONE_MS = 5500;  // tempo mínimo total antes de "pronto." — dá tempo de ler diablo 2
+const MIN_BEFORE_DONE_MS = 5000;  // tempo mínimo total antes de "pronto." — dá tempo de ler diablo 2
 const READY_HOLD_MS = 1200;       // quanto "pronto." fica visível antes de fade
 const FADE_MS = 400;
-const FADE_LINE_MS = 500;
 
 // Pool inicial — 30 frases (Bruno cura depois editando o array).
 // Categorizadas por tipo: mecânica, ciclos, terceiros, ética/privacidade,
@@ -92,8 +89,8 @@ export function LoadingScreen({
   active = "none",
   hideNav = false,
 }: Props) {
-  // shownCount controla quantas linhas estão visíveis (0..4):
-  //   1 = morph; 2 = +diablo1; 3 = +diablo2; 4 = +pronto
+  // shownCount controla quantas linhas estão visíveis (0..3):
+  //   1 = diablo1; 2 = +diablo2; 3 = +pronto
   const [shownCount, setShownCount] = useState(0);
   const [fadingOut, setFadingOut] = useState(false);
   const loadCompleteRef = useRef(loadComplete);
@@ -105,25 +102,23 @@ export function LoadingScreen({
   const [diablo2] = useState<string>(() => pickRandom(DIABLO_POOL, [diablo1]));
 
   // Cadeia das linhas (todas no campo da voz sistema):
-  //   t=0       → morph         (shownCount 0→1)
-  //   t=2500ms  → diablo1        (shownCount 1→2)
-  //   t=5000ms  → diablo2        (shownCount 2→3)
-  //   loadComplete && t≥5500ms → pronto (shownCount 3→4)
+  //   t=0       → diablo1        (shownCount 0→1)
+  //   t=2500ms  → diablo2        (shownCount 1→2)
+  //   loadComplete && t≥5000ms → pronto (shownCount 2→3)
   useEffect(() => {
     setShownCount(1);
     const t1 = window.setTimeout(() => setShownCount(2), LINE_DELAY_MS);
-    const t2 = window.setTimeout(() => setShownCount(3), LINE_DELAY_MS * 2);
-    return () => { window.clearTimeout(t1); window.clearTimeout(t2); };
+    return () => window.clearTimeout(t1);
   }, []);
 
   // Vigilância pra mostrar "pronto." quando: load completo + tempo mínimo
   useEffect(() => {
-    if (shownCount < 3) return;
+    if (shownCount < 2) return;
     const checkInterval = window.setInterval(() => {
       const elapsed = Date.now() - startTimeRef.current;
       if (loadCompleteRef.current && elapsed >= MIN_BEFORE_DONE_MS) {
         window.clearInterval(checkInterval);
-        setShownCount(4);
+        setShownCount(3);
       }
     }, 100);
     return () => window.clearInterval(checkInterval);
@@ -131,7 +126,7 @@ export function LoadingScreen({
 
   // Quando "pronto." aparece, espera HOLD + FADE e chama onDone
   useEffect(() => {
-    if (shownCount !== 4) return;
+    if (shownCount !== 3) return;
     const t1 = window.setTimeout(() => setFadingOut(true), READY_HOLD_MS);
     const t2 = window.setTimeout(() => onDone?.(), READY_HOLD_MS + FADE_MS);
     return () => { window.clearTimeout(t1); window.clearTimeout(t2); };
@@ -166,20 +161,6 @@ export function LoadingScreen({
           from { opacity: 0; }
           to { opacity: 1; }
         }
-        @keyframes rdwth-ls-line-in {
-          from { opacity: 0; transform: translateY(-2px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes rdwth-ls-diablo-in {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        .rdwth-ls-line {
-          animation: rdwth-ls-line-in ${FADE_LINE_MS}ms ease-out forwards;
-        }
-        .rdwth-ls-diablo {
-          animation: rdwth-ls-diablo-in 600ms ease-in forwards;
-        }
       `}</style>
 
       {/* Header canônico — `rdwth | section | YYYY.MM.DD` */}
@@ -198,79 +179,14 @@ export function LoadingScreen({
           gap: 4,
           zIndex: 1,
         }}>
-          {/* Linha 1 — morph: o sistema "se escrevendo" como sinal de carregamento.
-              Sem prefixo "> " (é a própria voz, não uma fala). Tamanho ~16px:
-              presente mas integrado ao campo de voz sistema. */}
-          {shownCount >= 1 && (
-            <div
-              className="rdwth-ls-line"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                lineHeight: 1.4,
-                marginBottom: 4,
-              }}
-            >
-              <AnimatedWordmark fontSize="16px" />
-            </div>
-          )}
+          {/* Linha 1 — diablo 1 (typewriter + cursor quadrado) */}
+          {shownCount >= 1 && <SystemTerminalLine text={diablo1} />}
 
-          {/* Linha 2 — diablo 1 */}
-          {shownCount >= 2 && (
-            <div
-              className="rdwth-ls-line"
-              style={{
-                fontFamily: "var(--r-font-sys, 'IBM Plex Mono', monospace)",
-                fontSize: 11,
-                fontWeight: 300,
-                color: "var(--r-voice-sys, #585860)",
-                letterSpacing: "0.04em",
-                lineHeight: 1.7,
-                whiteSpace: "pre-wrap",
-              }}
-            >
-              <span aria-hidden="true">{"> "}</span>
-              {diablo1}
-            </div>
-          )}
+          {/* Linha 2 — diablo 2 */}
+          {shownCount >= 2 && <SystemTerminalLine text={diablo2} />}
 
-          {/* Linha 3 — diablo 2 */}
-          {shownCount >= 3 && (
-            <div
-              className="rdwth-ls-line"
-              style={{
-                fontFamily: "var(--r-font-sys, 'IBM Plex Mono', monospace)",
-                fontSize: 11,
-                fontWeight: 300,
-                color: "var(--r-voice-sys, #585860)",
-                letterSpacing: "0.04em",
-                lineHeight: 1.7,
-                whiteSpace: "pre-wrap",
-              }}
-            >
-              <span aria-hidden="true">{"> "}</span>
-              {diablo2}
-            </div>
-          )}
-
-          {/* Linha 4 — pronto. (só com loadComplete && tempo mínimo) */}
-          {shownCount >= 4 && (
-            <div
-              className="rdwth-ls-line"
-              style={{
-                fontFamily: "var(--r-font-sys, 'IBM Plex Mono', monospace)",
-                fontSize: 11,
-                fontWeight: 300,
-                color: "var(--r-voice-sys, #585860)",
-                letterSpacing: "0.04em",
-                lineHeight: 1.7,
-                whiteSpace: "pre-wrap",
-              }}
-            >
-              <span aria-hidden="true">{"> "}</span>
-              pronto.
-            </div>
-          )}
+          {/* Linha 3 — pronto. (só com loadComplete && tempo mínimo) */}
+          {shownCount >= 3 && <SystemTerminalLine text="pronto." />}
         </div>
       </div>
 
