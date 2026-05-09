@@ -14,7 +14,6 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useUserName } from "@/hooks/useUserName";
 import { useShell } from "@/hooks/useShell";
-import { useFlow } from "@/hooks/useFlow";
 import SystemTerminalLine from "@/components/SystemTerminalLine";
 import SystemPulse from "@/components/SystemPulse";
 import SystemPulseRotation from "@/components/SystemPulseRotation";
@@ -35,16 +34,10 @@ export default function Home() {
   const navigate = useNavigate();
   const location = useLocation();
   const userName = useUserName();
-  const { flow } = useFlow();
   const [greeting, setGreeting] = useState<string | null>(null);
 
   // Mantém header sem section + nav active=home enquanto na Home
   useShell({ section: undefined, active: "home" });
-
-  // Quando um flow começa, fade-out das frases da Home (saudação + guide).
-  // O FlowVoice (no AppShell) entra na MESMA posição que a saudação ocupa,
-  // criando ilusão de continuidade.
-  const inFlow = flow !== null;
 
   // Modo guiado marco-driven
   const { guide } = useHomeGuide();
@@ -94,16 +87,11 @@ export default function Home() {
 
   return (
     <>
-      {/* Wrapper das frases da Home com fade-out durante o flow.
-          Mantém minHeight pra não colapsar layout enquanto FlowVoice entra na mesma altura. */}
-      <div
-        style={{
-          opacity: inFlow ? 0 : 1,
-          transition: "opacity 300ms ease",
-          pointerEvents: inFlow ? "none" : "auto",
-        }}
-      >
-        {/* TeamMessage — voz fundadores. Notifica Home quando carrega. */}
+      {/* Voice slot — espaço reservado (~110px) pra coexistir com FlowVoice.
+          Sem flow: TeamMessage + saudação + guide ocupam.
+          Com flow (clique no NavBottom): Home desmonta imediatamente — espaço da
+          página alvo assume o overlay. */}
+      <div style={{ minHeight: 110, flexShrink: 0 }}>
         <TeamMessage
           contextKey="home_first_visit"
           onLoaded={(has) => {
@@ -112,14 +100,12 @@ export default function Home() {
           }}
         />
 
-        {/* Saudação voz sistema — só renderiza após TeamMessage carregar (cascade dinâmico) */}
         {greeting && showGreeting && (
           <div style={{ padding: "12px 24px 0" }}>
             <SystemTerminalLine text={greeting} delayMs={0} />
           </div>
         )}
 
-        {/* Frase guide — em cadeia após saudação */}
         {guide && showGuide && (
           <div style={{ padding: "12px 24px 20px" }}>
             <SystemTerminalLine text={guide.frase} delayMs={0} />
@@ -130,11 +116,11 @@ export default function Home() {
       {/* Spacer — restante do canvas vazio */}
       <div style={{ flex: 1 }} />
 
-      {/* Pulse no destino do marco — só ativo quando NÃO está em flow */}
-      {!inFlow && guide?.target && pulseActive && (
+      {/* Pulse no destino do marco */}
+      {guide?.target && pulseActive && (
         <SystemPulse targetId={guide.target} active={true} />
       )}
-      {!inFlow && guide?.targets && pulseActive && (
+      {guide?.targets && pulseActive && (
         <SystemPulseRotation
           targetIds={guide.targets}
           perTargetMs={guide.perTargetMs ?? 7000}

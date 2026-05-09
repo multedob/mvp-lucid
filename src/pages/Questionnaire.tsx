@@ -543,26 +543,24 @@ export default function Questionnaire() {
     {loadingOverlay}
     <>
 
-      {/* Voz sistema topo: contador + empty message em cadeia.
-          Se veio do flow, o hint "perguntas restantes: X" já foi dito —
-          esconde aqui pra evitar duplicação visual. */}
-      {!fromFlow && (
-        <div style={{ padding: '10px 24px 0', flexShrink: 0 }}>
-          <SystemTerminalCounter
-            prefix="perguntas restantes: "
-            value={remainingQuestions ?? 16}
-          />
-        </div>
-      )}
-
-      {/* Empty state message — primeira visita ao questionnaire (espera contador) */}
-      {!fromFlow && (
-      <EmptyStateMessage
-        text="responda no seu ritmo. pode pausar e voltar."
-        contextKey="questionnaire_first_visit"
-        delayMs={700}
-      />
-      )}
+      {/* Voice slot — espaço reservado no topo (~110px).
+          Quando flow ativo, FlowVoice cobre. Quando termina, fica em branco.
+          Sem flow: counter + empty message ocupam o slot. */}
+      <div style={{ minHeight: 110, flexShrink: 0, padding: '10px 24px 0' }}>
+        {!fromFlow && (
+          <>
+            <SystemTerminalCounter
+              prefix="perguntas restantes: "
+              value={remainingQuestions ?? 16}
+            />
+            <EmptyStateMessage
+              text="responda no seu ritmo. pode pausar e voltar."
+              contextKey="questionnaire_first_visit"
+              delayMs={700}
+            />
+          </>
+        )}
+      </div>
 
       {/* Pergunta — cascade: aparece após voz sistema (~2700ms delay, igual warmup) */}
       <div

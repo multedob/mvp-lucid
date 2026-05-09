@@ -87,14 +87,18 @@ export default function Pills() {
 
   return (
     <>
-      {/* Empty canvas message — topo. Se veio do flow, o hint já foi dito no FlowVoice. */}
-      {!fromFlow && !loading && pillsDone.size === 0 && (
-        <EmptyStateMessage
-          text="escolha uma pill para começar."
-          contextKey="pills_first_visit"
-          onAction={() => navigate("/pill/PI")}
-        />
-      )}
+      {/* Voice slot — espaço reservado no topo do canvas (~110px).
+          Quando flow ativo, FlowVoice (no AppShell) sobrepõe esta área via overlay absoluto.
+          Quando flow termina, espaço fica em branco — conteúdo principal mantém posição. */}
+      <div style={{ minHeight: 110, flexShrink: 0 }}>
+        {!fromFlow && !loading && pillsDone.size === 0 && (
+          <EmptyStateMessage
+            text="escolha uma pill para começar."
+            contextKey="pills_first_visit"
+            onAction={() => navigate("/pill/PI")}
+          />
+        )}
+      </div>
 
       {/* Pill list — cascade após voz sistema (~2700ms) */}
       <div style={{

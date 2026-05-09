@@ -868,10 +868,12 @@ export default function Context() {
   // Empty state — nenhum ciclo ainda
   if (!loading && cycles.length === 0) return (
     <>
-      <div style={{ padding: "12px 24px 0", flexShrink: 0 }}>
-        <SystemTerminalLine
-          text={"nenhuma leitura ainda.\ncomplete um questionário pra começar."}
-        />
+      <div style={{ minHeight: 110, flexShrink: 0, padding: "12px 24px 0" }}>
+        {!fromFlow && (
+          <SystemTerminalLine
+            text={"nenhuma leitura ainda.\ncomplete um questionário pra começar."}
+          />
+        )}
       </div>
       <div style={{ flex: 1 }} />
     </>
@@ -884,22 +886,24 @@ export default function Context() {
 
   return (
     <>
-      {/* Voz sistema topo: contador + disclaimer numa linha após a outra.
-          Se veio do flow, voz sistema já foi dita no shell — esconde aqui. */}
-      {!fromFlow && cycle && (
-        <div style={{ padding: "10px 24px 0", flexShrink: 0 }}>
-          {cycle.questionnaireRemaining > 0 && (
-            <SystemTerminalCounter
-              prefix="perguntas restantes: "
-              value={cycle.questionnaireRemaining}
+      {/* Voice slot — espaço reservado (~110px). Sem flow: counter + disclaimer.
+          Com flow: vazio (FlowVoice ocupa via overlay). Após flow: vazio. */}
+      <div style={{ minHeight: 110, flexShrink: 0, padding: "10px 24px 0" }}>
+        {!fromFlow && cycle && (
+          <>
+            {cycle.questionnaireRemaining > 0 && (
+              <SystemTerminalCounter
+                prefix="perguntas restantes: "
+                value={cycle.questionnaireRemaining}
+              />
+            )}
+            <SystemTerminalLine
+              text={disclaimerText}
+              delayMs={cycle.questionnaireRemaining > 0 ? 700 : 0}
             />
-          )}
-          <SystemTerminalLine
-            text={disclaimerText}
-            delayMs={cycle.questionnaireRemaining > 0 ? 700 : 0}
-          />
-        </div>
-      )}
+          </>
+        )}
+      </div>
 
       {/* Conteúdo principal — cascade após voz sistema (~2700ms) */}
       <div style={{

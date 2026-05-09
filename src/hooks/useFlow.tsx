@@ -25,7 +25,9 @@ export interface FlowSnapshot {
   dest: FlowDestination;
   /** Path final após animação */
   path: string;
-  /** Frase única (hint contextual) — typewriter no overlay */
+  /** 2 frases diablo distintas + hint contextual (cobre loadings de duração variável) */
+  diablo1: string;
+  diablo2: string;
   hint: string;
 }
 
@@ -60,7 +62,7 @@ export function FlowProvider({ children }: { children: ReactNode }) {
       shell.setActive(DEST_ACTIVE[dest]);
 
       const voice = pickFlowVoice(dest);
-      setFlow({ dest, path, hint: voice.hint });
+      setFlow({ dest, path, ...voice });
 
       // Navega IMEDIATAMENTE — Home desmonta, página alvo monta com fromFlow=true.
       // FlowVoice (no AppShell) persiste através da navegação e cobre a transição.

@@ -572,6 +572,10 @@ export default function Reed() {
 
   return (
     <>
+      {/* Voice slot — espaço reservado (~110px). Reed não tem voz topo própria,
+          mas mantém o slot pra coexistir com FlowVoice durante transições. */}
+      <div style={{ minHeight: 110, flexShrink: 0 }} />
+
       <div className="r-scroll" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '20px 24px 16px' }}>
         {messages.map((msg, i) => {
           const isSys = msg.role === 'reed' && msg.text.startsWith('[sys]')
