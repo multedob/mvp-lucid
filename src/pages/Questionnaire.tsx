@@ -11,6 +11,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { callEdgeFunction, getCurrentUserVersion } from '@/lib/api'
 import { useShell } from '@/hooks/useShell'
+import { FLOW_CONTENT_DELAY_MS } from '@/components/FlowVoice'
 import { triggerDeepReadingRefresh } from '@/lib/deepReading'
 import { QUESTIONS, getQuestionText, type BlockId } from '@/data/questions'
 import { AudioRecorder } from '@/components/AudioRecorder'
@@ -187,11 +188,11 @@ export default function Questionnaire() {
     if (phase === 'loading' || phase === 'transition' || phase === 'done') return
     cascadeArmedRef.current = true
     // Sem flow: cadência original (3500ms / 4200ms / 5000ms — espera voz própria).
-    // Com flow: pergunta entra durante o hold do hint do FlowVoice (~2000ms),
-    //          coexiste brevemente com hint, depois hint some.
-    const qDelay = fromFlow ? 2000 : 3500
-    const iDelay = fromFlow ? 2700 : 4200
-    const aDelay = fromFlow ? 3500 : 5000
+    // Com flow: pergunta entra após o sistema parar de falar (~FLOW_CONTENT_DELAY_MS),
+    //          coexiste com sistema por ~1.2s, depois sistema apaga.
+    const qDelay = fromFlow ? FLOW_CONTENT_DELAY_MS : 3500
+    const iDelay = fromFlow ? FLOW_CONTENT_DELAY_MS + 700 : 4200
+    const aDelay = fromFlow ? FLOW_CONTENT_DELAY_MS + 1500 : 5000
 
     const t1 = window.setTimeout(() => setQuestionVisible(true), qDelay)
     const t2 = window.setTimeout(() => setInputVisible(true), iDelay)

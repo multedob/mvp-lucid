@@ -18,6 +18,7 @@ import AppHeader from "@/components/AppHeader";
 import { useUserName } from "@/hooks/useUserName";
 import NavBottom from "@/components/NavBottom";
 import { useShell } from "@/hooks/useShell";
+import { FLOW_CONTENT_DELAY_MS } from "@/components/FlowVoice";
 import SystemTerminalLine from "@/components/SystemTerminalLine";
 import SystemTerminalCounter from "@/components/SystemTerminalCounter";
 import { fetchQuestionnaireProgress } from "@/lib/questionnaireProgress";
@@ -737,11 +738,11 @@ export default function Context() {
   useEffect(() => { loadCycles(); }, []);
 
   // Cascade: voz sistema entra primeiro, canvas (descrição + ações) entra com fade depois.
-  // Sem flow: 2700ms (espera voz própria). Com flow: 2000ms (durante hold do hint).
+  // Sem flow: 2700ms (espera voz própria). Com flow: FLOW_CONTENT_DELAY_MS (após sistema falar tudo).
   // IMPORTANTE: hooks DEVEM estar antes de qualquer return condicional (regra dos hooks).
   const [canvasVisible, setCanvasVisible] = useState(false);
   useEffect(() => {
-    const delay = fromFlow ? 2000 : 2700;
+    const delay = fromFlow ? FLOW_CONTENT_DELAY_MS : 2700;
     const t = window.setTimeout(() => setCanvasVisible(true), delay);
     return () => window.clearTimeout(t);
   }, [fromFlow]);

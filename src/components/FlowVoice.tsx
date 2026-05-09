@@ -1,26 +1,34 @@
 // src/components/FlowVoice.tsx
 // Voz do sistema durante uma transição flowTo() — overlay absoluto sobre o canvas.
 //
-// 3 falas empilhadas (cobre loadings de duração variável):
-//   1. diablo1 (typewriter)
-//   2. diablo2 (typewriter, ~1800ms depois)
-//   3. hint    (typewriter, ~3600ms depois)
+// SEQUÊNCIA — sistema fala TUDO antes do conteúdo entrar:
+//   t=0      → diablo1 typewriter
+//   t=1800   → diablo2 typewriter
+//   t=3600   → hint typewriter
+//   t=5100   → hint completa (sistema PARA de falar)
+//   t=5300   → conteúdo principal da página entra (fade-in)
+//   t=6500   → sistema começa fade-out (~1.2s depois do conteúdo aparecer)
+//   t=6900   → sistema sumiu, conteúdo permanece
 //
-// Após hint completa, hold ~1500ms e fade-out. Total ~7000ms.
-// Conteúdo principal da página alvo entra ~3000ms (durante diablo2) — coexiste,
-// depois voz some, conteúdo permanece. Espaço reservado no topo do canvas
-// (~110px) pelas páginas alvo evita que conteúdo se mova quando voz desaparece.
+// Páginas alvo importam FLOW_CONTENT_DELAY_MS pra sincronizar o cascade do
+// conteúdo principal com o fim da voz.
 
 import { useEffect, useState } from "react";
 import { useFlow } from "@/hooks/useFlow";
 import SystemTerminalLine from "./SystemTerminalLine";
 
 const LINE_DELAY_MS = 1800;        // intervalo entre starts de cada linha
-const HOLD_AFTER_HINT_MS = 1500;   // tempo que hint fica parada após typewriter completar
 const TYPE_BUFFER_MS = 1500;       // estimativa do typewriter da hint
+const HINT_COMPLETE_AT = LINE_DELAY_MS * 2 + TYPE_BUFFER_MS; // 5100ms
+const CONTENT_AFTER_HINT_MS = 200; // gap entre hint completar e conteúdo entrar
+const HOLD_AFTER_CONTENT_MS = 1200; // sistema permanece visível com conteúdo já entrando
 const FADE_OUT_MS = 400;
-const TOTAL_BEFORE_FADE = LINE_DELAY_MS * 2 + TYPE_BUFFER_MS + HOLD_AFTER_HINT_MS;
-// = 1800 + 1800 + 1500 + 1500 = 6600ms
+const TOTAL_BEFORE_FADE = HINT_COMPLETE_AT + CONTENT_AFTER_HINT_MS + HOLD_AFTER_CONTENT_MS;
+// = 5100 + 200 + 1200 = 6500ms
+
+/** Quanto tempo após o início do flow o conteúdo principal deve entrar.
+ *  Páginas alvo importam isso pra sincronizar o cascade. */
+export const FLOW_CONTENT_DELAY_MS = HINT_COMPLETE_AT + CONTENT_AFTER_HINT_MS; // 5300ms
 
 export default function FlowVoice() {
   const { flow, clearFlow } = useFlow();

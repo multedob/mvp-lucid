@@ -9,6 +9,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { callEdgeFunction, getCurrentUserVersion } from '@/lib/api'
 import { useShell } from '@/hooks/useShell'
+import { FLOW_CONTENT_DELAY_MS } from '@/components/FlowVoice'
 import { AudioRecorder } from '@/components/AudioRecorder'
 import { AutoResizeTextarea } from '@/components/AutoResizeTextarea'
 import { LoadingScreen } from '@/components/LoadingScreen'
@@ -155,6 +156,15 @@ export default function Reed() {
   const [loading, setLoading] = useState(true)
   // Se veio do flow, pula o LoadingScreen — voz sistema já foi dita no shell.
   const [loadingScreenDone, setLoadingScreenDone] = useState(fromFlow)
+
+  // Quando vem do flow, welcome do Reed entra DEPOIS do sistema parar de falar.
+  // Mantém messages escondidas até o cascade.
+  const [chatVisible, setChatVisible] = useState(!fromFlow)
+  useEffect(() => {
+    if (!fromFlow) return
+    const t = window.setTimeout(() => setChatVisible(true), FLOW_CONTENT_DELAY_MS)
+    return () => window.clearTimeout(t)
+  }, [fromFlow])
   const [sending, setSending] = useState(false)
   const [cycleId, setCycleId] = useState<string | null>(null)
   const [baseVersion, setBaseVersion] = useState<number | null>(null)
@@ -572,11 +582,22 @@ export default function Reed() {
 
   return (
     <>
-      {/* Voice slot — espaço reservado (~110px). Reed não tem voz topo própria,
-          mas mantém o slot pra coexistir com FlowVoice durante transições. */}
-      <div style={{ minHeight: 110, flexShrink: 0 }} />
-
-      <div className="r-scroll" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '20px 24px 16px' }}>
+      {/* Voice slot DENTRO do scroll container — quando user rola pra cima,
+          o slot sobe junto e o welcome ocupa o canvas inteiro.
+          Welcome entra com fade-in após sistema parar de falar (chatVisible). */}
+      <div
+        className="r-scroll"
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          padding: '0 24px 16px',
+          opacity: chatVisible ? 1 : 0,
+          transition: 'opacity 500ms ease-in',
+        }}
+      >
+        <div style={{ minHeight: 110, flexShrink: 0 }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingTop: 20 }}>
         {messages.map((msg, i) => {
           const isSys = msg.role === 'reed' && msg.text.startsWith('[sys]')
 
@@ -651,6 +672,7 @@ export default function Reed() {
           </p>
         )}
         <div ref={bottomRef} />
+        </div>
       </div>
 
       <div className="r-line" />

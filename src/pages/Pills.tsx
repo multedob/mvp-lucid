@@ -13,6 +13,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useShell } from "@/hooks/useShell";
 import EmptyStateMessage from "@/components/EmptyStateMessage";
+import { FLOW_CONTENT_DELAY_MS } from "@/components/FlowVoice";
 import { track } from "@/lib/analytics";
 
 type PillId = "PI" | "PII" | "PIII" | "PIV" | "PV" | "PVI";
@@ -37,12 +38,12 @@ export default function Pills() {
 
   useShell({ section: "pills", active: "pills" });
 
-  // Cascade: lista entra com fade após voz sistema digitar.
+  // Cascade: lista entra com fade após voz sistema falar TUDO.
   // Sem flow: 2700ms (espera voz própria da página).
-  // Com flow: 2000ms (entra durante o "hold" do hint, coexiste, depois hint some).
+  // Com flow: FLOW_CONTENT_DELAY_MS — entra logo após o sistema parar de falar.
   const [listVisible, setListVisible] = useState(false);
   useEffect(() => {
-    const delay = fromFlow ? 2000 : 2700;
+    const delay = fromFlow ? FLOW_CONTENT_DELAY_MS : 2700;
     const t = window.setTimeout(() => setListVisible(true), delay);
     return () => window.clearTimeout(t);
   }, [fromFlow]);
