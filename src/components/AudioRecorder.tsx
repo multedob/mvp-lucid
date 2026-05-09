@@ -216,9 +216,24 @@ export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(({
   async function handleStop() {
     try {
       const durationMs = Math.round(performance.now() - startMsRef.current);
-      const mime = chunksRef.current[0]?.type || "audio/webm";
-      const ext = mime.includes("ogg") ? "ogg" : mime.includes("mp4") ? "m4a" : "webm";
-      const blob = new Blob(chunksRef.current, { type: mime });
+      const rawMime = chunksRef.current[0]?.type || "audio/webm";
+      // Storage rejeita mime com codecs (ex: "audio/webm; codecs=opus") → 415.
+      // Normaliza pro mime base aceito pelo bucket (allowed_mime_types).
+      const normalizedMime = (() => {
+        const lower = rawMime.toLowerCase();
+        if (lower.includes("webm")) return "audio/webm";
+        if (lower.includes("ogg")) return "audio/ogg";
+        if (lower.includes("mp4")) return "audio/mp4";
+        if (lower.includes("mpeg") || lower.includes("mp3")) return "audio/mpeg";
+        if (lower.includes("wav")) return "audio/wav";
+        return "audio/webm";
+      })();
+      const ext = normalizedMime === "audio/ogg" ? "ogg"
+                : normalizedMime === "audio/mp4" ? "m4a"
+                : normalizedMime === "audio/mpeg" ? "mp3"
+                : normalizedMime === "audio/wav" ? "wav"
+                : "webm";
+      const blob = new Blob(chunksRef.current, { type: normalizedMime });
       stopTracks();
 
       let path: string;
@@ -231,7 +246,7 @@ export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(({
         );
         const putRes = await fetch(signed.signed_url, {
           method: "PUT",
-          headers: { "Content-Type": mime, "x-upsert": "true" },
+          headers: { "Content-Type": normalizedMime, "x-upsert": "true" },
           body: blob,
         });
         if (!putRes.ok) {
@@ -244,7 +259,7 @@ export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(({
         path = `${userId}/${cycleId}/${pillId}_${moment}.${ext}`;
         const { error: upErr } = await supabase.storage
           .from("pill-audio")
-          .upload(path, blob, { contentType: mime, upsert: true });
+          .upload(path, blob, { contentType: normalizedMime, upsert: true });
         if (upErr) throw new Error(`upload_failed: ${upErr.message}`);
       }
 
