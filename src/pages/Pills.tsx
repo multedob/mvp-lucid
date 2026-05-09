@@ -9,10 +9,9 @@
 // e conteúdo sempre no topo da tela (regra ONB-7 §1.7 estendida).
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import AppHeader from "@/components/AppHeader";
-import NavBottom from "@/components/NavBottom";
+import { useShell } from "@/hooks/useShell";
 import EmptyStateMessage from "@/components/EmptyStateMessage";
 import { track } from "@/lib/analytics";
 
@@ -31,15 +30,21 @@ const PILL_TENSAO: Record<PillId, string> = {
 
 export default function Pills() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromFlow = !!(location.state as { fromFlow?: boolean } | null)?.fromFlow;
   const [pillsDone, setPillsDone] = useState<Set<PillId>>(new Set());
   const [loading, setLoading] = useState(true);
 
-  // Cascade: voz sistema entra primeiro, lista de pills entra com fade após delay.
-  const [listVisible, setListVisible] = useState(false);
+  useShell({ section: "pills", active: "pills" });
+
+  // Cascade: lista entra com fade após voz sistema digitar (~2700ms).
+  // Se veio de flowTo(), a lista entra IMEDIATAMENTE — voz já tá visível no shell.
+  const [listVisible, setListVisible] = useState(fromFlow);
   useEffect(() => {
+    if (fromFlow) return; // já visível
     const t = window.setTimeout(() => setListVisible(true), 2700);
     return () => window.clearTimeout(t);
-  }, []);
+  }, [fromFlow]);
 
   useEffect(() => { loadCycle(); }, []);
 
@@ -80,13 +85,9 @@ export default function Pills() {
   const allDone = PILL_ORDER.every(p => pillsDone.has(p));
 
   return (
-    <div className="r-screen">
-
-      {/* Header */}
-      <AppHeader section="pills" />
-
-      {/* Empty canvas message — topo */}
-      {!loading && pillsDone.size === 0 && (
+    <>
+      {/* Empty canvas message — topo. Se veio do flow, o hint já foi dito no FlowVoice. */}
+      {!fromFlow && !loading && pillsDone.size === 0 && (
         <EmptyStateMessage
           text="escolha uma pill para começar."
           contextKey="pills_first_visit"
@@ -175,8 +176,6 @@ export default function Pills() {
         )}
       </div>
 
-      <NavBottom active="pills" />
-
-    </div>
+    </>
   );
 }

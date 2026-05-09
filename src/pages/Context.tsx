@@ -11,12 +11,13 @@
 // contador terminar (delayMs=700) pra digitar — sequencial, não simultâneo.
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Copy, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import AppHeader from "@/components/AppHeader";
 import { useUserName } from "@/hooks/useUserName";
 import NavBottom from "@/components/NavBottom";
+import { useShell } from "@/hooks/useShell";
 import SystemTerminalLine from "@/components/SystemTerminalLine";
 import SystemTerminalCounter from "@/components/SystemTerminalCounter";
 import { fetchQuestionnaireProgress } from "@/lib/questionnaireProgress";
@@ -229,15 +230,14 @@ function SystemSections({ sections }: {
 
 // ─── ContextCycle — leitura salva ────────────────────────────────
 function ContextCycle({ cycle, onBack, userName }: { cycle: CycleData; onBack: () => void; userName: string | null }) {
+  useShell({ section: `contexto · ${cycle.id}`, active: "context" });
   const navigate = useNavigate();
   const disclaimerText = userName
     ? `${userName}, esta é uma leitura estrutural de um momento. Não define quem você é.`
     : "Esta é uma leitura estrutural de um momento. Não define quem você é.";
 
   return (
-    <div className="r-screen">
-      <AppHeader section={`contexto · ${cycle.id}`} />
-
+    <>
       <div className="r-scroll" style={{ padding: "28px 24px 16px", display: "flex", flexDirection: "column", gap: 24 }}>
         <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 9, color: "var(--r-telha)", letterSpacing: "0.12em" }}>
           {cycle.id} — leitura salva
@@ -253,12 +253,13 @@ function ContextCycle({ cycle, onBack, userName }: { cycle: CycleData; onBack: (
       <div style={{ height: 52, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, flexShrink: 0 }}>
         <span onClick={onBack} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
       </div>
-    </div>
+    </>
   );
 }
 
 // ─── ContextDeep — deep reading ──────────────────────────────────
 function ContextDeep({ cycle, onBack, userName }: { cycle: CycleData; onBack: () => void; userName: string | null }) {
+  useShell({ section: `contexto · ${cycle.id}`, active: "context" });
   const navigate = useNavigate();
   const disclaimerText = userName
     ? `${userName}, esta é uma leitura estrutural de um momento. Não define quem você é.`
@@ -272,9 +273,7 @@ function ContextDeep({ cycle, onBack, userName }: { cycle: CycleData; onBack: ()
   }, []);
 
   return (
-    <div className="r-screen">
-      <AppHeader section={`contexto · ${cycle.id}`} />
-
+    <>
       {/* Voz sistema sempre no topo — posição canônica */}
       <div style={{ padding: "10px 24px 0", flexShrink: 0 }}>
         <SystemTerminalLine text={disclaimerText} />
@@ -303,7 +302,7 @@ function ContextDeep({ cycle, onBack, userName }: { cycle: CycleData; onBack: ()
       <div style={{ height: 52, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, flexShrink: 0 }}>
         <span onClick={onBack} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -348,6 +347,7 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   onBack: () => void;
   userName: string | null;
 }) {
+  useShell({ section: "contexto · terceiros", active: "context" });
   const navigate = useNavigate();
   const [invites, setInvites] = useState<ThirdPartyInvite[]>([]);
   const [responses, setResponses] = useState<Record<string, ThirdPartyResponse[]>>({});
@@ -505,9 +505,7 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   }
 
   return (
-    <div className="r-screen">
-      <AppHeader section="contexto · terceiros" />
-
+    <>
       <div className="r-scroll" style={{ padding: "28px 24px 16px", display: "flex", flexDirection: "column", gap: 20 }}>
         <SystemTerminalLine text={headerText} />
 
@@ -708,7 +706,7 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
       <div style={{ height: 52, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, flexShrink: 0 }}>
         <span onClick={onBack} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -716,13 +714,19 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
 export default function Context() {
   const navigate = useNavigate();
   const userName = useUserName();
+  const location = useLocation();
+  const fromFlow = !!(location.state as { fromFlow?: boolean } | null)?.fromFlow;
+
+  // Section "contexto" como default — sub-componentes sobrescrevem com section própria.
+  useShell({ section: "contexto", active: "context" });
+
   const [cycles, setCycles] = useState<CycleData[]>([]);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [showDeep, setShowDeep] = useState(false);
   const [showCycle, setShowCycle] = useState(false);
   const [showThirdParty, setShowThirdParty] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [loadingScreenDone, setLoadingScreenDone] = useState(false);
+  const [loadingScreenDone, setLoadingScreenDone] = useState(fromFlow);
 
   // Onboardings consolidados em /sistema (item #7) — sem overlays primeira-visita.
   const handleOpenThirdParty = () => {
@@ -861,16 +865,14 @@ export default function Context() {
 
   // Empty state — nenhum ciclo ainda
   if (!loading && cycles.length === 0) return (
-    <div className="r-screen">
-      <AppHeader section="contexto" />
+    <>
       <div style={{ padding: "12px 24px 0", flexShrink: 0 }}>
         <SystemTerminalLine
           text={"nenhuma leitura ainda.\ncomplete um questionário pra começar."}
         />
       </div>
       <div style={{ flex: 1 }} />
-      <NavBottom active="context" />
-    </div>
+    </>
   );
 
   const cycle = cycles[selectedIdx];
@@ -879,14 +881,10 @@ export default function Context() {
     : "Aqui tem histórico de leituras dos seus ciclos e o canal para questionário de terceiros.";
 
   return (
-    <div className="r-screen">
-
-      {/* Header */}
-      <AppHeader section="contexto" />
-
-      {/* Voz sistema topo: contador + disclaimer numa linha após a outra
-          (disclaimer espera o contador terminar com delayMs=700) */}
-      {cycle && (
+    <>
+      {/* Voz sistema topo: contador + disclaimer numa linha após a outra.
+          Se veio do flow, voz sistema já foi dita no shell — esconde aqui. */}
+      {!fromFlow && cycle && (
         <div style={{ padding: "10px 24px 0", flexShrink: 0 }}>
           {cycle.questionnaireRemaining > 0 && (
             <SystemTerminalCounter
@@ -990,7 +988,6 @@ export default function Context() {
         </div>
       </div>
 
-      <NavBottom active="context" />
-    </div>
+    </>
   );
 }

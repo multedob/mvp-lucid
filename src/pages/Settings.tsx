@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunction } from "@/lib/api";
 import { track } from "@/lib/analytics";
-import AppHeader from "@/components/AppHeader";
+import { useShell } from "@/hooks/useShell";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -93,10 +93,10 @@ export default function Settings() {
     navigate("/auth");
   };
 
-  return (
-    <div className="r-screen">
-      <AppHeader section="ajustes" />
+  useShell({ section: "ajustes", active: "settings" });
 
+  return (
+    <>
       <div style={{ flex: 1, padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 0 }}>
 
         {[
@@ -164,6 +164,6 @@ export default function Settings() {
       <div style={{ height: 52, display: "flex", alignItems: "center", padding: "0 24px", flexShrink: 0 }}>
         <span onClick={() => navigate(-1 as any)} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
       </div>
-    </div>
+    </>
   );
 }

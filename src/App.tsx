@@ -25,6 +25,7 @@ import Sobre from "./pages/Sobre";
 import ResetPassword from "./pages/ResetPassword";
 import ThirdParty from "./pages/ThirdParty";
 import NotFound from "./pages/NotFound";
+import AppShell from "./components/AppShell";
 import { trackPageView, identifyUser, resetUser } from "./lib/analytics";
 
 const queryClient = new QueryClient();
@@ -177,14 +178,19 @@ const App = () => (
           <Route path="/letter" element={<OnboardingLetter />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/warmup" element={<ProtectedRoute><Warmup /></ProtectedRoute>} />
-          <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-          <Route path="/pills" element={<ProtectedRoute><Pills /></ProtectedRoute>} />
+          {/* AppShell — header + footer persistentes pra rotas autenticadas que
+              compartilham canvas. Transições entre essas rotas usam flowTo() —
+              ver hooks/useFlow.tsx. */}
+          <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
+            <Route path="/home" element={<Home />} />
+            <Route path="/pills" element={<Pills />} />
+            <Route path="/questionnaire" element={<Questionnaire />} />
+            <Route path="/context" element={<Context />} />
+            <Route path="/reed" element={<Reed />} />
+            <Route path="/settings" element={<Settings />} />
+          </Route>
           <Route path="/pill/:pillId" element={<ProtectedRoute><PillFlow /></ProtectedRoute>} />
-          <Route path="/questionnaire" element={<ProtectedRoute><Questionnaire /></ProtectedRoute>} />
-          <Route path="/context" element={<ProtectedRoute><Context /></ProtectedRoute>} />
           <Route path="/como-funciona" element={<ProtectedRoute><ContextSystem /></ProtectedRoute>} />
-          <Route path="/reed" element={<ProtectedRoute><Reed /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/privacy-policy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />

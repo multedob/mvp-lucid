@@ -11,6 +11,8 @@
 
 import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useOptionalFlow } from '@/hooks/useFlow'
+import { PATH_TO_DEST } from '@/lib/flowPools'
 
 export type ActivePage = 'reed' | 'pills' | 'questionnaire' | 'context' | 'system' | 'home' | 'settings' | 'none'
 
@@ -59,7 +61,19 @@ function injectPulseStyles() {
 
 export default function NavBottom({ active = 'none', pulseOnce = false }: NavBottomProps) {
   const navigate = useNavigate()
+  const flowCtx = useOptionalFlow()
   const fontSize = 'clamp(9px, 2.6vw, 11px)'
+
+  // Centraliza decisão "navega via flow ou direto?" — se path tem destino registrado
+  // E estamos dentro de um FlowProvider, dispara flowTo (transição com voz sistema).
+  // Caso contrário, navigate puro (back-compat pra NavBottom usado fora do AppShell).
+  const handleNav = (path: string) => {
+    if (flowCtx && PATH_TO_DEST[path]) {
+      flowCtx.flowTo(path)
+    } else {
+      navigate(path)
+    }
+  }
 
   // AFC ONB-6/7 — respiração única na transição warmup → home
   const pulseRef = useRef<HTMLDivElement>(null)
@@ -82,7 +96,7 @@ export default function NavBottom({ active = 'none', pulseOnce = false }: NavBot
     <span
       key={slug}
       id={`nav-${slug}`}
-      onClick={() => navigate(path)}
+      onClick={() => handleNav(path)}
       style={{
         fontFamily: 'var(--r-font-sys)',
         fontWeight: slug === active ? 400 : 300,

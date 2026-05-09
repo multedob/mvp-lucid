@@ -213,22 +213,44 @@ interface FooterProps {
   onContinue?: () => void;
   continueLabel?: string;
   disabled?: boolean;
+  /** Quando true, label do continue ganha pulse magenta (var(--r-telha)) — usado no
+   *  M1 da primeira pill da vida do user pra direcionar o clique. */
+  pulseAction?: boolean;
 }
 const Footer = forwardRef<HTMLDivElement, FooterProps>(({
   onBack, onContinue, continueLabel = "continuar",
-  disabled = false,
+  disabled = false, pulseAction = false,
 }, ref) => {
   return (
     <>
+      {pulseAction && (
+        <style>{`
+          @keyframes rdwth-footer-action-pulse {
+            0%, 100% { color: var(--r-telha); opacity: 1; }
+            50%      { color: var(--r-telha); opacity: 0.55; }
+          }
+          .r-footer-action.pulse-magenta {
+            color: var(--r-telha) !important;
+            font-weight: 400;
+            animation: rdwth-footer-action-pulse 1.8s ease-in-out infinite;
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .r-footer-action.pulse-magenta {
+              animation: none;
+              color: var(--r-telha) !important;
+            }
+          }
+        `}</style>
+      )}
       <div className="r-line" />
       <div ref={ref} className="r-footer">
         {onBack && <span className="r-footer-back" onClick={onBack}>‹</span>}
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 14 }}>
           {onContinue && (
             <span
-              className="r-footer-action"
+              className={`r-footer-action${pulseAction && !disabled ? " pulse-magenta" : ""}`}
               onClick={disabled ? undefined : onContinue}
-              style={{ opacity: disabled ? 0.3 : 1, cursor: disabled ? "default" : "pointer" }}
+              style={{ opacity: disabled ? 0.3 : undefined, cursor: disabled ? "default" : "pointer" }}
             >
               {continueLabel}
             </span>
@@ -276,6 +298,7 @@ InvisibleTextarea.displayName = "InvisibleTextarea";
 // ─── Main ─────────────────────────────────────────────────────────
 
 const AUDIO_PULSE_PILL_KEY = 'rdwth_audio_pulse_seen_pill';
+const FIRST_PILL_M1_KEY = 'rdwth_first_pill_m1_seen';
 
 export default function PillFlow() {
   const navigate = useNavigate();
@@ -292,6 +315,17 @@ export default function PillFlow() {
       try { localStorage.setItem(AUDIO_PULSE_PILL_KEY, '1'); } catch {}
     }, 3500);
     return () => window.clearTimeout(t);
+  }, []);
+
+  // Pulse magenta no "começar" do Footer — primeira pill da vida do user em M1.
+  // Acende só uma vez (localStorage flag); marca como visto no primeiro mount em M1.
+  const [pulseStartAction, setPulseStartAction] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const seen = localStorage.getItem(FIRST_PILL_M1_KEY) === '1';
+    if (seen) return;
+    setPulseStartAction(true);
+    try { localStorage.setItem(FIRST_PILL_M1_KEY, '1'); } catch {}
   }, []);
   const [state, setState] = useState<State>({
     pillId, moment: "M1", ipeCycleId: "", cycleDisplay: "",
@@ -734,7 +768,8 @@ export default function PillFlow() {
       </div>
       <Footer onBack={() => navigate("/home")} onContinue={submitM1}
         continueLabel={state.loading ? "..." : "começar"}
-        disabled={state.loading || !state.ipeCycleId} />
+        disabled={state.loading || !state.ipeCycleId}
+        pulseAction={pulseStartAction} />
     </div>
   );
 

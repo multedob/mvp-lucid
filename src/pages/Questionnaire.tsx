@@ -7,10 +7,10 @@
 // EmptyStateMessage recebe delayMs=700 pra encadear com o contador (igual Context).
 
 import { useState, useEffect, useRef, forwardRef, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { callEdgeFunction, getCurrentUserVersion } from '@/lib/api'
-import AppHeader from '@/components/AppHeader'
+import { useShell } from '@/hooks/useShell'
 import { triggerDeepReadingRefresh } from '@/lib/deepReading'
 import { QUESTIONS, getQuestionText, type BlockId } from '@/data/questions'
 import { AudioRecorder } from '@/components/AudioRecorder'
@@ -45,7 +45,6 @@ type Phase =
 // Subcomponents — mesmo padrão do PillFlow
 // ─────────────────────────────────────────
 
-const Header = () => <AppHeader section="questionário" />;
 Header.displayName = "Header";
 
 interface QFooterProps {
@@ -157,6 +156,10 @@ InvisibleTextarea.displayName = "InvisibleTextarea";
 // ─────────────────────────────────────────
 export default function Questionnaire() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const fromFlow = !!(location.state as { fromFlow?: boolean } | null)?.fromFlow
+
+  useShell({ section: "questionário", active: "questionnaire" })
 
   const [phase, setPhase] = useState<Phase>('loading')
   const [cycleId, setCycleId] = useState<string | null>(null)
@@ -204,7 +207,7 @@ export default function Questionnaire() {
       if (t3) window.clearTimeout(t3)
     }
   }, [phase])
-  const [loadingScreenDone, setLoadingScreenDone] = useState(false)
+  const [loadingScreenDone, setLoadingScreenDone] = useState(fromFlow)
 
   // Rotation variants: loaded once after /plan, used for principal question text
   const [rotationVariants, setRotationVariants] = useState<
@@ -515,7 +518,7 @@ export default function Questionnaire() {
   if (phase === 'transition') return (
     <>
       {loadingOverlay}
-      <div className="r-screen" style={{ justifyContent: 'center', alignItems: 'center' }}>
+      <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <div style={{ width: 32, height: 0.5, background: 'var(--r-line)' }} />
       </div>
     </>
@@ -524,7 +527,7 @@ export default function Questionnaire() {
   if (phase === 'done') return (
     <>
       {loadingOverlay}
-      <div className="r-screen" style={{ justifyContent: 'center', alignItems: 'center' }}>
+      <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <span className="r-header-label">pronto</span>
       </div>
     </>
@@ -533,24 +536,28 @@ export default function Questionnaire() {
   return (
     <>
     {loadingOverlay}
-    <div className="r-screen">
+    <>
 
-      <Header />
-
-      {/* Voz sistema topo: contador + empty message em cadeia */}
-      <div style={{ padding: '10px 24px 0', flexShrink: 0 }}>
-        <SystemTerminalCounter
-          prefix="perguntas restantes: "
-          value={remainingQuestions ?? 16}
-        />
-      </div>
+      {/* Voz sistema topo: contador + empty message em cadeia.
+          Se veio do flow, o hint "perguntas restantes: X" já foi dito —
+          esconde aqui pra evitar duplicação visual. */}
+      {!fromFlow && (
+        <div style={{ padding: '10px 24px 0', flexShrink: 0 }}>
+          <SystemTerminalCounter
+            prefix="perguntas restantes: "
+            value={remainingQuestions ?? 16}
+          />
+        </div>
+      )}
 
       {/* Empty state message — primeira visita ao questionnaire (espera contador) */}
+      {!fromFlow && (
       <EmptyStateMessage
         text="responda no seu ritmo. pode pausar e voltar."
         contextKey="questionnaire_first_visit"
         delayMs={700}
       />
+      )}
 
       {/* Pergunta — cascade: aparece após voz sistema (~2700ms delay, igual warmup) */}
       <div
@@ -614,7 +621,7 @@ export default function Questionnaire() {
         fallbackLabel={fallbackLabel}
       />
 
-    </div>
+    </>
     </>
   )
 }

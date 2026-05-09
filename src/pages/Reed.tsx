@@ -5,11 +5,10 @@
 // - AbortController pra cancel mid-stream
 
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { callEdgeFunction, getCurrentUserVersion } from '@/lib/api'
-import AppHeader from '@/components/AppHeader'
-import NavBottom from '@/components/NavBottom'
+import { useShell } from '@/hooks/useShell'
 import { AudioRecorder } from '@/components/AudioRecorder'
 import { AutoResizeTextarea } from '@/components/AutoResizeTextarea'
 import { LoadingScreen } from '@/components/LoadingScreen'
@@ -143,14 +142,19 @@ function BlockReveal({
 
 export default function Reed() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const fromFlow = !!(location.state as { fromFlow?: boolean } | null)?.fromFlow
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const abortRef = useRef<AbortController | null>(null)
 
+  useShell({ section: "reed", active: "reed" })
+
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(true)
-  const [loadingScreenDone, setLoadingScreenDone] = useState(false)
+  // Se veio do flow, pula o LoadingScreen — voz sistema já foi dita no shell.
+  const [loadingScreenDone, setLoadingScreenDone] = useState(fromFlow)
   const [sending, setSending] = useState(false)
   const [cycleId, setCycleId] = useState<string | null>(null)
   const [baseVersion, setBaseVersion] = useState<number | null>(null)
@@ -567,10 +571,7 @@ export default function Reed() {
   )
 
   return (
-    <div className="r-screen">
-
-      <AppHeader section="reed" />
-
+    <>
       <div className="r-scroll" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '20px 24px 16px' }}>
         {messages.map((msg, i) => {
           const isSys = msg.role === 'reed' && msg.text.startsWith('[sys]')
@@ -689,8 +690,6 @@ export default function Reed() {
         </div>
       </div>
 
-      <NavBottom active="reed" />
-
       <style>{`
         @keyframes rdwth-cursor-blink {
           0%, 50% { opacity: 1; }
@@ -707,6 +706,6 @@ export default function Reed() {
           40% { opacity: 0.8; transform: scale(1.1); }
         }
       `}</style>
-    </div>
+    </>
   )
 }
