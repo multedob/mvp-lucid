@@ -2,18 +2,14 @@
 // Política de Privacidade — required for Apple App Store + LGPD/GDPR
 
 import { useNavigate } from "react-router-dom";
-import { getToday } from "@/lib/api";
+import AppHeader from "@/components/AppHeader";
 
 export default function Privacy() {
   const navigate = useNavigate();
 
   return (
     <div className="r-screen">
-      <div className="r-header">
-        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span> · privacidade</span>
-        <span className="r-header-date">{getToday()}</span>
-      </div>
-      <div className="r-line" />
+      <AppHeader section="privacidade" />
 
       <div className="r-scroll" style={{ flex: 1, padding: "28px 24px" }}>
         <div style={{

@@ -5,8 +5,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { callEdgeFunction, getToday } from "@/lib/api";
+import { callEdgeFunction } from "@/lib/api";
 import { track } from "@/lib/analytics";
+import AppHeader from "@/components/AppHeader";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -94,12 +95,7 @@ export default function Settings() {
 
   return (
     <div className="r-screen">
-      <div className="r-header">
-        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
-        <span className="r-header-section">ajustes</span>
-        <span className="r-header-date">{getToday()}</span>
-      </div>
-      <div className="r-line" />
+      <AppHeader section="ajustes" />
 
       <div style={{ flex: 1, padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 0 }}>
 

@@ -7,7 +7,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
-import { callEdgeFunction, getCurrentUserVersion, getToday } from '@/lib/api'
+import { callEdgeFunction, getCurrentUserVersion } from '@/lib/api'
+import AppHeader from '@/components/AppHeader'
 import NavBottom from '@/components/NavBottom'
 import { AudioRecorder } from '@/components/AudioRecorder'
 import { AutoResizeTextarea } from '@/components/AutoResizeTextarea'
@@ -565,18 +566,15 @@ export default function Reed() {
       ]}
       loadComplete={!loading}
       onDone={() => setLoadingScreenDone(true)}
+      section="reed"
+      active="reed"
     />
   )
 
   return (
     <div className="r-screen">
 
-      <div className="r-header">
-        <span className="r-header-label" onClick={() => navigate('/home')} style={{ cursor: 'pointer' }}>rdwth</span>
-        <span className="r-header-section">reed</span>
-        <span className="r-header-date">{getToday()}</span>
-      </div>
-      <div className="r-line" />
+      <AppHeader section="reed" />
 
       <div className="r-scroll" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '20px 24px 16px' }}>
         {messages.map((msg, i) => {

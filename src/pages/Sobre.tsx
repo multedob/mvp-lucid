@@ -3,20 +3,14 @@
 // Acessível via /sobre, ou link a partir de OnboardingLetter
 
 import { useNavigate } from "react-router-dom";
-import { getToday } from "@/lib/api";
+import AppHeader from "@/components/AppHeader";
 
 export default function Sobre() {
   const navigate = useNavigate();
 
   return (
     <div className="r-screen">
-      <div className="r-header">
-        <span className="r-header-label">
-          <span onClick={() => navigate(-1)} style={{ cursor: "pointer" }}>rdwth</span> · sobre
-        </span>
-        <span className="r-header-date">{getToday()}</span>
-      </div>
-      <div className="r-line" />
+      <AppHeader section="sobre" onLabelClick={() => navigate(-1)} />
 
       <div className="r-scroll" style={{ flex: 1, padding: "28px 24px" }}>
         {/* Manifesto completo — voz fundadores: IBM Plex Mono COLORIDO (var(--r-telha)) */}

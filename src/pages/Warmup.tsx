@@ -11,7 +11,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { markOnboardingStep } from "@/hooks/useOnboardingState";
-import { getToday } from "@/lib/api";
+import AppHeader from "@/components/AppHeader";
 import { track } from "@/lib/analytics";
 
 // Telemetria one-time helper — evita disparo duplicado em React strict mode / re-renders.
@@ -242,12 +242,8 @@ export default function Warmup() {
 
   return (
     <div className="r-screen" style={{ position: "relative" }}>
-      {/* Header */}
-      <div className="r-header">
-        <span className="r-header-label">rdwth</span>
-        <span className="r-header-date">{getToday()}</span>
-      </div>
-      <div className="r-line" />
+      {/* Header — durante o warmup, label não navega (foco no fluxo) */}
+      <AppHeader onLabelClick={() => { /* no-op: warmup bloqueia navegação */ }} />
 
       {/* Conteúdo */}
       <div className="r-scroll" style={{ flex: 1, padding: "24px 24px 64px" }}>

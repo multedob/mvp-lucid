@@ -1,5 +1,6 @@
 // src/components/QuestionnaireLoadingScreen.tsx
 // Wrapper sobre LoadingScreen com frases do questionário.
+// Header `rdwth | questionário | data` + footer com "questionário" iluminado.
 
 import { LoadingScreen } from "./LoadingScreen";
 
@@ -15,5 +16,13 @@ const PHRASES: [string, string, string] = [
 ];
 
 export function QuestionnaireLoadingScreen({ loadComplete, onDone }: Props) {
-  return <LoadingScreen phrases={PHRASES} loadComplete={loadComplete} onDone={onDone} />;
+  return (
+    <LoadingScreen
+      phrases={PHRASES}
+      loadComplete={loadComplete}
+      onDone={onDone}
+      section="questionário"
+      active="questionnaire"
+    />
+  );
 }

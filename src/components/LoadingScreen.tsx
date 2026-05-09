@@ -20,6 +20,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatedWordmark } from "./AnimatedWordmark";
+import AppHeader from "./AppHeader";
+import NavBottom, { type ActivePage } from "./NavBottom";
 
 const LINE_DELAY_MS = 1500;       // tempo entre frase 1 → 2
 const MIN_BEFORE_DONE_MS = 4500;  // tempo mínimo total antes de mostrar "pronto." — dá tempo de ler 1 frase Diablo
@@ -76,6 +78,12 @@ interface Props {
   phrases: [string, string, string];
   loadComplete?: boolean;
   onDone?: () => void;
+  /** Texto do meio do header (ex: "reed", "contexto"). Sem section, só "rdwth | data". */
+  section?: string;
+  /** Item ativo do NavBottom (ilumina enquanto carrega). Default: "none". */
+  active?: ActivePage;
+  /** Esconde o NavBottom — usado em ThirdParty (terceiro sem app). */
+  hideNav?: boolean;
 }
 
 function pickRandom<T>(pool: T[], excluding: T[] = []): T {
@@ -84,7 +92,14 @@ function pickRandom<T>(pool: T[], excluding: T[] = []): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-export function LoadingScreen({ phrases, loadComplete = true, onDone }: Props) {
+export function LoadingScreen({
+  phrases,
+  loadComplete = true,
+  onDone,
+  section,
+  active = "none",
+  hideNav = false,
+}: Props) {
   // Sistema empilhado: shownCount controla quantas linhas estão visíveis (0..3)
   const [shownCount, setShownCount] = useState(0);
   const [fadingOut, setFadingOut] = useState(false);
@@ -158,12 +173,15 @@ export function LoadingScreen({ phrases, loadComplete = true, onDone }: Props) {
         justifyContent: "center",
       }}
     >
-      {/* Container centralizado — mesma largura mobile no desktop */}
+      {/* Container centralizado — mesma largura mobile no desktop.
+          Estrutura: AppHeader (top) → main relativo (voz sistema + centro) → NavBottom. */}
       <div style={{
         position: "relative",
         width: "100%",
         maxWidth: 480,
         height: "100%",
+        display: "flex",
+        flexDirection: "column",
       }}>
       <style>{`
         @keyframes rdwth-ls-fade-in {
@@ -186,78 +204,88 @@ export function LoadingScreen({ phrases, loadComplete = true, onDone }: Props) {
         }
       `}</style>
 
-      {/* Voz sistema — topo-esquerda, margens apertadas (igual r-header) */}
-      <div style={{
-        position: "absolute",
-        top: 14,
-        left: 16,
-        right: 16,
-        display: "flex",
-        flexDirection: "column",
-        gap: 4,
-      }}>
-        {phrases.slice(0, shownCount).map((p, i) => (
-          <div
-            key={i}
-            className="rdwth-ls-line"
-            style={{
-              fontFamily: "var(--r-font-sys, 'IBM Plex Mono', monospace)",
-              fontSize: 11,
-              fontWeight: 300,
-              color: "var(--r-voice-sys, #585860)",
-              letterSpacing: "0.04em",
-              lineHeight: 1.7,
-              whiteSpace: "pre-wrap",
-            }}
-          >
-            <span aria-hidden="true">{"> "}</span>
-            {p}
-          </div>
-        ))}
-      </div>
+      {/* Header canônico — `rdwth | section | YYYY.MM.DD` */}
+      <AppHeader section={section} />
 
-      {/* Centro: Wordmark + Diablo phrases logo abaixo (flex column).
-          Mesmo layout em desktop e mobile. Margens laterais apertadas. */}
-      <div style={{
-        position: "absolute",
-        inset: 0,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 24,
-        padding: "0 16px",
-      }}>
-        <AnimatedWordmark fontSize="clamp(40px, 8vw, 80px)" />
-
-        {/* Frases Diablo logo abaixo da logo, centralizadas. Contraste aumentado
-            (voice-sys cor canônica WCAG AA + opacity 1). */}
+      {/* Main — voz sistema topo (~12px abaixo do header) + Wordmark/Diablo central */}
+      <div style={{ flex: 1, position: "relative", minHeight: 0 }}>
+        {/* Voz sistema — topo-esquerda, abaixo do header (não colide mais com r-header) */}
         <div style={{
+          position: "absolute",
+          top: 12,
+          left: 16,
+          right: 16,
           display: "flex",
           flexDirection: "column",
-          alignItems: "center",
-          gap: 6,
+          gap: 4,
+          zIndex: 1,
         }}>
-          {diabloPair.map((phrase, i) => (
+          {phrases.slice(0, shownCount).map((p, i) => (
             <div
-              key={`${i}-${phrase}`}
-              className="rdwth-ls-diablo"
+              key={i}
+              className="rdwth-ls-line"
               style={{
                 fontFamily: "var(--r-font-sys, 'IBM Plex Mono', monospace)",
                 fontSize: 11,
                 fontWeight: 300,
                 color: "var(--r-voice-sys, #585860)",
                 letterSpacing: "0.04em",
-                lineHeight: 1.6,
-                textAlign: "center",
-                maxWidth: 420,
+                lineHeight: 1.7,
+                whiteSpace: "pre-wrap",
               }}
             >
-              {phrase}
+              <span aria-hidden="true">{"> "}</span>
+              {p}
             </div>
           ))}
         </div>
+
+        {/* Centro: Wordmark + Diablo phrases logo abaixo (flex column).
+            Mesmo layout em desktop e mobile. Margens laterais apertadas. */}
+        <div style={{
+          position: "absolute",
+          inset: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 24,
+          padding: "0 16px",
+        }}>
+          <AnimatedWordmark fontSize="clamp(40px, 8vw, 80px)" />
+
+          {/* Frases Diablo logo abaixo da logo, centralizadas. Contraste aumentado
+              (voice-sys cor canônica WCAG AA + opacity 1). */}
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 6,
+          }}>
+            {diabloPair.map((phrase, i) => (
+              <div
+                key={`${i}-${phrase}`}
+                className="rdwth-ls-diablo"
+                style={{
+                  fontFamily: "var(--r-font-sys, 'IBM Plex Mono', monospace)",
+                  fontSize: 11,
+                  fontWeight: 300,
+                  color: "var(--r-voice-sys, #585860)",
+                  letterSpacing: "0.04em",
+                  lineHeight: 1.6,
+                  textAlign: "center",
+                  maxWidth: 420,
+                }}
+              >
+                {phrase}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
+
+      {/* NavBottom com item ativo iluminado — esconde no ThirdParty (terceiro sem app) */}
+      {!hideNav && <NavBottom active={active} />}
       </div>
     </div>
   );

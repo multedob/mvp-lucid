@@ -2,7 +2,8 @@
 import { useState, useEffect, useRef, useCallback, forwardRef, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { callEdgeFunction, getToday } from "@/lib/api";
+import { callEdgeFunction } from "@/lib/api";
+import AppHeader from "@/components/AppHeader";
 import { RevealText } from "@/components/RevealText";
 import { AudioRecorder } from "@/components/AudioRecorder";
 import { EcoLoadingScreen } from "@/components/EcoLoadingScreen";
@@ -202,21 +203,10 @@ const HEADER_LABEL: Record<Moment, string> = {
 
 // ─── Subcomponents ─────────────────────────────────────────────────
 
-const Header = forwardRef<HTMLDivElement, { moment: Moment }>(({ moment }, ref) => {
-  const navigate = useNavigate();
+function Header({ moment }: { moment: Moment }) {
   const counter = HEADER_LABEL[moment];
-  return (
-    <>
-      <div ref={ref} className="r-header">
-        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
-        <span className="r-header-section">{counter ? `pills · ${counter}` : "pills"}</span>
-        <span className="r-header-date">{getToday()}</span>
-      </div>
-      <div className="r-line" />
-    </>
-  );
-});
-Header.displayName = "Header";
+  return <AppHeader section={counter ? `pills · ${counter}` : "pills"} />;
+}
 
 interface FooterProps {
   onBack?: () => void;

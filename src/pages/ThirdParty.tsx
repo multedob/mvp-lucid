@@ -12,7 +12,7 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getToday } from "@/lib/api";
+import AppHeader from "@/components/AppHeader";
 import { AnimatedWordmark } from "@/components/AnimatedWordmark";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { AudioRecorder } from "@/components/AudioRecorder";
@@ -109,16 +109,7 @@ function isValidEmail(s: string) {
 // ────────────────────────────────────────────────────────────────────────────
 
 function Header({ subtitle, onLabelClick }: { subtitle?: string; onLabelClick: () => void }) {
-  return (
-    <>
-      <div className="r-header">
-        <span className="r-header-label" onClick={onLabelClick} style={{ cursor: "pointer" }}>rdwth</span>
-        <span className="r-header-section">{subtitle || "convite"}</span>
-        <span className="r-header-date">{getToday()}</span>
-      </div>
-      <div className="r-line" />
-    </>
-  );
+  return <AppHeader section={subtitle || "convite"} onLabelClick={onLabelClick} />;
 }
 
 function Footer({
@@ -787,6 +778,7 @@ export default function ThirdParty() {
         ]}
         loadComplete={phase === "done"}
         onDone={() => setFinalizeLoadingDone(true)}
+        hideNav
       />
     );
   }

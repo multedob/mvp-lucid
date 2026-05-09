@@ -14,7 +14,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Copy, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { getToday } from "@/lib/api";
+import AppHeader from "@/components/AppHeader";
 import { useUserName } from "@/hooks/useUserName";
 import NavBottom from "@/components/NavBottom";
 import SystemTerminalLine from "@/components/SystemTerminalLine";
@@ -122,12 +122,7 @@ export function ContextSystem({ onBack }: { onBack?: () => void }) {
 
   return (
     <div className="r-screen">
-      <div className="r-header">
-        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
-        <span className="r-header-section">sistema</span>
-        <span className="r-header-date">{getToday()}</span>
-      </div>
-      <div className="r-line" />
+      <AppHeader section="sistema" />
 
       <SystemSections sections={SECTIONS} />
 
@@ -241,12 +236,7 @@ function ContextCycle({ cycle, onBack, userName }: { cycle: CycleData; onBack: (
 
   return (
     <div className="r-screen">
-      <div className="r-header">
-        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
-        <span className="r-header-section">contexto · {cycle.id}</span>
-        <span className="r-header-date">{getToday()}</span>
-      </div>
-      <div className="r-line" />
+      <AppHeader section={`contexto · ${cycle.id}`} />
 
       <div className="r-scroll" style={{ padding: "28px 24px 16px", display: "flex", flexDirection: "column", gap: 24 }}>
         <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 9, color: "var(--r-telha)", letterSpacing: "0.12em" }}>
@@ -283,12 +273,7 @@ function ContextDeep({ cycle, onBack, userName }: { cycle: CycleData; onBack: ()
 
   return (
     <div className="r-screen">
-      <div className="r-header">
-        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
-        <span className="r-header-section">contexto · {cycle.id}</span>
-        <span className="r-header-date">{getToday()}</span>
-      </div>
-      <div className="r-line" />
+      <AppHeader section={`contexto · ${cycle.id}`} />
 
       {/* Voz sistema sempre no topo — posição canônica */}
       <div style={{ padding: "10px 24px 0", flexShrink: 0 }}>
@@ -515,17 +500,14 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
       phrases={["buscando perspectivas...", "organizando...", "pronto."]}
       loadComplete={!loading}
       onDone={() => setLoadingScreenDone(true)}
+      section="contexto"
+      active="context"
     />;
   }
 
   return (
     <div className="r-screen">
-      <div className="r-header">
-        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
-        <span className="r-header-section">contexto · terceiros</span>
-        <span className="r-header-date">{getToday()}</span>
-      </div>
-      <div className="r-line" />
+      <AppHeader section="contexto · terceiros" />
 
       <div className="r-scroll" style={{ padding: "28px 24px 16px", display: "flex", flexDirection: "column", gap: 20 }}>
         <SystemTerminalLine text={headerText} />
@@ -861,6 +843,8 @@ export default function Context() {
       phrases={["buscando seu ciclo...", "compondo a leitura...", "pronto."]}
       loadComplete={!loading}
       onDone={() => setLoadingScreenDone(true)}
+      section="contexto"
+      active="context"
     />;
   }
 
@@ -880,12 +864,7 @@ export default function Context() {
   // Empty state — nenhum ciclo ainda
   if (!loading && cycles.length === 0) return (
     <div className="r-screen">
-      <div className="r-header">
-        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
-        <span className="r-header-section">contexto</span>
-        <span className="r-header-date">{getToday()}</span>
-      </div>
-      <div className="r-line" />
+      <AppHeader section="contexto" />
       <div style={{ padding: "12px 24px 0", flexShrink: 0 }}>
         <SystemTerminalLine
           text={"nenhuma leitura ainda.\ncomplete um questionário pra começar."}
@@ -905,12 +884,7 @@ export default function Context() {
     <div className="r-screen">
 
       {/* Header */}
-      <div className="r-header">
-        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
-        <span className="r-header-section">contexto</span>
-        <span className="r-header-date">{getToday()}</span>
-      </div>
-      <div className="r-line" />
+      <AppHeader section="contexto" />
 
       {/* Voz sistema topo: contador + disclaimer numa linha após a outra
           (disclaimer espera o contador terminar com delayMs=700) */}

@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { track } from "@/lib/analytics";
 import { markOnboardingStep } from "@/hooks/useOnboardingState";
+import AppHeader from "@/components/AppHeader";
 
 const ABOUT = [
   "rdwth oferece leituras reflexivas estruturais baseadas nas suas respostas.",
@@ -31,10 +32,7 @@ export default function Consent() {
 
   return (
     <div className="r-screen">
-      <div className="r-header">
-        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
-      </div>
-      <div className="r-line" />
+      <AppHeader />
 
       <div className="r-scroll" style={{ padding: "28px 24px 0" }}>
         <div style={{

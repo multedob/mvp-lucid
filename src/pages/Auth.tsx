@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { getToday } from "@/lib/api";
+import AppHeader from "@/components/AppHeader";
 import { track } from "@/lib/analytics";
 
 export default function Auth() {
@@ -99,17 +99,7 @@ export default function Auth() {
     <div className="r-screen">
 
       {/* header */}
-      <div className="r-header">
-        <span
-          className="r-header-label"
-          style={{ cursor: "pointer" }}
-          onClick={() => navigate("/home")}
-        >
-          rdwth
-        </span>
-        <span className="r-header-date">{getToday()}</span>
-      </div>
-      <div className="r-line" />
+      <AppHeader />
 
       {/* spacer */}
       <div style={{ flex: 1 }} />

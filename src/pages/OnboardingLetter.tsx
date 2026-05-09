@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getToday } from "@/lib/api";
+import AppHeader from "@/components/AppHeader";
 import { track } from "@/lib/analytics";
 import { markOnboardingStep } from "@/hooks/useOnboardingState";
 
@@ -322,11 +322,7 @@ export default function OnboardingLetter() {
       </svg>
 
       {/* Header */}
-      <div className="r-header">
-        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
-        <span className="r-header-date">{getToday()}</span>
-      </div>
-      <div className="r-line" />
+      <AppHeader />
 
       {/* Body — scrollável */}
       <div

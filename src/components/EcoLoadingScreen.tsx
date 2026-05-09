@@ -7,6 +7,8 @@
 // ============================================================
 
 import { useEffect, useRef, useState } from "react";
+import AppHeader from "./AppHeader";
+import NavBottom from "./NavBottom";
 
 interface FontDef { f: string; w: number }
 
@@ -147,12 +149,24 @@ export function EcoLoadingScreen({ staticOverride }: EcoLoadingScreenProps) {
         zIndex: 100,
         display: "flex",
         flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 32,
         animation: "loading-fade-in 400ms ease-out",
       }}
     >
+      {/* Header canônico — `rdwth | pills | YYYY.MM.DD` */}
+      <AppHeader section="pills" />
+
+      {/* Main centralizado (pulse + palavra morph + frase) */}
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 32,
+          minHeight: 0,
+        }}
+      >
       {/* Inline keyframes pro fade-in */}
       <style>{`
         @keyframes loading-fade-in {
@@ -283,6 +297,10 @@ export function EcoLoadingScreen({ staticOverride }: EcoLoadingScreenProps) {
       >
         {staticOverride ?? STATIC_PHRASES[phraseIdx]}
       </div>
+      </div>
+
+      {/* NavBottom com "pills" iluminado */}
+      <NavBottom active="pills" />
     </div>
   );
 }

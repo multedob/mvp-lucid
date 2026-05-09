@@ -20,7 +20,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSubmitting } from "@/hooks/useSubmitting";
 import { markOnboardingStep } from "@/hooks/useOnboardingState";
-import { getToday } from "@/lib/api";
+import AppHeader from "@/components/AppHeader";
 import { track } from "@/lib/analytics";
 import SystemTerminalLine from "@/components/SystemTerminalLine";
 
@@ -119,11 +119,7 @@ export default function Onboarding() {
 
   return (
     <div className="r-screen">
-      <div className="r-header">
-        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
-        <span className="r-header-date">{getToday()}</span>
-      </div>
-      <div className="r-line" />
+      <AppHeader />
 
       <div style={{
         flex: 1, display: "flex", flexDirection: "column",

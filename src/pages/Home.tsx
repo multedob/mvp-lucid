@@ -12,7 +12,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { getToday } from "@/lib/api";
+import AppHeader from "@/components/AppHeader";
 import { useUserName } from "@/hooks/useUserName";
 import NavBottom from "@/components/NavBottom";
 import SystemTerminalLine from "@/components/SystemTerminalLine";
@@ -87,11 +87,7 @@ export default function Home() {
     <div className="r-screen">
 
       {/* Header */}
-      <div className="r-header">
-        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
-        <span className="r-header-date">{getToday()}</span>
-      </div>
-      <div className="r-line" />
+      <AppHeader />
 
       {/* TeamMessage — voz fundadores. Notifica Home quando carrega (com ou sem msg). */}
       <TeamMessage

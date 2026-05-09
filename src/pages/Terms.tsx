@@ -2,18 +2,14 @@
 // Termos de Uso — required for Apple App Store
 
 import { useNavigate } from "react-router-dom";
-import { getToday } from "@/lib/api";
+import AppHeader from "@/components/AppHeader";
 
 export default function Terms() {
   const navigate = useNavigate();
 
   return (
     <div className="r-screen">
-      <div className="r-header">
-        <span className="r-header-label"><span onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span> · termos</span>
-        <span className="r-header-date">{getToday()}</span>
-      </div>
-      <div className="r-line" />
+      <AppHeader section="termos" />
 
       <div className="r-scroll" style={{ flex: 1, padding: "28px 24px" }}>
         <div style={{

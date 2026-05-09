@@ -9,7 +9,8 @@
 import { useState, useEffect, useRef, forwardRef, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
-import { callEdgeFunction, getCurrentUserVersion, getToday } from '@/lib/api'
+import { callEdgeFunction, getCurrentUserVersion } from '@/lib/api'
+import AppHeader from '@/components/AppHeader'
 import { triggerDeepReadingRefresh } from '@/lib/deepReading'
 import { QUESTIONS, getQuestionText, type BlockId } from '@/data/questions'
 import { AudioRecorder } from '@/components/AudioRecorder'
@@ -44,19 +45,7 @@ type Phase =
 // Subcomponents — mesmo padrão do PillFlow
 // ─────────────────────────────────────────
 
-const Header = forwardRef<HTMLDivElement>((_, ref) => {
-  const navigate = useNavigate()
-  return (
-    <>
-      <div ref={ref} className="r-header">
-        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
-        <span className="r-header-section">questionário</span>
-        <span className="r-header-date">{getToday()}</span>
-      </div>
-      <div className="r-line" />
-    </>
-  )
-});
+const Header = () => <AppHeader section="questionário" />;
 Header.displayName = "Header";
 
 interface QFooterProps {

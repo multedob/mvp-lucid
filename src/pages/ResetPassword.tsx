@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { getToday } from "@/lib/api";
+import AppHeader from "@/components/AppHeader";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -62,11 +62,7 @@ export default function ResetPassword() {
 
   return (
     <div className="r-screen">
-      <div className="r-header">
-        <span className="r-header-label" style={{ cursor: "pointer" }} onClick={() => navigate("/home")}>rdwth</span>
-        <span className="r-header-date">{getToday()}</span>
-      </div>
-      <div className="r-line" />
+      <AppHeader />
 
       <div style={{ flex: 1 }} />
 

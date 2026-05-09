@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { track } from "@/lib/analytics";
 import { markOnboardingStep } from "@/hooks/useOnboardingState";
+import AppHeader from "@/components/AppHeader";
 
 export default function AgeCheck() {
   const navigate = useNavigate();
@@ -13,10 +14,7 @@ export default function AgeCheck() {
 
   if (blocked) return (
     <div className="r-screen">
-      <div className="r-header">
-        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
-      </div>
-      <div className="r-line" />
+      <AppHeader />
       <div style={{ flex: 1 }} />
       <div style={{ padding: "0 24px 56px", flexShrink: 0 }}>
         <div style={{
@@ -56,10 +54,7 @@ export default function AgeCheck() {
 
   return (
     <div className="r-screen">
-      <div className="r-header">
-        <span className="r-header-label" onClick={() => navigate("/home")} style={{ cursor: "pointer" }}>rdwth</span>
-      </div>
-      <div className="r-line" />
+      <AppHeader />
       <div style={{ flex: 1 }} />
 
       <div style={{ padding: "0 24px 56px", flexShrink: 0 }}>
