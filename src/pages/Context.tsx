@@ -737,12 +737,14 @@ export default function Context() {
   useEffect(() => { loadCycles(); }, []);
 
   // Cascade: voz sistema entra primeiro, canvas (descrição + ações) entra com fade depois.
+  // Sem flow: 2700ms (espera voz própria). Com flow: 2000ms (durante hold do hint).
   // IMPORTANTE: hooks DEVEM estar antes de qualquer return condicional (regra dos hooks).
   const [canvasVisible, setCanvasVisible] = useState(false);
   useEffect(() => {
-    const t = window.setTimeout(() => setCanvasVisible(true), 2700);
+    const delay = fromFlow ? 2000 : 2700;
+    const t = window.setTimeout(() => setCanvasVisible(true), delay);
     return () => window.clearTimeout(t);
-  }, []);
+  }, [fromFlow]);
 
   async function loadCycles() {
     try {

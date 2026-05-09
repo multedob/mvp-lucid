@@ -37,12 +37,13 @@ export default function Pills() {
 
   useShell({ section: "pills", active: "pills" });
 
-  // Cascade: lista entra com fade após voz sistema digitar (~2700ms).
-  // Se veio de flowTo(), a lista entra IMEDIATAMENTE — voz já tá visível no shell.
-  const [listVisible, setListVisible] = useState(fromFlow);
+  // Cascade: lista entra com fade após voz sistema digitar.
+  // Sem flow: 2700ms (espera voz própria da página).
+  // Com flow: 2000ms (entra durante o "hold" do hint, coexiste, depois hint some).
+  const [listVisible, setListVisible] = useState(false);
   useEffect(() => {
-    if (fromFlow) return; // já visível
-    const t = window.setTimeout(() => setListVisible(true), 2700);
+    const delay = fromFlow ? 2000 : 2700;
+    const t = window.setTimeout(() => setListVisible(true), delay);
     return () => window.clearTimeout(t);
   }, [fromFlow]);
 

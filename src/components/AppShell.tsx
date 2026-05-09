@@ -35,8 +35,9 @@ export default function AppShell({ children }: AppShellProps) {
       <FlowProvider>
         <div className="r-screen">
           <AppHeader section={section} />
-          <FlowVoice />
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+          {/* main com position relative pra FlowVoice (overlay absoluto) coexistir com Outlet */}
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, position: "relative" }}>
+            <FlowVoice />
             {children ?? <Outlet />}
           </div>
           <NavBottom active={active} />

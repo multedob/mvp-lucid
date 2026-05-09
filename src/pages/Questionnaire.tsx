@@ -186,8 +186,15 @@ export default function Questionnaire() {
     if (cascadeArmedRef.current) return
     if (phase === 'loading' || phase === 'transition' || phase === 'done') return
     cascadeArmedRef.current = true
-    const t1 = window.setTimeout(() => setQuestionVisible(true), 3500)
-    const t2 = window.setTimeout(() => setInputVisible(true), 4200)
+    // Sem flow: cadência original (3500ms / 4200ms / 5000ms — espera voz própria).
+    // Com flow: pergunta entra durante o hold do hint do FlowVoice (~2000ms),
+    //          coexiste brevemente com hint, depois hint some.
+    const qDelay = fromFlow ? 2000 : 3500
+    const iDelay = fromFlow ? 2700 : 4200
+    const aDelay = fromFlow ? 3500 : 5000
+
+    const t1 = window.setTimeout(() => setQuestionVisible(true), qDelay)
+    const t2 = window.setTimeout(() => setInputVisible(true), iDelay)
 
     // Pulse áudio só 1ª vez no questionário (vem após input, dá tempo de ler)
     const alreadySeen = typeof window !== 'undefined' && localStorage.getItem(AUDIO_PULSE_KEY) === '1'
@@ -196,7 +203,7 @@ export default function Questionnaire() {
       t3 = window.setTimeout(() => {
         setAudioPulseFirst(true)
         try { localStorage.setItem(AUDIO_PULSE_KEY, '1') } catch {}
-      }, 5000)
+      }, aDelay)
     }
 
     return () => {
@@ -204,7 +211,7 @@ export default function Questionnaire() {
       window.clearTimeout(t2)
       if (t3) window.clearTimeout(t3)
     }
-  }, [phase])
+  }, [phase, fromFlow])
   const [loadingScreenDone, setLoadingScreenDone] = useState(fromFlow)
 
   // Rotation variants: loaded once after /plan, used for principal question text

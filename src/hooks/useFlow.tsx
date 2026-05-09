@@ -25,9 +25,7 @@ export interface FlowSnapshot {
   dest: FlowDestination;
   /** Path final após animação */
   path: string;
-  /** 2 frases diablo distintas + hint final, sorteadas no momento do flowTo */
-  diablo1: string;
-  diablo2: string;
+  /** Frase única (hint contextual) — typewriter no overlay */
   hint: string;
 }
 
@@ -57,13 +55,16 @@ export function FlowProvider({ children }: { children: ReactNode }) {
       // Já estamos no destino? não faz flow.
       if (window.location.pathname === path) return;
 
-      // Atualiza header + nav imediatamente (não espera animação) — assim o
-      // contexto visual já indica pra onde está indo desde o primeiro frame.
+      // Atualiza header + nav imediatamente.
       shell.setSection(DEST_SECTION[dest]);
       shell.setActive(DEST_ACTIVE[dest]);
 
       const voice = pickFlowVoice(dest);
-      setFlow({ dest, path, ...voice });
+      setFlow({ dest, path, hint: voice.hint });
+
+      // Navega IMEDIATAMENTE — Home desmonta, página alvo monta com fromFlow=true.
+      // FlowVoice (no AppShell) persiste através da navegação e cobre a transição.
+      navigate(path, { state: { fromFlow: true } });
     },
     [navigate, shell]
   );
