@@ -27,7 +27,7 @@ const LINE_DELAY_MS = 1500;       // tempo entre frase 1 → 2
 const MIN_BEFORE_DONE_MS = 4500;  // tempo mínimo total antes de mostrar "pronto." — dá tempo de ler 1 frase Diablo
 const READY_HOLD_MS = 1200;       // quanto "pronto." fica visível antes de fade
 const FADE_MS = 400;
-const DIABLO_ROTATE_MS = 5000;    // a cada 5s, troca 1 das 2 frases visíveis
+const DIABLO_ROTATE_MS = 2800;    // 1 frase por vez, levemente acima do ritmo natural de leitura
 const FADE_LINE_MS = 500;
 
 // Pool inicial — 30 frases (Bruno cura depois editando o array).
@@ -107,12 +107,8 @@ export function LoadingScreen({
   loadCompleteRef.current = loadComplete;
   const startTimeRef = useRef(Date.now());
 
-  // Diablo: 2 frases visíveis, rotaciona uma de cada vez
-  const [diabloPair, setDiabloPair] = useState<[string, string]>(() => {
-    const a = pickRandom(DIABLO_POOL);
-    const b = pickRandom(DIABLO_POOL, [a]);
-    return [a, b];
-  });
+  // Diablo: 1 frase por vez (rotação acima do ritmo de leitura)
+  const [diabloCurrent, setDiabloCurrent] = useState<string>(() => pickRandom(DIABLO_POOL));
 
   // Cadeia das frases sistema:
   // - frase 1: imediato (shownCount 0→1)
@@ -145,16 +141,10 @@ export function LoadingScreen({
     return () => { window.clearTimeout(t1); window.clearTimeout(t2); };
   }, [shownCount, onDone]);
 
-  // Diablo rotation
+  // Diablo rotation — substitui a frase visível por outra do pool (sem repetir a atual)
   useEffect(() => {
     const interval = window.setInterval(() => {
-      setDiabloPair(prev => {
-        const idxToReplace = Math.random() < 0.5 ? 0 : 1;
-        const candidate = pickRandom(DIABLO_POOL, [prev[0], prev[1]]);
-        const next: [string, string] = [prev[0], prev[1]];
-        next[idxToReplace] = candidate;
-        return next;
-      });
+      setDiabloCurrent(prev => pickRandom(DIABLO_POOL, [prev]));
     }, DIABLO_ROTATE_MS);
     return () => window.clearInterval(interval);
   }, []);
@@ -254,32 +244,22 @@ export function LoadingScreen({
         }}>
           <AnimatedWordmark fontSize="clamp(40px, 8vw, 80px)" />
 
-          {/* Frases Diablo logo abaixo da logo, centralizadas. Contraste aumentado
-              (voice-sys cor canônica WCAG AA + opacity 1). */}
-          <div style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 6,
-          }}>
-            {diabloPair.map((phrase, i) => (
-              <div
-                key={`${i}-${phrase}`}
-                className="rdwth-ls-diablo"
-                style={{
-                  fontFamily: "var(--r-font-sys, 'IBM Plex Mono', monospace)",
-                  fontSize: 11,
-                  fontWeight: 300,
-                  color: "var(--r-voice-sys, #585860)",
-                  letterSpacing: "0.04em",
-                  lineHeight: 1.6,
-                  textAlign: "center",
-                  maxWidth: 420,
-                }}
-              >
-                {phrase}
-              </div>
-            ))}
+          {/* Frase Diablo única logo abaixo da logo. Reanima a cada troca via key dinâmica. */}
+          <div
+            key={diabloCurrent}
+            className="rdwth-ls-diablo"
+            style={{
+              fontFamily: "var(--r-font-sys, 'IBM Plex Mono', monospace)",
+              fontSize: 11,
+              fontWeight: 300,
+              color: "var(--r-voice-sys, #585860)",
+              letterSpacing: "0.04em",
+              lineHeight: 1.6,
+              textAlign: "center",
+              maxWidth: 420,
+            }}
+          >
+            {diabloCurrent}
           </div>
         </div>
       </div>
