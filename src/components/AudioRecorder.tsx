@@ -47,6 +47,12 @@ interface AudioRecorderProps {
   language?: string;
   /** Quando true, anima 2 ciclos breathing fade in/out na cor original — onboarding visual da feature. */
   breathingPulseOnce?: boolean;
+  /**
+   * Token de invite do terceiro (quando moment === "third-party").
+   * Quando presente, usa edge function third-party-upload-audio-url pra obter
+   * signed URL (bypassa RLS do storage, que não funciona sem auth).
+   */
+  thirdPartyToken?: string;
   onLiveTranscript?: (text: string) => void;
   onFinalTranscript?: (text: string) => void;
   onAudioStored?: (info: { path: string; durationMs: number }) => void;
@@ -90,6 +96,7 @@ export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(({
   moment,
   language = "en-US",
   breathingPulseOnce = false,
+  thirdPartyToken,
   onLiveTranscript,
   onFinalTranscript,
   onAudioStored,
@@ -214,13 +221,32 @@ export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(({
       const blob = new Blob(chunksRef.current, { type: mime });
       stopTracks();
 
-      const path = `${userId}/${cycleId}/${pillId}_${moment}.${ext}`;
+      let path: string;
 
-      // Upload (upsert so a re-take overwrites the previous take).
-      const { error: upErr } = await supabase.storage
-        .from("pill-audio")
-        .upload(path, blob, { contentType: mime, upsert: true });
-      if (upErr) throw new Error(`upload_failed: ${upErr.message}`);
+      if (moment === "third-party" && thirdPartyToken) {
+        // Caminho terceiro: pega signed URL via edge function (bypassa RLS).
+        const signed = await callEdgeFunction<{ signed_url: string; path: string; token: string }>(
+          "third-party-upload-audio-url",
+          { token: thirdPartyToken, question_id: pillId, ext },
+        );
+        const putRes = await fetch(signed.signed_url, {
+          method: "PUT",
+          headers: { "Content-Type": mime, "x-upsert": "true" },
+          body: blob,
+        });
+        if (!putRes.ok) {
+          const txt = await putRes.text().catch(() => "");
+          throw new Error(`upload_failed: ${putRes.status} ${txt}`);
+        }
+        path = signed.path;
+      } else {
+        // Caminho autenticado tradicional.
+        path = `${userId}/${cycleId}/${pillId}_${moment}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("pill-audio")
+          .upload(path, blob, { contentType: mime, upsert: true });
+        if (upErr) throw new Error(`upload_failed: ${upErr.message}`);
+      }
 
       onAudioStored?.({ path, durationMs });
 
@@ -229,6 +255,8 @@ export const AudioRecorder = forwardRef<HTMLDivElement, AudioRecorderProps>(({
       const data = await callEdgeFunction<{ text?: string }>("transcribe-audio", {
         audio_path: path,
         language: iso,
+        // Quando third-party: passa token pra edge function bypassar auth de user.
+        ...(moment === "third-party" && thirdPartyToken ? { third_party_token: thirdPartyToken } : {}),
       });
       const finalText = (data.text ?? "").trim();
       if (finalText) onFinalTranscript?.(finalText);
