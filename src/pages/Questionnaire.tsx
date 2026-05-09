@@ -45,8 +45,6 @@ type Phase =
 // Subcomponents — mesmo padrão do PillFlow
 // ─────────────────────────────────────────
 
-Header.displayName = "Header";
-
 interface QFooterProps {
   onContinue?: () => void
   continueLabel?: string
