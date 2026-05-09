@@ -1,21 +1,16 @@
 // src/components/LoadingScreen.tsx
 // ============================================================
-// Loading screen v2 — voz sistema empilhada + Wordmark + frases Diablo-style
+// Loading screen v3 — TUDO no campo da voz do sistema (topo-esquerda).
+// Sem nada no centro do canvas. Morph = sistema dizendo "carregando".
 //
-// Estrutura:
-//   ┌──────────────────────────────────────────┐
-//   │ > frase 1                                │  ← topo-esq, voz sistema
-//   │ > frase 2                                │     fade-in sequencial
-//   │ > frase 3 (pronto.)                      │     última só com loadComplete
-//   │                                          │
-//   │           rdwth (wordmark)               │  ← centro, identidade
-//   │                                          │
-//   │      [frase Diablo rotacionando 1]       │  ← embaixo, educação
-//   │      [frase Diablo rotacionando 2]       │     2 frases, troca a cada 5s
-//   └──────────────────────────────────────────┘
+// Sequência de 4 linhas empilhadas:
+//   > [rdwth morph animado]   ← linha 1 (sistema "se escrevendo")
+//   > frase Diablo 1           ← linha 2 (educação sobre o produto)
+//   > frase Diablo 2           ← linha 3 (educação)
+//   > pronto.                  ← linha 4 (só quando loadComplete)
 //
-// Tempo MÍNIMO total ~3500ms (1500ms entre linhas + 500ms fade out).
-// Diablo rotaciona enquanto loading; some no fade out final.
+// Frases Diablo são SORTEADAS do pool (não rotacionam — entram uma vez cada).
+// As 2 são distintas. Após "pronto.", fade out e onDone.
 // ============================================================
 
 import { useEffect, useRef, useState } from "react";
@@ -23,11 +18,10 @@ import { AnimatedWordmark } from "./AnimatedWordmark";
 import AppHeader from "./AppHeader";
 import NavBottom, { type ActivePage } from "./NavBottom";
 
-const LINE_DELAY_MS = 1500;       // tempo entre frase 1 → 2
-const MIN_BEFORE_DONE_MS = 4500;  // tempo mínimo total antes de mostrar "pronto." — dá tempo de ler 1 frase Diablo
+const LINE_DELAY_MS = 2500;       // tempo entre cada linha — ~ritmo de leitura
+const MIN_BEFORE_DONE_MS = 5500;  // tempo mínimo total antes de "pronto." — dá tempo de ler diablo 2
 const READY_HOLD_MS = 1200;       // quanto "pronto." fica visível antes de fade
 const FADE_MS = 400;
-const DIABLO_ROTATE_MS = 2800;    // 1 frase por vez, levemente acima do ritmo natural de leitura
 const FADE_LINE_MS = 500;
 
 // Pool inicial — 30 frases (Bruno cura depois editando o array).
@@ -75,7 +69,6 @@ const DIABLO_POOL: string[] = [
 ];
 
 interface Props {
-  phrases: [string, string, string];
   loadComplete?: boolean;
   onDone?: () => void;
   /** Texto do meio do header (ex: "reed", "contexto"). Sem section, só "rdwth | data". */
@@ -93,61 +86,56 @@ function pickRandom<T>(pool: T[], excluding: T[] = []): T {
 }
 
 export function LoadingScreen({
-  phrases,
   loadComplete = true,
   onDone,
   section,
   active = "none",
   hideNav = false,
 }: Props) {
-  // Sistema empilhado: shownCount controla quantas linhas estão visíveis (0..3)
+  // shownCount controla quantas linhas estão visíveis (0..4):
+  //   1 = morph; 2 = +diablo1; 3 = +diablo2; 4 = +pronto
   const [shownCount, setShownCount] = useState(0);
   const [fadingOut, setFadingOut] = useState(false);
   const loadCompleteRef = useRef(loadComplete);
   loadCompleteRef.current = loadComplete;
   const startTimeRef = useRef(Date.now());
 
-  // Diablo: 1 frase por vez (rotação acima do ritmo de leitura)
-  const [diabloCurrent, setDiabloCurrent] = useState<string>(() => pickRandom(DIABLO_POOL));
+  // Sorteia 2 frases Diablo distintas no mount (não rotacionam — entram em sequência)
+  const [diablo1] = useState<string>(() => pickRandom(DIABLO_POOL));
+  const [diablo2] = useState<string>(() => pickRandom(DIABLO_POOL, [diablo1]));
 
-  // Cadeia das frases sistema:
-  // - frase 1: imediato (shownCount 0→1)
-  // - frase 2: após LINE_DELAY_MS (shownCount 1→2)
-  // - frase 3 ("pronto."): só quando loadComplete E elapsed >= MIN_BEFORE_DONE_MS
+  // Cadeia das linhas (todas no campo da voz sistema):
+  //   t=0       → morph         (shownCount 0→1)
+  //   t=2500ms  → diablo1        (shownCount 1→2)
+  //   t=5000ms  → diablo2        (shownCount 2→3)
+  //   loadComplete && t≥5500ms → pronto (shownCount 3→4)
   useEffect(() => {
     setShownCount(1);
     const t1 = window.setTimeout(() => setShownCount(2), LINE_DELAY_MS);
-    return () => window.clearTimeout(t1);
+    const t2 = window.setTimeout(() => setShownCount(3), LINE_DELAY_MS * 2);
+    return () => { window.clearTimeout(t1); window.clearTimeout(t2); };
   }, []);
 
-  // Vigilância pra mostrar frase 3 quando ambos: load completo + tempo mínimo
+  // Vigilância pra mostrar "pronto." quando: load completo + tempo mínimo
   useEffect(() => {
-    if (shownCount < 2) return;
+    if (shownCount < 3) return;
     const checkInterval = window.setInterval(() => {
       const elapsed = Date.now() - startTimeRef.current;
       if (loadCompleteRef.current && elapsed >= MIN_BEFORE_DONE_MS) {
         window.clearInterval(checkInterval);
-        setShownCount(3);
+        setShownCount(4);
       }
     }, 100);
     return () => window.clearInterval(checkInterval);
   }, [shownCount]);
 
-  // Quando frase 3 aparece, espera HOLD + FADE e chama onDone
+  // Quando "pronto." aparece, espera HOLD + FADE e chama onDone
   useEffect(() => {
-    if (shownCount !== 3) return;
+    if (shownCount !== 4) return;
     const t1 = window.setTimeout(() => setFadingOut(true), READY_HOLD_MS);
     const t2 = window.setTimeout(() => onDone?.(), READY_HOLD_MS + FADE_MS);
     return () => { window.clearTimeout(t1); window.clearTimeout(t2); };
   }, [shownCount, onDone]);
-
-  // Diablo rotation — substitui a frase visível por outra do pool (sem repetir a atual)
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      setDiabloCurrent(prev => pickRandom(DIABLO_POOL, [prev]));
-    }, DIABLO_ROTATE_MS);
-    return () => window.clearInterval(interval);
-  }, []);
 
   return (
     <div
@@ -210,9 +198,26 @@ export function LoadingScreen({
           gap: 4,
           zIndex: 1,
         }}>
-          {phrases.slice(0, shownCount).map((p, i) => (
+          {/* Linha 1 — morph: o sistema "se escrevendo" como sinal de carregamento.
+              Sem prefixo "> " (é a própria voz, não uma fala). Tamanho ~16px:
+              presente mas integrado ao campo de voz sistema. */}
+          {shownCount >= 1 && (
             <div
-              key={i}
+              className="rdwth-ls-line"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                lineHeight: 1.4,
+                marginBottom: 4,
+              }}
+            >
+              <AnimatedWordmark fontSize="16px" />
+            </div>
+          )}
+
+          {/* Linha 2 — diablo 1 */}
+          {shownCount >= 2 && (
+            <div
               className="rdwth-ls-line"
               style={{
                 fontFamily: "var(--r-font-sys, 'IBM Plex Mono', monospace)",
@@ -225,42 +230,47 @@ export function LoadingScreen({
               }}
             >
               <span aria-hidden="true">{"> "}</span>
-              {p}
+              {diablo1}
             </div>
-          ))}
-        </div>
+          )}
 
-        {/* Centro: Wordmark + Diablo phrases logo abaixo (flex column).
-            Mesmo layout em desktop e mobile. Margens laterais apertadas. */}
-        <div style={{
-          position: "absolute",
-          inset: 0,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 24,
-          padding: "0 16px",
-        }}>
-          <AnimatedWordmark fontSize="clamp(40px, 8vw, 80px)" />
+          {/* Linha 3 — diablo 2 */}
+          {shownCount >= 3 && (
+            <div
+              className="rdwth-ls-line"
+              style={{
+                fontFamily: "var(--r-font-sys, 'IBM Plex Mono', monospace)",
+                fontSize: 11,
+                fontWeight: 300,
+                color: "var(--r-voice-sys, #585860)",
+                letterSpacing: "0.04em",
+                lineHeight: 1.7,
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              <span aria-hidden="true">{"> "}</span>
+              {diablo2}
+            </div>
+          )}
 
-          {/* Frase Diablo única logo abaixo da logo. Reanima a cada troca via key dinâmica. */}
-          <div
-            key={diabloCurrent}
-            className="rdwth-ls-diablo"
-            style={{
-              fontFamily: "var(--r-font-sys, 'IBM Plex Mono', monospace)",
-              fontSize: 11,
-              fontWeight: 300,
-              color: "var(--r-voice-sys, #585860)",
-              letterSpacing: "0.04em",
-              lineHeight: 1.6,
-              textAlign: "center",
-              maxWidth: 420,
-            }}
-          >
-            {diabloCurrent}
-          </div>
+          {/* Linha 4 — pronto. (só com loadComplete && tempo mínimo) */}
+          {shownCount >= 4 && (
+            <div
+              className="rdwth-ls-line"
+              style={{
+                fontFamily: "var(--r-font-sys, 'IBM Plex Mono', monospace)",
+                fontSize: 11,
+                fontWeight: 300,
+                color: "var(--r-voice-sys, #585860)",
+                letterSpacing: "0.04em",
+                lineHeight: 1.7,
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              <span aria-hidden="true">{"> "}</span>
+              pronto.
+            </div>
+          )}
         </div>
       </div>
 

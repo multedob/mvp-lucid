@@ -771,11 +771,6 @@ export default function ThirdParty() {
   if (phase === "finalizing" || (phase === "done" && !finalizeLoadingDone)) {
     return (
       <LoadingScreen
-        phrases={[
-          "lendo o que você trouxe...",
-          "enxergando o que tem por trás...",
-          "pronto.",
-        ]}
         loadComplete={phase === "done"}
         onDone={() => setFinalizeLoadingDone(true)}
         hideNav

@@ -559,11 +559,6 @@ export default function Reed() {
 
   if (!loadingScreenDone) return (
     <LoadingScreen
-      phrases={[
-        "preparando o espaço...",
-        "afinando o tom...",
-        "pronto.",
-      ]}
       loadComplete={!loading}
       onDone={() => setLoadingScreenDone(true)}
       section="reed"

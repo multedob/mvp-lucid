@@ -1,6 +1,7 @@
 // src/components/QuestionnaireLoadingScreen.tsx
-// Wrapper sobre LoadingScreen com frases do questionário.
+// Wrapper sobre LoadingScreen pro questionário.
 // Header `rdwth | questionário | data` + footer com "questionário" iluminado.
+// Frases agora são fixas (morph + 2 Diablo + pronto), padrão do LoadingScreen v3.
 
 import { LoadingScreen } from "./LoadingScreen";
 
@@ -9,16 +10,9 @@ interface Props {
   onDone?: () => void;
 }
 
-const PHRASES: [string, string, string] = [
-  "ajustando ao seu ciclo...",
-  "revisando o que ainda faz sentido perguntar...",
-  "pronto.",
-];
-
 export function QuestionnaireLoadingScreen({ loadComplete, onDone }: Props) {
   return (
     <LoadingScreen
-      phrases={PHRASES}
       loadComplete={loadComplete}
       onDone={onDone}
       section="questionário"

@@ -497,7 +497,6 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
 
   if (!loadingScreenDone) {
     return <LoadingScreen
-      phrases={["buscando perspectivas...", "organizando...", "pronto."]}
       loadComplete={!loading}
       onDone={() => setLoadingScreenDone(true)}
       section="contexto"
@@ -840,7 +839,6 @@ export default function Context() {
   // E também durante phase 3 + fade out, controlado por loadingScreenDone)
   if (!loadingScreenDone) {
     return <LoadingScreen
-      phrases={["buscando seu ciclo...", "compondo a leitura...", "pronto."]}
       loadComplete={!loading}
       onDone={() => setLoadingScreenDone(true)}
       section="contexto"
