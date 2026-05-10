@@ -18,6 +18,7 @@ import AppHeader from "@/components/AppHeader";
 import { useUserName } from "@/hooks/useUserName";
 import NavBottom from "@/components/NavBottom";
 import { useShell } from "@/hooks/useShell";
+import { useFlow } from "@/hooks/useFlow";
 import { FLOW_CONTENT_DELAY_MS } from "@/components/FlowVoice";
 import SystemTerminalLine from "@/components/SystemTerminalLine";
 import SystemTerminalCounter from "@/components/SystemTerminalCounter";
@@ -720,6 +721,7 @@ export default function Context() {
 
   // Section "contexto" como default — sub-componentes sobrescrevem com section própria.
   useShell({ section: "contexto", active: "context" });
+  const { markFlowReady, hintShown } = useFlow();
 
   const [cycles, setCycles] = useState<CycleData[]>([]);
   const [selectedIdx, setSelectedIdx] = useState(0);
@@ -737,15 +739,25 @@ export default function Context() {
 
   useEffect(() => { loadCycles(); }, []);
 
-  // Cascade: voz sistema entra primeiro, canvas (descrição + ações) entra com fade depois.
-  // Sem flow: 2700ms (espera voz própria). Com flow: FLOW_CONTENT_DELAY_MS (após sistema falar tudo).
+  // Cascade. Sem flow: 2700ms (espera voz própria).
+  // Com flow: aguarda hintShown (sistema chegou na hint), depois FLOW_CONTENT_DELAY_MS.
   // IMPORTANTE: hooks DEVEM estar antes de qualquer return condicional (regra dos hooks).
   const [canvasVisible, setCanvasVisible] = useState(false);
   useEffect(() => {
-    const delay = fromFlow ? FLOW_CONTENT_DELAY_MS : 2700;
-    const t = window.setTimeout(() => setCanvasVisible(true), delay);
+    if (!fromFlow) {
+      const t = window.setTimeout(() => setCanvasVisible(true), 2700);
+      return () => window.clearTimeout(t);
+    }
+    if (!hintShown) return;
+    const t = window.setTimeout(() => setCanvasVisible(true), FLOW_CONTENT_DELAY_MS);
     return () => window.clearTimeout(t);
-  }, [fromFlow]);
+  }, [fromFlow, hintShown]);
+
+  // Sinaliza ao FlowVoice quando dados do Context carregaram
+  useEffect(() => {
+    if (!fromFlow) return;
+    if (!loading) markFlowReady();
+  }, [fromFlow, loading, markFlowReady]);
 
   async function loadCycles() {
     try {

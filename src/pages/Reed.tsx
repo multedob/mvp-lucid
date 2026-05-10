@@ -9,6 +9,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { callEdgeFunction, getCurrentUserVersion } from '@/lib/api'
 import { useShell } from '@/hooks/useShell'
+import { useFlow } from '@/hooks/useFlow'
 import { FLOW_CONTENT_DELAY_MS } from '@/components/FlowVoice'
 import { AudioRecorder } from '@/components/AudioRecorder'
 import { AutoResizeTextarea } from '@/components/AutoResizeTextarea'
@@ -150,6 +151,7 @@ export default function Reed() {
   const abortRef = useRef<AbortController | null>(null)
 
   useShell({ section: "reed", active: "reed" })
+  const { markFlowReady, hintShown } = useFlow()
 
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -158,13 +160,20 @@ export default function Reed() {
   const [loadingScreenDone, setLoadingScreenDone] = useState(fromFlow)
 
   // Quando vem do flow, welcome do Reed entra DEPOIS do sistema parar de falar.
-  // Mantém messages escondidas até o cascade.
+  // Espera hintShown (sistema chegou na hint) + FLOW_CONTENT_DELAY_MS.
   const [chatVisible, setChatVisible] = useState(!fromFlow)
   useEffect(() => {
     if (!fromFlow) return
+    if (!hintShown) return
     const t = window.setTimeout(() => setChatVisible(true), FLOW_CONTENT_DELAY_MS)
     return () => window.clearTimeout(t)
-  }, [fromFlow])
+  }, [fromFlow, hintShown])
+
+  // Sinaliza pro FlowVoice que os dados do Reed carregaram
+  useEffect(() => {
+    if (!fromFlow) return
+    if (!loading) markFlowReady()
+  }, [fromFlow, loading, markFlowReady])
   const [sending, setSending] = useState(false)
   const [cycleId, setCycleId] = useState<string | null>(null)
   const [baseVersion, setBaseVersion] = useState<number | null>(null)
@@ -584,7 +593,9 @@ export default function Reed() {
     <>
       {/* Voice slot DENTRO do scroll container — quando user rola pra cima,
           o slot sobe junto e o welcome ocupa o canvas inteiro.
-          Welcome entra com fade-in após sistema parar de falar (chatVisible). */}
+          Mensagens só montam quando chatVisible=true: BlockReveal anima do zero
+          (cascade dos parágrafos do welcome), em vez de animar invisível enquanto
+          o sistema ainda fala. */}
       <div
         className="r-scroll"
         style={{
@@ -592,11 +603,10 @@ export default function Reed() {
           display: 'flex',
           flexDirection: 'column',
           padding: '0 24px 16px',
-          opacity: chatVisible ? 1 : 0,
-          transition: 'opacity 500ms ease-in',
         }}
       >
         <div style={{ minHeight: 110, flexShrink: 0 }} />
+        {chatVisible && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingTop: 20 }}>
         {messages.map((msg, i) => {
           const isSys = msg.role === 'reed' && msg.text.startsWith('[sys]')
@@ -673,6 +683,7 @@ export default function Reed() {
         )}
         <div ref={bottomRef} />
         </div>
+        )}
       </div>
 
       <div className="r-line" />

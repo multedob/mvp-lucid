@@ -25,9 +25,9 @@ export interface FlowSnapshot {
   dest: FlowDestination;
   /** Path final após animação */
   path: string;
-  /** 2 frases diablo distintas + hint contextual (cobre loadings de duração variável) */
-  diablo1: string;
-  diablo2: string;
+  /** Pool shuffled — linhas alternam consumindo em sequência (loop ao esgotar) */
+  pool: string[];
+  /** Frase contextual final que substitui as 2 linhas quando dataReady */
   hint: string;
 }
 
@@ -37,6 +37,16 @@ interface FlowContextValue {
   flowTo: (path: string) => void;
   /** Limpa o flow ativo (chamado pelo FlowVoice ao terminar) */
   clearFlow: () => void;
+  /** Página alvo chama quando dados estão prontos. FlowVoice troca os pares
+   *  alternantes pela hint final na próxima oportunidade de transição. */
+  markFlowReady: () => void;
+  /** True quando markFlowReady foi chamado. */
+  isFlowReady: boolean;
+  /** True quando o FlowVoice já mostra a hint (sistema parou de alternar pares).
+   *  Páginas alvo armam cascade do conteúdo principal observando isso. */
+  hintShown: boolean;
+  /** Internal — FlowVoice marca quando passa pra fase de hint. Não usar fora dele. */
+  _setHintShown: (v: boolean) => void;
 }
 
 const FlowContext = createContext<FlowContextValue | null>(null);
@@ -45,6 +55,8 @@ export function FlowProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const shell = useShellState();
   const [flow, setFlow] = useState<FlowSnapshot | null>(null);
+  const [ready, setReady] = useState(false);
+  const [hintShown, setHintShown] = useState(false);
 
   const flowTo = useCallback(
     (path: string) => {
@@ -63,6 +75,8 @@ export function FlowProvider({ children }: { children: ReactNode }) {
 
       const voice = pickFlowVoice(dest);
       setFlow({ dest, path, ...voice });
+      setReady(false);
+      setHintShown(false);
 
       // Navega IMEDIATAMENTE — Home desmonta, página alvo monta com fromFlow=true.
       // FlowVoice (no AppShell) persiste através da navegação e cobre a transição.
@@ -71,11 +85,18 @@ export function FlowProvider({ children }: { children: ReactNode }) {
     [navigate, shell]
   );
 
-  const clearFlow = useCallback(() => setFlow(null), []);
+  const clearFlow = useCallback(() => {
+    setFlow(null);
+    setReady(false);
+    setHintShown(false);
+  }, []);
+
+  const markFlowReady = useCallback(() => setReady(true), []);
+  const _setHintShown = useCallback((v: boolean) => setHintShown(v), []);
 
   const value = useMemo<FlowContextValue>(
-    () => ({ flow, flowTo, clearFlow }),
-    [flow, flowTo, clearFlow]
+    () => ({ flow, flowTo, clearFlow, markFlowReady, isFlowReady: ready, hintShown, _setHintShown }),
+    [flow, flowTo, clearFlow, markFlowReady, ready, hintShown, _setHintShown]
   );
 
   return <FlowContext.Provider value={value}>{children}</FlowContext.Provider>;

@@ -116,6 +116,7 @@ export default function SystemTerminalLine({
         letterSpacing: "0.04em",
         whiteSpace: "pre-wrap",
         minHeight: `${Math.round(fontSize * 1.7)}px`,
+        margin: 0,
       }}
     >
       {started ? (

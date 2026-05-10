@@ -12,6 +12,7 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useShell } from "@/hooks/useShell";
+import { useFlow } from "@/hooks/useFlow";
 import EmptyStateMessage from "@/components/EmptyStateMessage";
 import { FLOW_CONTENT_DELAY_MS } from "@/components/FlowVoice";
 import { track } from "@/lib/analytics";
@@ -37,18 +38,29 @@ export default function Pills() {
   const [loading, setLoading] = useState(true);
 
   useShell({ section: "pills", active: "pills" });
+  const { markFlowReady, hintShown } = useFlow();
 
-  // Cascade: lista entra com fade após voz sistema falar TUDO.
-  // Sem flow: 2700ms (espera voz própria da página).
-  // Com flow: FLOW_CONTENT_DELAY_MS — entra logo após o sistema parar de falar.
+  // Cascade: lista entra com fade após voz sistema falar.
+  // Sem flow: 2700ms (espera voz própria).
+  // Com flow: arma timer quando hintShown (sistema já chegou na hint).
   const [listVisible, setListVisible] = useState(false);
   useEffect(() => {
-    const delay = fromFlow ? FLOW_CONTENT_DELAY_MS : 2700;
-    const t = window.setTimeout(() => setListVisible(true), delay);
+    if (!fromFlow) {
+      const t = window.setTimeout(() => setListVisible(true), 2700);
+      return () => window.clearTimeout(t);
+    }
+    if (!hintShown) return;
+    const t = window.setTimeout(() => setListVisible(true), FLOW_CONTENT_DELAY_MS);
     return () => window.clearTimeout(t);
-  }, [fromFlow]);
+  }, [fromFlow, hintShown]);
 
   useEffect(() => { loadCycle(); }, []);
+
+  // Sinaliza pro FlowVoice que dados estão prontos — troca rotação pela hint final.
+  useEffect(() => {
+    if (!fromFlow) return;
+    if (!loading) markFlowReady();
+  }, [fromFlow, loading, markFlowReady]);
 
   async function loadCycle() {
     try {

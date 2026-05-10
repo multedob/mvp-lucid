@@ -11,6 +11,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { callEdgeFunction, getCurrentUserVersion } from '@/lib/api'
 import { useShell } from '@/hooks/useShell'
+import { useFlow } from '@/hooks/useFlow'
 import { FLOW_CONTENT_DELAY_MS } from '@/components/FlowVoice'
 import { triggerDeepReadingRefresh } from '@/lib/deepReading'
 import { QUESTIONS, getQuestionText, type BlockId } from '@/data/questions'
@@ -159,6 +160,7 @@ export default function Questionnaire() {
   const fromFlow = !!(location.state as { fromFlow?: boolean } | null)?.fromFlow
 
   useShell({ section: "questionário", active: "questionnaire" })
+  const { markFlowReady, hintShown } = useFlow()
 
   const [phase, setPhase] = useState<Phase>('loading')
   const [cycleId, setCycleId] = useState<string | null>(null)
@@ -178,24 +180,28 @@ export default function Questionnaire() {
   // Cascade: pergunta + input só aparecem APÓS voz do sistema (counter + empty state)
   // terminar de entrar. Ritmo igual ao warmup (pergunta após ~2700ms, input após 3300ms).
   // Bolinha de áudio com 2 pulsos breathing na 1ª entrada (delay 3900ms).
-  const [questionVisible, setQuestionVisible] = useState(false)
-  const [inputVisible, setInputVisible] = useState(false)
+  // questionReady/inputReady = "tempo do cascade passou". Visibilidade real depende
+  // também do dado pronto (phase fora de loading) — abaixo via questionVisible computed.
+  const [questionReady, setQuestionReady] = useState(false)
+  const [inputReady, setInputReady] = useState(false)
   const [audioPulseFirst, setAudioPulseFirst] = useState(false)
   const cascadeArmedRef = useRef(false)
   const AUDIO_PULSE_KEY = 'rdwth_audio_pulse_seen_questionnaire'
+
+  // Cascade.
+  // Sem flow: cadência original (3500/4200/5000) que espera a voz própria da página.
+  // Com flow: aguarda hintShown (sistema chegou na hint final); pergunta entra
+  // após FLOW_CONTENT_DELAY_MS, input +700ms, pulse áudio +1500ms.
   useEffect(() => {
     if (cascadeArmedRef.current) return
-    if (phase === 'loading' || phase === 'transition' || phase === 'done') return
+    if (fromFlow && !hintShown) return
     cascadeArmedRef.current = true
-    // Sem flow: cadência original (3500ms / 4200ms / 5000ms — espera voz própria).
-    // Com flow: pergunta entra após o sistema parar de falar (~FLOW_CONTENT_DELAY_MS),
-    //          coexiste com sistema por ~1.2s, depois sistema apaga.
     const qDelay = fromFlow ? FLOW_CONTENT_DELAY_MS : 3500
     const iDelay = fromFlow ? FLOW_CONTENT_DELAY_MS + 700 : 4200
     const aDelay = fromFlow ? FLOW_CONTENT_DELAY_MS + 1500 : 5000
 
-    const t1 = window.setTimeout(() => setQuestionVisible(true), qDelay)
-    const t2 = window.setTimeout(() => setInputVisible(true), iDelay)
+    const t1 = window.setTimeout(() => setQuestionReady(true), qDelay)
+    const t2 = window.setTimeout(() => setInputReady(true), iDelay)
 
     // Pulse áudio só 1ª vez no questionário (vem após input, dá tempo de ler)
     const alreadySeen = typeof window !== 'undefined' && localStorage.getItem(AUDIO_PULSE_KEY) === '1'
@@ -212,7 +218,19 @@ export default function Questionnaire() {
       window.clearTimeout(t2)
       if (t3) window.clearTimeout(t3)
     }
-  }, [phase, fromFlow])
+  }, [fromFlow, hintShown])
+
+  // Sinaliza pro FlowVoice que os dados do questionário estão prontos (phase saiu de loading)
+  useEffect(() => {
+    if (!fromFlow) return
+    if (phase === 'loading' || phase === 'transition') return
+    markFlowReady()
+  }, [fromFlow, phase, markFlowReady])
+
+  // Visibilidade real: cascade armed E dados prontos (phase fora de loading).
+  const questionVisible = questionReady && phase !== 'loading' && phase !== 'transition'
+  const inputVisible = inputReady && phase !== 'loading' && phase !== 'transition'
+
   const [loadingScreenDone, setLoadingScreenDone] = useState(fromFlow)
 
   // Rotation variants: loaded once after /plan, used for principal question text
