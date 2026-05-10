@@ -20,6 +20,25 @@ import NavBottom from "@/components/NavBottom";
 import { useShell } from "@/hooks/useShell";
 import { useFlow } from "@/hooks/useFlow";
 import { FLOW_CONTENT_DELAY_MS } from "@/components/FlowVoice";
+import SystemCyclingLine from "@/components/SystemCyclingLine";
+
+// Pool de frases pra voz do sistema durante abertura de Terceiros.
+// Tudo lowercase, ≤ 38 chars (não quebra em mobile).
+const THIRD_PARTY_DIABLOS = [
+  "olhares de fora afinam o ciclo.",
+  "terceiros veem o que você não vê.",
+  "perspectiva externa amplia a leitura.",
+  "pessoas próximas refletem padrões.",
+  "pontos cegos viram visíveis.",
+  "quem te conhece te lê melhor.",
+  "olhares próximos revelam ângulos.",
+  "o de fora amplia o de dentro.",
+];
+
+function pickTwoDistinct(pool: string[]): [string, string] {
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+  return [shuffled[0] ?? "", shuffled[1] ?? shuffled[0] ?? ""];
+}
 import SystemTerminalLine from "@/components/SystemTerminalLine";
 import SystemTerminalCounter from "@/components/SystemTerminalCounter";
 import { fetchQuestionnaireProgress } from "@/lib/questionnaireProgress";
@@ -351,11 +370,13 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
 }) {
   useShell({ section: "contexto · terceiros", active: "context" });
   const navigate = useNavigate();
-  const [invites, setInvites] = useState<ThirdPartyInvite[]>([]);
+  const [invites, setInvites] = useState<(ThirdPartyInvite & { cycle_number?: number })[]>([]);
   const [responses, setResponses] = useState<Record<string, ThirdPartyResponse[]>>({});
   const [loading, setLoading] = useState(true);
   const [loadingScreenDone, setLoadingScreenDone] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [view, setView] = useState<"main" | "history">("main");
+  const [openCycle, setOpenCycle] = useState<number | null>(null);
   // Pronome eliminado da UI — inferido do primeiro nome do user.
   // Heurística PT-BR: termina em 'a' → ela; em 'o' → ele; outros → elu (neutro).
   function inferPronoun(name: string | null | undefined): "ela" | "ele" | "elu" {
@@ -390,8 +411,54 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   };
 
   const headerText = userName
-    ? `${capitalizeName(userName)}, convide até 8 pessoas próximas que conhecem você. As respostas delas alimentam suas leituras com perspectiva externa.`
-    : "Convide até 8 pessoas próximas. As respostas delas alimentam suas leituras com perspectiva externa.";
+    ? `${capitalizeName(userName)}, convide até 8 pessoas próximas que conhecem você. as respostas delas alimentam suas leituras com perspectiva externa.`
+    : "convide até 8 pessoas próximas. as respostas delas alimentam suas leituras com perspectiva externa.";
+
+  // ─── Voice sequence (abertura da página de Terceiros) ──────────────
+  // Phase 1: linha 1 (diablo) entra com typewriter.
+  // Phase 2: linha 2 (diablo) entra após ~2000ms.
+  // Phase 3: ambas reverse pra "" após ~5000ms.
+  // Phase 4: linha 1 = headerText (typewriter forward) após reverse completar.
+  // Phase 5: depois do typewriter da headerText, conteúdo aparece + voz fade-out.
+  const diablosRef = useRef<[string, string]>(pickTwoDistinct(THIRD_PARTY_DIABLOS));
+  const [voiceLine1, setVoiceLine1] = useState("");
+  const [voiceLine2, setVoiceLine2] = useState("");
+  const [voiceHeader, setVoiceHeader] = useState("");
+  const [contentVisible, setContentVisible] = useState(false);
+  const [voiceFading, setVoiceFading] = useState(false);
+
+  useEffect(() => {
+    // Reset quando o cycleId muda (caso user troque de ciclo)
+    setVoiceLine1(diablosRef.current[0]);
+    setVoiceLine2("");
+    setVoiceHeader("");
+    setContentVisible(false);
+    setVoiceFading(false);
+
+    const t1 = window.setTimeout(() => setVoiceLine2(diablosRef.current[1]), 2000);
+    const t2 = window.setTimeout(() => {
+      // Reverse das duas linhas (CyclingLine apaga até "")
+      setVoiceLine1("");
+      setVoiceLine2("");
+    }, 5000);
+    const t3 = window.setTimeout(() => {
+      // Phase 4: linha 1 vira headerText
+      setVoiceLine1(headerText);
+    }, 5800);
+    // Conteúdo aparece após typewriter da headerText (~headerText.length × 30ms + 300 buffer)
+    const headerTypeTime = headerText.length * 30 + 300;
+    const t4 = window.setTimeout(() => setContentVisible(true), 5800 + headerTypeTime);
+    // Voz fade-out 1500ms após conteúdo aparecer
+    const t5 = window.setTimeout(() => setVoiceFading(true), 5800 + headerTypeTime + 1500);
+
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.clearTimeout(t3);
+      window.clearTimeout(t4);
+      window.clearTimeout(t5);
+    };
+  }, [headerText]);
 
   const loadAll = async () => {
     setLoading(true);
@@ -400,11 +467,24 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
       if (!session) return;
       const headers = { Authorization: `Bearer ${session.access_token}`, apikey: ANON_KEY };
 
+      // 1. Puxa todos ciclos do user pra agrupar invites por ciclo na History view
+      const { data: cycles } = await supabase
+        .from("ipe_cycles")
+        .select("id, cycle_number")
+        .eq("user_id", session.user.id);
+      const cycleMap: Record<string, number> = {};
+      (cycles ?? []).forEach((c) => { cycleMap[c.id] = c.cycle_number; });
+      const cycleIds = Object.keys(cycleMap);
+
+      // 2. Puxa invites de TODOS os ciclos do user (não só o atual) — necessário
+      //    pra agrupar por ciclo na view "convites enviados".
+      const idsCsv = cycleIds.map((id) => `"${id}"`).join(",");
       const invR = await fetch(
-        `${SUPABASE_URL}/rest/v1/third_party_invites?ipe_cycle_id=eq.${ipeCycleId}&order=created_at.desc`,
+        `${SUPABASE_URL}/rest/v1/third_party_invites?ipe_cycle_id=in.(${idsCsv})&order=created_at.desc`,
         { headers }
       );
-      const invs: ThirdPartyInvite[] = await invR.json();
+      const rawInvs: ThirdPartyInvite[] = await invR.json();
+      const invs = rawInvs.map((i) => ({ ...i, cycle_number: cycleMap[(i as any).ipe_cycle_id] }));
       setInvites(invs);
 
       // Carrega responses dos invites com status submitted.
@@ -506,202 +586,245 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
     />;
   }
 
+  // Helpers de UI
+  const minimalBtn = {
+    display: "flex" as const,
+    alignItems: "center" as const,
+    gap: 12,
+    cursor: "pointer" as const,
+    padding: "14px 0",
+  };
+  const minimalBtnLine = {
+    width: 1,
+    height: 14,
+    background: "var(--r-text)",
+    flexShrink: 0,
+  };
+  const minimalBtnLabel = {
+    fontFamily: "var(--r-font-sys)",
+    fontWeight: 300,
+    fontSize: 12,
+    color: "var(--r-text)",
+    letterSpacing: "0.06em",
+  };
+
+  // Agrupa invites por cycle_number (decrescente)
+  const groupsByCycle = (() => {
+    const map = new Map<number, typeof invites>();
+    invites.forEach((inv) => {
+      const cn = inv.cycle_number ?? 1;
+      if (!map.has(cn)) map.set(cn, []);
+      map.get(cn)!.push(inv);
+    });
+    return Array.from(map.entries()).sort((a, b) => b[0] - a[0]);
+  })();
+
   return (
     <>
       <div className="r-scroll" style={{ padding: "28px 24px 16px", display: "flex", flexDirection: "column", gap: 20 }}>
-        <SystemTerminalLine text={headerText} />
+        {/* Voz do sistema — phase 1: 2 diablos alternando, phase 2: reverse,
+            phase 3: headerText, phase 4: fade-out junto com conteúdo já visível */}
+        <div
+          style={{
+            opacity: voiceFading ? 0 : 1,
+            transition: "opacity 400ms ease",
+            display: "flex",
+            flexDirection: "column",
+            gap: 0,
+            minHeight: 60,
+          }}
+        >
+          {!voiceHeader && (
+            <>
+              <SystemCyclingLine text={voiceLine1} />
+              <SystemCyclingLine text={voiceLine2} />
+            </>
+          )}
+          {voiceHeader && <SystemCyclingLine text={voiceHeader} />}
+        </div>
 
-        <div style={{ height: 1, background: "var(--r-ghost)", opacity: 0.4 }} />
+        {/* Conteúdo só aparece após voz terminar de falar */}
+        {contentVisible && view === "main" && (
+          <>
+            <div style={{ height: 1, background: "var(--r-ghost)", opacity: 0.4 }} />
 
-        {/* Painel criar */}
-        {!creating && activeCount < 8 && (
-          <div onClick={() => { setCreating(true); setCreatedUrl(null); createInvite(); }}
-            style={{
-              fontFamily: "var(--r-font-sys)", fontSize: 13, padding: "12px 16px",
-              background: "var(--r-text)", color: "var(--r-bg)",
-              cursor: "pointer", textAlign: "center", letterSpacing: "0.04em",
-              maxWidth: 400, marginLeft: "auto", marginRight: "auto", width: "100%",
-            }}>
-            + novo convite
-          </div>
-        )}
-
-        {creating && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "12px 16px", border: "1px solid var(--r-ghost)", maxWidth: 480, marginLeft: "auto", marginRight: "auto", width: "100%" }}>
-            {!createdUrl && (
-              <>
-                <div className="r-sub" style={{ fontStyle: "italic" }}>gerando link...</div>
-                {errorMsg && <div style={{ color: "var(--terracota, #b85a3e)", fontSize: 12 }}>{errorMsg}</div>}
-              </>
-            )}
-            {createdUrl && (
-              <>
-                <div className="r-sub">link gerado e copiado pra área de transferência:</div>
-                <div style={{ position: "relative", fontFamily: "monospace", fontSize: 11, padding: "8px 36px 8px 8px", background: "var(--r-bg)", border: "1px dashed var(--r-ghost)", wordBreak: "break-all" }}>
-                  {createdUrl}
-                  <button
-                    type="button"
-                    onClick={copyCreatedUrl}
-                    aria-label={linkCopied ? "copiado" : "copiar link"}
-                    title={linkCopied ? "copiado" : "copiar link"}
-                    style={{
-                      position: "absolute",
-                      top: 6,
-                      right: 6,
-                      width: 24,
-                      height: 24,
-                      background: "transparent",
-                      border: 0,
-                      padding: 0,
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <span style={{ position: "relative", width: 14, height: 14, display: "inline-block" }}>
-                      <Copy
-                        size={14}
-                        style={{
-                          position: "absolute",
-                          inset: 0,
-                          opacity: linkCopied ? 0 : 1,
-                          transition: "opacity 220ms ease",
-                          color: "var(--r-muted-dk, #585860)",
-                        }}
-                      />
-                      <Check
-                        size={14}
-                        style={{
-                          position: "absolute",
-                          inset: 0,
-                          opacity: linkCopied ? 1 : 0,
-                          transition: "opacity 220ms ease",
-                          color: "var(--r-text)",
-                        }}
-                      />
-                    </span>
-                  </button>
-                </div>
-                <div className="r-sub" style={{ fontStyle: "italic" }}>
-                  envie esse link pra quem você quer que responda.
-                </div>
-                <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-                  <span onClick={() => { setCreating(false); setCreatedUrl(null); }} style={{ fontFamily: "var(--r-font-sys)", fontSize: 12, color: "var(--r-text)", cursor: "pointer" }}>fechar</span>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {activeCount >= 8 && !creating && (
-          <div className="r-sub" style={{ textAlign: "center", fontStyle: "italic" }}>
-            limite de 8 convites por ciclo atingido.
-          </div>
-        )}
-
-        {/* Lista de invites */}
-
-        {!loading && invites.length === 0 && (
-          <div className="r-sub" style={{ textAlign: "center", padding: "20px 0" }}>
-            nenhum convite ainda. clique em "novo convite" pra começar.
-          </div>
-        )}
-
-        {!loading && invites.length > 0 && (
-          <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 9, color: "var(--r-ghost)", letterSpacing: "0.12em", marginTop: 8 }}>
-            {submittedCount} respondidos · {activeCount} ativos · {invites.length} no total
-          </div>
-        )}
-
-        {!loading && (() => {
-          const anonCount = invites.filter(i => i.status === "submitted" && i.reveal_identity === false).length;
-          if (anonCount === 0) return null;
-          return (
-            <div style={{
-              marginTop: 12,
-              padding: "10px 12px",
-              border: "0.5px solid var(--r-ghost)",
-              borderLeft: "2px solid var(--r-ghost)",
-              fontFamily: "var(--r-font-ed)",
-              fontSize: 12,
-              lineHeight: 1.6,
-              color: "var(--r-muted)",
-              fontStyle: "italic",
-            }}>
-              {anonCount === 1 ? "1 pessoa optou" : `${anonCount} pessoas optaram`} por anonimato. As respostas escritas não aparecem aqui, mas estão sendo lidas pelo sistema e participam da sua leitura profunda.
-            </div>
-          );
-        })()}
-
-        {!loading && invites.map(inv => {
-          const VALID_QIDS = new Set(["calibration", "q1", "q2", "q3", "q4", "q5"]);
-          const respList = (responses[inv.id] ?? []).filter(r => VALID_QIDS.has(r.question_id));
-          const respCount = respList.length;
-          const expectedTotal = 6; // calibration + 5 perguntas
-          const showDetails = expanded === inv.id;
-          const canShowResponses = inv.status === "submitted" && inv.reveal_identity === true;
-
-          // Display do nome:
-          // - submitted + reveal=true → nome capitalizado
-          // - submitted + reveal=false → "respondeu sem se identificar"
-          // - pending → "aguardando resposta"
-          // - revoked → "—"
-          const displayName =
-            inv.status === "submitted"
-              ? (inv.reveal_identity === true && inv.responder_name
-                  ? capitalizeName(inv.responder_name)
-                  : "respondeu sem se identificar")
-              : inv.status === "pending"
-                ? "convite aguardando"
-                : "—";
-
-          return (
-            <div key={inv.id} style={{ borderTop: "1px solid var(--r-ghost)", paddingTop: 14, paddingBottom: 4 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 12, color: "var(--r-text)", letterSpacing: "0.04em" }}>
-                    {displayName}
-                  </div>
-                  <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 10, color: "var(--r-muted)", marginTop: 2 }}>
-                    {statusLabel(inv.status)}
-                    {inv.status === "submitted" && respCount > 0 && ` · ${respCount}/${expectedTotal} respostas`}
-                    {inv.question_set && ` · grupo ${inv.question_set === "alpha" ? "α" : "β"}`}
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                  {inv.status === "pending" && (
-                    <>
-                      <span onClick={() => copyUrl(inv.token)} style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--r-muted)", cursor: "pointer" }} title="copiar link">copiar link</span>
-                      <span onClick={() => revokeInvite(inv.id)} style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--terracota, #b85a3e)", cursor: "pointer" }}>revogar</span>
-                    </>
-                  )}
-                  {canShowResponses && (
-                    <span onClick={() => setExpanded(showDetails ? null : inv.id)} style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--r-text)", cursor: "pointer", letterSpacing: "0.04em" }}>
-                      {showDetails ? "fechar" : "ver respostas"}
-                    </span>
-                  )}
-                </div>
+            {/* KPIs */}
+            {!loading && invites.length > 0 && (
+              <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 9, color: "var(--r-ghost)", letterSpacing: "0.12em" }}>
+                {submittedCount} respondidos · {activeCount} ativos · {invites.length} no total
               </div>
+            )}
 
-              {showDetails && canShowResponses && (
-                <div style={{ marginTop: 12, padding: "12px 14px", background: "rgba(0,0,0,0.02)", borderLeft: "1px solid var(--r-ghost)" }}>
-                  {respList.map(r => (
-                    <div key={r.question_id} style={{ marginBottom: 12, fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--r-text)" }}>
-                      <div style={{ color: "var(--r-muted)", letterSpacing: "0.06em", marginBottom: 4 }}>
-                        {r.question_id}
-                        {r.scale_value !== null && ` · escala: ${r.scale_value}/5`}
-                      </div>
-                      {r.episode_text && <div style={{ marginBottom: 4, lineHeight: 1.5 }}>{r.episode_text}</div>}
-                      {r.open_text && <div style={{ fontStyle: "italic", color: "var(--r-muted)" }}>{r.open_text}</div>}
-                    </div>
-                  ))}
-                  {/* W20.5b: mini-insight do terceiro NÃO aparece pro user — é só do terceiro */}
+            {/* Botões minimalistas */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+              {activeCount < 8 && !creating && (
+                <div
+                  style={minimalBtn}
+                  onClick={() => { setCreating(true); setCreatedUrl(null); createInvite(); }}
+                >
+                  <div style={minimalBtnLine} />
+                  <span style={minimalBtnLabel}>+ novo convite</span>
+                </div>
+              )}
+              {activeCount >= 8 && !creating && (
+                <div className="r-sub" style={{ fontStyle: "italic", padding: "10px 0" }}>
+                  limite de 8 convites por ciclo atingido.
+                </div>
+              )}
+
+              {invites.length > 0 && (
+                <div style={minimalBtn} onClick={() => setView("history")}>
+                  <div style={minimalBtnLine} />
+                  <span style={minimalBtnLabel}>convites enviados ›</span>
                 </div>
               )}
             </div>
-          );
-        })}
+
+            {/* Painel de criação (após click "novo convite") */}
+            {creating && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "12px 16px", border: "1px solid var(--r-ghost)", maxWidth: 480, marginLeft: "auto", marginRight: "auto", width: "100%" }}>
+                {!createdUrl && (
+                  <>
+                    <div className="r-sub" style={{ fontStyle: "italic" }}>gerando link...</div>
+                    {errorMsg && <div style={{ color: "var(--terracota, #b85a3e)", fontSize: 12 }}>{errorMsg}</div>}
+                  </>
+                )}
+                {createdUrl && (
+                  <>
+                    <div className="r-sub">link gerado e copiado pra área de transferência:</div>
+                    <div style={{ position: "relative", fontFamily: "monospace", fontSize: 11, padding: "8px 36px 8px 8px", background: "var(--r-bg)", border: "1px dashed var(--r-ghost)", wordBreak: "break-all" }}>
+                      {createdUrl}
+                      <button
+                        type="button"
+                        onClick={copyCreatedUrl}
+                        aria-label={linkCopied ? "copiado" : "copiar link"}
+                        title={linkCopied ? "copiado" : "copiar link"}
+                        style={{
+                          position: "absolute", top: 6, right: 6, width: 24, height: 24,
+                          background: "transparent", border: 0, padding: 0,
+                          cursor: "pointer", display: "inline-flex",
+                          alignItems: "center", justifyContent: "center",
+                        }}
+                      >
+                        <span style={{ position: "relative", width: 14, height: 14, display: "inline-block" }}>
+                          <Copy size={14} style={{ position: "absolute", inset: 0, opacity: linkCopied ? 0 : 1, transition: "opacity 220ms ease", color: "var(--r-muted-dk, #585860)" }} />
+                          <Check size={14} style={{ position: "absolute", inset: 0, opacity: linkCopied ? 1 : 0, transition: "opacity 220ms ease", color: "var(--r-text)" }} />
+                        </span>
+                      </button>
+                    </div>
+                    <div className="r-sub" style={{ fontStyle: "italic" }}>
+                      envie esse link pra quem você quer que responda.
+                    </div>
+                    <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+                      <span onClick={() => { setCreating(false); setCreatedUrl(null); }} style={{ fontFamily: "var(--r-font-sys)", fontSize: 12, color: "var(--r-text)", cursor: "pointer" }}>fechar</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* History view — convites agrupados por ciclo, cada ciclo expansível */}
+        {contentVisible && view === "history" && (
+          <>
+            <div style={minimalBtn} onClick={() => { setView("main"); setOpenCycle(null); }}>
+              <span style={{ ...minimalBtnLabel, color: "var(--r-muted)" }}>‹ voltar</span>
+            </div>
+
+            <div style={{ height: 1, background: "var(--r-ghost)", opacity: 0.4 }} />
+
+            {!loading && invites.length === 0 && (
+              <div className="r-sub" style={{ textAlign: "center", padding: "20px 0" }}>
+                nenhum convite enviado ainda.
+              </div>
+            )}
+
+            {groupsByCycle.map(([cycleNumber, invs]) => {
+              const isOpen = openCycle === cycleNumber;
+              const respondedInCycle = invs.filter((i) => i.status === "submitted").length;
+              return (
+                <div key={cycleNumber} style={{ borderTop: "0.5px solid var(--r-ghost)", paddingTop: 12 }}>
+                  <div
+                    style={{ ...minimalBtn, padding: "10px 0" }}
+                    onClick={() => setOpenCycle(isOpen ? null : cycleNumber)}
+                  >
+                    <div style={minimalBtnLine} />
+                    <span style={minimalBtnLabel}>
+                      ciclo c{cycleNumber} · {invs.length} convites · {respondedInCycle} respondidos {isOpen ? "▾" : "▸"}
+                    </span>
+                  </div>
+
+                  {isOpen && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingLeft: 12, paddingBottom: 10 }}>
+                      {invs.map((inv) => {
+                        const VALID_QIDS = new Set(["calibration", "q1", "q2", "q3", "q4", "q5"]);
+                        const respList = (responses[inv.id] ?? []).filter((r) => VALID_QIDS.has(r.question_id));
+                        const respCount = respList.length;
+                        const expectedTotal = 6;
+                        const showDetails = expanded === inv.id;
+                        const canShowResponses = inv.status === "submitted" && inv.reveal_identity === true;
+                        const displayName =
+                          inv.status === "submitted"
+                            ? inv.reveal_identity === true && inv.responder_name
+                              ? capitalizeName(inv.responder_name)
+                              : "respondeu sem se identificar"
+                            : inv.status === "pending"
+                              ? "convite aguardando"
+                              : "—";
+
+                        return (
+                          <div key={inv.id} style={{ paddingTop: 8, paddingBottom: 4 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 12, color: "var(--r-text)", letterSpacing: "0.04em" }}>
+                                  {displayName}
+                                </div>
+                                <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 10, color: "var(--r-muted)", marginTop: 2 }}>
+                                  {statusLabel(inv.status)}
+                                  {inv.status === "submitted" && respCount > 0 && ` · ${respCount}/${expectedTotal} respostas`}
+                                  {inv.question_set && ` · grupo ${inv.question_set === "alpha" ? "α" : "β"}`}
+                                </div>
+                              </div>
+                              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                                {inv.status === "pending" && (
+                                  <>
+                                    <span onClick={() => copyUrl(inv.token)} style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--r-muted)", cursor: "pointer" }} title="copiar link">copiar link</span>
+                                    <span onClick={() => revokeInvite(inv.id)} style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--terracota, #b85a3e)", cursor: "pointer" }}>revogar</span>
+                                  </>
+                                )}
+                                {canShowResponses && (
+                                  <span onClick={() => setExpanded(showDetails ? null : inv.id)} style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--r-text)", cursor: "pointer", letterSpacing: "0.04em" }}>
+                                    {showDetails ? "fechar" : "ver respostas"}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {showDetails && canShowResponses && (
+                              <div style={{ marginTop: 12, padding: "12px 14px", background: "rgba(0,0,0,0.02)", borderLeft: "1px solid var(--r-ghost)" }}>
+                                {respList.map((r) => (
+                                  <div key={r.question_id} style={{ marginBottom: 12, fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--r-text)" }}>
+                                    <div style={{ color: "var(--r-muted)", letterSpacing: "0.06em", marginBottom: 4 }}>
+                                      {r.question_id}
+                                      {r.scale_value !== null && ` · escala: ${r.scale_value}/5`}
+                                    </div>
+                                    {r.episode_text && <div style={{ marginBottom: 4, lineHeight: 1.5 }}>{r.episode_text}</div>}
+                                    {r.open_text && <div style={{ fontStyle: "italic", color: "var(--r-muted)" }}>{r.open_text}</div>}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </>
+        )}
       </div>
 
       <div className="r-line" />

@@ -9,7 +9,12 @@
 export type FlowDestination = "pills" | "questionnaire" | "reed" | "context";
 
 export interface FlowPool {
-  diablo: string[];
+  /** Frases gerais (usado quando A/B não estão definidos). */
+  diablo?: string[];
+  /** Pra reed: linha 1 só pode vir desse grupo (todas começam com "reed"). */
+  diabloA?: string[];
+  /** Pra reed: linha 2 só pode vir desse grupo (não começa com "reed"). */
+  diabloB?: string[];
   hints: string[];
 }
 
@@ -55,15 +60,26 @@ const POOLS: Record<FlowDestination, FlowPool> = {
   },
 
   reed: {
-    diablo: [
+    // Linha 1 sempre começa com "reed", linha 2 nunca — evita repetição visual.
+    diabloA: [
       "reed presta atenção.",
       "reed não julga.",
       "reed lê com você.",
-      "pode falar por texto ou áudio.",
       "reed não dá conselhos.",
       "reed devolve perguntas.",
-      "fica entre vocês.",
       "reed não tem pressa.",
+      "reed escuta antes.",
+      "reed pergunta. você responde.",
+    ],
+    diabloB: [
+      "fala por texto ou áudio.",
+      "tudo fica entre vocês.",
+      "não há pressa.",
+      "uma escuta atenta, sem juízo.",
+      "espaço pra pensar em voz alta.",
+      "perguntas que abrem perguntas.",
+      "sem conselhos. só presença.",
+      "leitura junto, não por você.",
     ],
     hints: [
       "comece a conversa.",
@@ -112,13 +128,33 @@ export function pickFlowVoice(dest: FlowDestination): {
   pool: string[];
   hint: string;
 } {
-  const diabloPool = POOLS[dest].diablo;
-  const shuffled = [...diabloPool].sort(() => Math.random() - 0.5);
-  const diablo1 = shuffled[0] ?? "";
-  const diablo2 = shuffled[1] ?? shuffled[0] ?? "";
-  const extras = shuffled.slice(2);
-  const pool = shuffled;
-  const hint = pickRandom(POOLS[dest].hints);
+  const def = POOLS[dest];
+
+  let diablo1: string;
+  let diablo2: string;
+  let extras: string[];
+  let pool: string[];
+
+  if (def.diabloA && def.diabloB) {
+    // Categorizado A/B: linha 1 só de A, linha 2 só de B (evita repetição).
+    diablo1 = pickRandom(def.diabloA);
+    diablo2 = pickRandom(def.diabloB);
+    const allOthers = [
+      ...def.diabloA.filter((p) => p !== diablo1),
+      ...def.diabloB.filter((p) => p !== diablo2),
+    ];
+    extras = allOthers.sort(() => Math.random() - 0.5);
+    pool = [diablo1, diablo2, ...extras];
+  } else {
+    const diabloPool = def.diablo ?? [];
+    const shuffled = [...diabloPool].sort(() => Math.random() - 0.5);
+    diablo1 = shuffled[0] ?? "";
+    diablo2 = shuffled[1] ?? shuffled[0] ?? "";
+    extras = shuffled.slice(2);
+    pool = shuffled;
+  }
+
+  const hint = pickRandom(def.hints);
   return { diablo1, diablo2, extras, pool, hint };
 }
 

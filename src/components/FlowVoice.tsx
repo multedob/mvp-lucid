@@ -22,6 +22,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useFlow } from "@/hooks/useFlow";
 import SystemTerminalLine from "./SystemTerminalLine";
+import SystemCyclingLine from "./SystemCyclingLine";
 
 const FADE_OUT_MS = 400;
 
@@ -35,7 +36,8 @@ const A_TYPE_BUFFER_MS = 1500;
 const B_LINE2_DELAY_MS = 2000;        // entrada da linha 2 após mount
 const B_STEP_MS = 3500;                // intervalo entre substituições (cobre reverse + forward)
 const B_FORWARD_CHAR_MS = 30;
-const B_REVERSE_CHAR_MS = 18;
+// Reverse não tem charDelay próprio — usa o mesmo tick do forward mas remove
+// 2 chars por tick (efetivo ~15ms/char).
 const B_HINT_TYPE_MS = 1500;
 const B_HINT_HOLD_MS = 2700;
 
@@ -45,97 +47,9 @@ export const FLOW_HINT_DELAY_MS = 300;
 export const FLOW_CONTENT_DELAY_MS =
   A_LINE_DELAY_MS * 2 + A_TYPE_BUFFER_MS + 200; // ~5300ms
 
-// ─── CyclingLine (Modo B) ───────────────────────────────────────────
-// Linha que faz typewriter forward na entrada e reverse + forward ao trocar texto.
-// Phase é DERIVADO do estado (displayed vs target) — não usa state machine que
-// pode descincronizar. Usa requestAnimationFrame com tracking de timestamp pra
-// distinguir velocidade forward/reverse.
-
-function CyclingLine({ text: rawText }: { text: string }) {
-  // Voz do sistema é SEMPRE minúscula.
-  const text = rawText.toLowerCase();
-  const [displayed, setDisplayed] = useState("");
-  const targetRef = useRef(text);
-
-  // Atualiza o target quando text muda. Loop reage automaticamente via comparação.
-  useEffect(() => {
-    targetRef.current = text;
-  }, [text]);
-
-  // Animation loop único, baseado em RAF + timestamp. Phase derivado a cada tick.
-  useEffect(() => {
-    let cancelled = false;
-    let lastTickTs = 0;
-    let raf = 0;
-
-    const animate = (now: number) => {
-      if (cancelled) return;
-
-      setDisplayed((prev) => {
-        const target = targetRef.current;
-        // Phase derivado:
-        //   prev === target              → shown (parado)
-        //   target.startsWith(prev)      → forward (digitar próximo char)
-        //   senão                        → reverse (apagar último char)
-        const phase: "forward" | "shown" | "reverse" =
-          prev === target
-            ? "shown"
-            : target.startsWith(prev)
-              ? "forward"
-              : "reverse";
-
-        if (phase === "shown") return prev;
-
-        const required =
-          phase === "reverse" ? B_REVERSE_CHAR_MS : B_FORWARD_CHAR_MS;
-        if (now - lastTickTs < required) return prev;
-
-        lastTickTs = now;
-        if (phase === "forward") {
-          return target.slice(0, prev.length + 1);
-        }
-        return prev.slice(0, -1);
-      });
-
-      raf = requestAnimationFrame(animate);
-    };
-
-    raf = requestAnimationFrame(animate);
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(raf);
-    };
-  }, []);
-
-  const isShown = displayed === text;
-  const hasContent = displayed.length > 0 || !isShown;
-
-  return (
-    <div
-      style={{
-        fontFamily: "var(--r-font-sys)",
-        fontWeight: 300,
-        fontSize: 11,
-        lineHeight: 1.7,
-        color: "var(--r-voice-sys)",
-        letterSpacing: "0.04em",
-        whiteSpace: "pre-wrap",
-        margin: 0,
-        minHeight: `${Math.round(11 * 1.7)}px`,
-      }}
-    >
-      {hasContent && (
-        <>
-          <span aria-hidden="true">{"> "}</span>
-          {displayed}
-          {!isShown && (
-            <span style={{ display: "inline-block", marginLeft: 2 }}>█</span>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
+// CyclingLine extraído pra ./SystemCyclingLine.tsx — reusado aqui e em
+// outros lugares (ex: ContextThirdParty).
+const CyclingLine = SystemCyclingLine;
 
 // ─── Modo A ─────────────────────────────────────────────────────────
 
