@@ -56,12 +56,14 @@ function prefersReducedMotion(): boolean {
 }
 
 export default function SystemTerminalLine({
-  text,
+  text: rawText,
   showCursor = true,
   fontSize = DEFAULT_FONT_SIZE,
   charDelayMs = DEFAULT_CHAR_DELAY,
   delayMs = 0,
 }: SystemTerminalLineProps) {
+  // Voz do sistema é SEMPRE minúscula (regra do design).
+  const text = rawText.toLowerCase();
   const [displayed, setDisplayed] = useState("");
   const [started, setStarted] = useState(false);
   const [done, setDone] = useState(false);

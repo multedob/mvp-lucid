@@ -51,14 +51,16 @@ function prefersReducedMotion(): boolean {
 }
 
 export default function SystemTerminalCounter({
-  prefix,
-  value,
+  prefix: rawPrefix,
+  value: rawValue,
   fontSize = DEFAULT_FONT_SIZE,
   charDelayMs = DEFAULT_CHAR_DELAY,
   showCursor = true,
   delayMs = 0,
 }: SystemTerminalCounterProps) {
-  const valueStr = String(value);
+  // Voz do sistema é SEMPRE minúscula.
+  const prefix = rawPrefix.toLowerCase();
+  const valueStr = String(rawValue).toLowerCase();
   const [displayedPrefix, setDisplayedPrefix] = useState("");
   const [displayedValue, setDisplayedValue] = useState("");
   const [started, setStarted] = useState(false);

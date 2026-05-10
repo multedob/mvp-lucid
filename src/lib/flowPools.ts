@@ -13,16 +13,19 @@ export interface FlowPool {
   hints: string[];
 }
 
+// Frases curtas (≤ 38 chars) pra evitar quebra de linha em mobile.
+// Tudo lowercase — voz do sistema é sempre minúscula.
 const POOLS: Record<FlowDestination, FlowPool> = {
   pills: {
     diablo: [
-      "As pills são leituras curtas. Você reage, o sistema escuta.",
-      "Cada pill representa uma dimensão da sua estrutura.",
-      "As pills alimentam o sistema e revelam padrões.",
-      "Pode usar áudio com o Reed em vez de texto, se for mais natural.",
-      "Não há pill certa. Comece pela que te chamar.",
-      "Uma pill leva alguns minutos. Sem pressa.",
-      "Você pode interromper uma pill. Ela fica salva onde parou.",
+      "pills são leituras curtas.",
+      "você reage. o sistema escuta.",
+      "cada pill é uma dimensão sua.",
+      "pills revelam padrões.",
+      "não há pill certa.",
+      "comece pela que te chamar.",
+      "uma pill leva poucos minutos.",
+      "pode pausar. fica salvo.",
     ],
     hints: [
       "escolha uma pill para começar.",
@@ -33,49 +36,54 @@ const POOLS: Record<FlowDestination, FlowPool> = {
 
   questionnaire: {
     diablo: [
-      "O questionário tem 18 blocos em 4 dimensões.",
-      "Você pode pausar o questionário. Ele guarda onde parou.",
-      "Não há resposta certa. Há a sua.",
-      "Cada pergunta abre um pouco da sua estrutura.",
-      "Responda no seu ritmo. Não é prova.",
-      "O questionário não te define — só te lê.",
-      "Quanto mais honesto, mais nítida a leitura.",
+      "18 blocos em 4 dimensões.",
+      "pode pausar. fica salvo.",
+      "não há resposta certa.",
+      "há a sua resposta.",
+      "cada pergunta abre algo.",
+      "responda no seu ritmo.",
+      "não é prova.",
+      "honestidade afia a leitura.",
+      "o questionário não te define.",
+      "ele só te lê.",
     ],
     hints: [
       "perguntas restantes: 16",
-      "responda no seu ritmo. pode pausar e voltar.",
-      "abrindo as perguntas pendentes.",
+      "responda no seu ritmo.",
+      "abrindo o questionário.",
     ],
   },
 
   reed: {
     diablo: [
-      "Reed presta atenção, mas não julga.",
-      "O Reed lê com você, não por você.",
-      "Você pode falar com o Reed por texto ou áudio.",
-      "O Reed não dá conselhos. Ele devolve perguntas.",
-      "O que você diz ao Reed fica entre vocês.",
-      "Reed não tem pressa. Você também não precisa ter.",
+      "reed presta atenção.",
+      "reed não julga.",
+      "reed lê com você.",
+      "pode falar por texto ou áudio.",
+      "reed não dá conselhos.",
+      "reed devolve perguntas.",
+      "fica entre vocês.",
+      "reed não tem pressa.",
     ],
     hints: [
       "comece a conversa.",
-      "o Reed está pronto.",
-      "fale com o Reed.",
+      "o reed está pronto.",
+      "fale com o reed.",
     ],
   },
 
   context: {
     diablo: [
-      "Padrões só aparecem com repetição.",
-      "Sua leitura se aprofunda com o tempo, não com a pressa.",
-      "O contexto mostra o que se repete em você.",
-      "Quanto mais ciclos, mais camadas aparecem.",
-      "O rdwth amadurece com você ao longo dos ciclos.",
-      "A leitura de hoje é só uma camada.",
+      "padrões aparecem com repetição.",
+      "sua leitura aprofunda com tempo.",
+      "contexto mostra o que se repete.",
+      "mais ciclos, mais camadas.",
+      "o rdwth amadurece com você.",
+      "hoje é só uma camada.",
     ],
     hints: [
       "leitura do seu ciclo.",
-      "abrindo a sua estrutura recente.",
+      "abrindo sua estrutura recente.",
       "o que o sistema viu até aqui.",
     ],
   },

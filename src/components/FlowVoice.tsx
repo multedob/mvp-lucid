@@ -46,51 +46,69 @@ export const FLOW_CONTENT_DELAY_MS =
   A_LINE_DELAY_MS * 2 + A_TYPE_BUFFER_MS + 200; // ~5300ms
 
 // ─── CyclingLine (Modo B) ───────────────────────────────────────────
-// Linha que faz typewriter forward na entrada e reverse + forward ao trocar de texto.
+// Linha que faz typewriter forward na entrada e reverse + forward ao trocar texto.
+// Phase é DERIVADO do estado (displayed vs target) — não usa state machine que
+// pode descincronizar. Usa requestAnimationFrame com tracking de timestamp pra
+// distinguir velocidade forward/reverse.
 
-type LinePhase = "forward" | "shown" | "reverse";
-
-function CyclingLine({ text }: { text: string }) {
+function CyclingLine({ text: rawText }: { text: string }) {
+  // Voz do sistema é SEMPRE minúscula.
+  const text = rawText.toLowerCase();
   const [displayed, setDisplayed] = useState("");
-  const [phase, setPhase] = useState<LinePhase>("forward");
   const targetRef = useRef(text);
 
+  // Atualiza o target quando text muda. Loop reage automaticamente via comparação.
   useEffect(() => {
     targetRef.current = text;
-    setPhase((current) => (current === "shown" ? "reverse" : current));
   }, [text]);
 
+  // Animation loop único, baseado em RAF + timestamp. Phase derivado a cada tick.
   useEffect(() => {
-    if (phase === "shown") return;
-    const delay = phase === "reverse" ? B_REVERSE_CHAR_MS : B_FORWARD_CHAR_MS;
-    const interval = window.setInterval(() => {
-      if (phase === "forward") {
-        setDisplayed((prev) => {
-          const target = targetRef.current;
-          if (prev === target) {
-            setPhase("shown");
-            return prev;
-          }
-          if (target.startsWith(prev)) {
-            return target.slice(0, prev.length + 1);
-          }
-          setPhase("reverse");
-          return prev;
-        });
-      } else {
-        setDisplayed((prev) => {
-          if (prev.length === 0) {
-            setPhase("forward");
-            return prev;
-          }
-          return prev.slice(0, -1);
-        });
-      }
-    }, delay);
-    return () => window.clearInterval(interval);
-  }, [phase]);
+    let cancelled = false;
+    let lastTickTs = 0;
+    let raf = 0;
 
-  const hasContent = displayed.length > 0 || phase !== "shown";
+    const animate = (now: number) => {
+      if (cancelled) return;
+
+      setDisplayed((prev) => {
+        const target = targetRef.current;
+        // Phase derivado:
+        //   prev === target              → shown (parado)
+        //   target.startsWith(prev)      → forward (digitar próximo char)
+        //   senão                        → reverse (apagar último char)
+        const phase: "forward" | "shown" | "reverse" =
+          prev === target
+            ? "shown"
+            : target.startsWith(prev)
+              ? "forward"
+              : "reverse";
+
+        if (phase === "shown") return prev;
+
+        const required =
+          phase === "reverse" ? B_REVERSE_CHAR_MS : B_FORWARD_CHAR_MS;
+        if (now - lastTickTs < required) return prev;
+
+        lastTickTs = now;
+        if (phase === "forward") {
+          return target.slice(0, prev.length + 1);
+        }
+        return prev.slice(0, -1);
+      });
+
+      raf = requestAnimationFrame(animate);
+    };
+
+    raf = requestAnimationFrame(animate);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  const isShown = displayed === text;
+  const hasContent = displayed.length > 0 || !isShown;
 
   return (
     <div
@@ -110,7 +128,7 @@ function CyclingLine({ text }: { text: string }) {
         <>
           <span aria-hidden="true">{"> "}</span>
           {displayed}
-          {phase !== "shown" && (
+          {!isShown && (
             <span style={{ display: "inline-block", marginLeft: 2 }}>█</span>
           )}
         </>
