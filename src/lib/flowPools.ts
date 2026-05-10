@@ -88,20 +88,30 @@ function pickRandom<T>(pool: T[], excluding: T[] = []): T {
 }
 
 /**
- * Sorteia voz do flow pra um destino:
- * - pool: lista de frases shuffled. Linhas alternam consumindo o pool em sequência —
- *         linha 1 = pool[0], linha 2 = pool[1], linha 1 = pool[2] (substitui), etc.
- *         Loop ao esgotar.
- * - hint: frase final (substitui as 2 linhas quando dataReady).
+ * Sorteia voz do flow pra um destino. Retorna ambos formatos pra suportar
+ * Modo A (Pills/Reed/Context — 3 linhas empilhadas) e Modo B (Questionnaire —
+ * zig-zag com typewriter reverso).
+ *
+ * Modo A usa: diablo1 (linha 1), diablo2 (linha 2), extras (rotação na linha 3),
+ *             hint (substitui linha 3 quando ready).
+ * Modo B usa: pool (consumido em sequência alternando linha 1 / linha 2),
+ *             hint (entra como 3ª linha NOVA abaixo quando ready).
  */
 export function pickFlowVoice(dest: FlowDestination): {
+  diablo1: string;
+  diablo2: string;
+  extras: string[];
   pool: string[];
   hint: string;
 } {
   const diabloPool = POOLS[dest].diablo;
-  const pool = [...diabloPool].sort(() => Math.random() - 0.5);
+  const shuffled = [...diabloPool].sort(() => Math.random() - 0.5);
+  const diablo1 = shuffled[0] ?? "";
+  const diablo2 = shuffled[1] ?? shuffled[0] ?? "";
+  const extras = shuffled.slice(2);
+  const pool = shuffled;
   const hint = pickRandom(POOLS[dest].hints);
-  return { pool, hint };
+  return { diablo1, diablo2, extras, pool, hint };
 }
 
 /** Map de path → destino do flow. */

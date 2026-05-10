@@ -38,21 +38,17 @@ export default function Pills() {
   const [loading, setLoading] = useState(true);
 
   useShell({ section: "pills", active: "pills" });
-  const { markFlowReady, hintShown } = useFlow();
+  const { markFlowReady } = useFlow();
 
   // Cascade: lista entra com fade após voz sistema falar.
   // Sem flow: 2700ms (espera voz própria).
-  // Com flow: arma timer quando hintShown (sistema já chegou na hint).
+  // Com flow: delay fixo desde mount (FLOW_CONTENT_DELAY_MS ~ 5300ms = típico Modo A).
   const [listVisible, setListVisible] = useState(false);
   useEffect(() => {
-    if (!fromFlow) {
-      const t = window.setTimeout(() => setListVisible(true), 2700);
-      return () => window.clearTimeout(t);
-    }
-    if (!hintShown) return;
-    const t = window.setTimeout(() => setListVisible(true), FLOW_CONTENT_DELAY_MS);
+    const delay = fromFlow ? FLOW_CONTENT_DELAY_MS : 2700;
+    const t = window.setTimeout(() => setListVisible(true), delay);
     return () => window.clearTimeout(t);
-  }, [fromFlow, hintShown]);
+  }, [fromFlow]);
 
   useEffect(() => { loadCycle(); }, []);
 

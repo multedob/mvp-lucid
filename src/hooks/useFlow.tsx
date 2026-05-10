@@ -25,9 +25,15 @@ export interface FlowSnapshot {
   dest: FlowDestination;
   /** Path final após animação */
   path: string;
-  /** Pool shuffled — linhas alternam consumindo em sequência (loop ao esgotar) */
+  /** Modo A — linha 1 fixa */
+  diablo1: string;
+  /** Modo A — linha 2 fixa */
+  diablo2: string;
+  /** Modo A — pool de extras rotacionando na linha 3 */
+  extras: string[];
+  /** Modo B (questionnaire) — pool consumido em zig-zag */
   pool: string[];
-  /** Frase contextual final que substitui as 2 linhas quando dataReady */
+  /** Frase contextual final */
   hint: string;
 }
 

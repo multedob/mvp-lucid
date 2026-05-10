@@ -12,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { callEdgeFunction, getCurrentUserVersion } from '@/lib/api'
 import { useShell } from '@/hooks/useShell'
 import { useFlow } from '@/hooks/useFlow'
-import { FLOW_CONTENT_DELAY_MS } from '@/components/FlowVoice'
+import { FLOW_HINT_DELAY_MS } from '@/components/FlowVoice'
 import { triggerDeepReadingRefresh } from '@/lib/deepReading'
 import { QUESTIONS, getQuestionText, type BlockId } from '@/data/questions'
 import { AudioRecorder } from '@/components/AudioRecorder'
@@ -190,15 +190,15 @@ export default function Questionnaire() {
 
   // Cascade.
   // Sem flow: cadência original (3500/4200/5000) que espera a voz própria da página.
-  // Com flow: aguarda hintShown (sistema chegou na hint final); pergunta entra
-  // após FLOW_CONTENT_DELAY_MS, input +700ms, pulse áudio +1500ms.
+  // Com flow (Modo B): aguarda hintShown (linha 3 hint apareceu); pergunta entra
+  // logo abaixo (FLOW_HINT_DELAY_MS), input +700ms, pulse áudio +1500ms.
   useEffect(() => {
     if (cascadeArmedRef.current) return
     if (fromFlow && !hintShown) return
     cascadeArmedRef.current = true
-    const qDelay = fromFlow ? FLOW_CONTENT_DELAY_MS : 3500
-    const iDelay = fromFlow ? FLOW_CONTENT_DELAY_MS + 700 : 4200
-    const aDelay = fromFlow ? FLOW_CONTENT_DELAY_MS + 1500 : 5000
+    const qDelay = fromFlow ? FLOW_HINT_DELAY_MS : 3500
+    const iDelay = fromFlow ? FLOW_HINT_DELAY_MS + 700 : 4200
+    const aDelay = fromFlow ? FLOW_HINT_DELAY_MS + 1500 : 5000
 
     const t1 = window.setTimeout(() => setQuestionReady(true), qDelay)
     const t2 = window.setTimeout(() => setInputReady(true), iDelay)

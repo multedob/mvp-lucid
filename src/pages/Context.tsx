@@ -721,7 +721,7 @@ export default function Context() {
 
   // Section "contexto" como default — sub-componentes sobrescrevem com section própria.
   useShell({ section: "contexto", active: "context" });
-  const { markFlowReady, hintShown } = useFlow();
+  const { markFlowReady } = useFlow();
 
   const [cycles, setCycles] = useState<CycleData[]>([]);
   const [selectedIdx, setSelectedIdx] = useState(0);
@@ -740,18 +740,14 @@ export default function Context() {
   useEffect(() => { loadCycles(); }, []);
 
   // Cascade. Sem flow: 2700ms (espera voz própria).
-  // Com flow: aguarda hintShown (sistema chegou na hint), depois FLOW_CONTENT_DELAY_MS.
+  // Com flow: delay fixo desde mount (Modo A — 3 frases empilhadas + hint).
   // IMPORTANTE: hooks DEVEM estar antes de qualquer return condicional (regra dos hooks).
   const [canvasVisible, setCanvasVisible] = useState(false);
   useEffect(() => {
-    if (!fromFlow) {
-      const t = window.setTimeout(() => setCanvasVisible(true), 2700);
-      return () => window.clearTimeout(t);
-    }
-    if (!hintShown) return;
-    const t = window.setTimeout(() => setCanvasVisible(true), FLOW_CONTENT_DELAY_MS);
+    const delay = fromFlow ? FLOW_CONTENT_DELAY_MS : 2700;
+    const t = window.setTimeout(() => setCanvasVisible(true), delay);
     return () => window.clearTimeout(t);
-  }, [fromFlow, hintShown]);
+  }, [fromFlow]);
 
   // Sinaliza ao FlowVoice quando dados do Context carregaram
   useEffect(() => {

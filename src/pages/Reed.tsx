@@ -151,7 +151,7 @@ export default function Reed() {
   const abortRef = useRef<AbortController | null>(null)
 
   useShell({ section: "reed", active: "reed" })
-  const { markFlowReady, hintShown } = useFlow()
+  const { markFlowReady } = useFlow()
 
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -160,14 +160,13 @@ export default function Reed() {
   const [loadingScreenDone, setLoadingScreenDone] = useState(fromFlow)
 
   // Quando vem do flow, welcome do Reed entra DEPOIS do sistema parar de falar.
-  // Espera hintShown (sistema chegou na hint) + FLOW_CONTENT_DELAY_MS.
+  // Modo A — delay fixo desde mount (~5300ms cobre 3 frases empilhadas + hint).
   const [chatVisible, setChatVisible] = useState(!fromFlow)
   useEffect(() => {
     if (!fromFlow) return
-    if (!hintShown) return
     const t = window.setTimeout(() => setChatVisible(true), FLOW_CONTENT_DELAY_MS)
     return () => window.clearTimeout(t)
-  }, [fromFlow, hintShown])
+  }, [fromFlow])
 
   // Sinaliza pro FlowVoice que os dados do Reed carregaram
   useEffect(() => {
