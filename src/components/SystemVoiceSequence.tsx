@@ -243,9 +243,9 @@ export default function SystemVoiceSequence({
       {computed.map((slot, idx) => {
         const isHint = idx === hintIdx;
         // Width final do span first (compensa letter-spacing 0.04em com +2ch)
-        const firstWidth = `calc(${slot.first.text.length}ch + 2ch)`;
+        const firstWidth = `calc(${slot.first.text.length}ch + 3ch)`;
         const secondWidth = slot.second
-          ? `calc(${slot.second.text.length}ch + 2ch)`
+          ? `calc(${slot.second.text.length}ch + 3ch)`
           : undefined;
 
         // Animation do span first: forward sempre, + opcional reverse + disappear final.
@@ -380,7 +380,7 @@ export default function SystemVoiceSequence({
                     verticalAlign: "bottom",
                     width: 0,
                     animation: `rdwth-voice-fwd ${slot.third.typeMs}ms steps(${slot.third.text.length || 1}) ${slot.third.startMs}ms forwards`,
-                    ["--rdwth-w" as keyof React.CSSProperties as string]: `calc(${slot.third.text.length}ch + 2ch)`,
+                    ["--rdwth-w" as keyof React.CSSProperties as string]: `calc(${slot.third.text.length}ch + 3ch)`,
                   } as React.CSSProperties}
                 >
                   {slot.third.text}
