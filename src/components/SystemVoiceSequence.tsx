@@ -96,9 +96,11 @@ interface Props {
    *  com seu próprio typewriter, em sequência). Posicionada no topo (absolute),
    *  aparece após reverse das linhas 1 e 2 do voice. */
   multilineHint?: boolean;
-  /** Linhas da hint multi (typewriter sequencial). Cada string vira uma linha
-   *  visual. Cabe nowrap em mobile — preferir ≤38 chars por linha. */
-  hintLines?: string[];
+  /** Linhas da hint multi (typewriter sequencial). Aceita string ou objeto:
+   *  - string → linha normal com `> ` prefix
+   *  - { text, continuation: true } → linha sem `> `, indentada (continuação da anterior)
+   *  Cabe nowrap em mobile — preferir ≤38 chars por linha. */
+  hintLines?: Array<string | { text: string; continuation?: boolean }>;
 }
 
 export default function SystemVoiceSequence({
@@ -425,13 +427,18 @@ export default function SystemVoiceSequence({
           Position absolute top:0 — ocupa visualmente a área das linhas 1 e 2
           que fizeram reverse e desapareceram. */}
       {multilineHint && hintLines && hintLines.length > 0 && (() => {
-        const lowered = hintLines.map((l) => l.toLowerCase());
+        // Normaliza entrada: string vira { text, continuation: false }
+        const normalized = hintLines.map((entry) =>
+          typeof entry === "string"
+            ? { text: entry.toLowerCase(), continuation: false }
+            : { text: entry.text.toLowerCase(), continuation: !!entry.continuation }
+        );
         let cursor = hintStartMs;
-        const computedLines = lowered.map((text) => {
+        const computedLines = normalized.map(({ text, continuation }) => {
           const typeMs = Math.max(150, text.length * TYPE_MS_PER_CHAR);
           const startMs = cursor;
           cursor += typeMs + HINT_LINE_HOLD_MS;
-          return { text, startMs, typeMs };
+          return { text, startMs, typeMs, continuation };
         });
         const lastIdx = computedLines.length - 1;
         return (
@@ -459,11 +466,13 @@ export default function SystemVoiceSequence({
                   whiteSpace: "pre-wrap",
                   margin: 0,
                   minHeight: `${Math.round(fontSize * 1.7)}px`,
+                  // Continuation: sem ">", indenta 2ch pra alinhar com o texto das outras
+                  paddingLeft: line.continuation ? "2ch" : 0,
                   opacity: 0,
                   animation: `rdwth-voice-appear 1ms ${line.startMs}ms forwards`,
                 }}
               >
-                <span aria-hidden="true">{"> "}</span>
+                {!line.continuation && <span aria-hidden="true">{"> "}</span>}
                 <span
                   style={{
                     display: "inline-block",

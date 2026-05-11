@@ -423,23 +423,26 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   const diablosRef = useRef<[string, string]>(pickTwoDistinct(THIRD_PARTY_DIABLOS));
   const [contentVisible, setContentVisible] = useState(false);
   const firstName = (userName ?? "").toLowerCase().trim().split(/\s+/)[0] ?? "";
-  // Cada linha cabe em mobile (≤38 chars com nowrap). Frase original preservada.
-  const hintLines = useMemo(() => {
+  // 3 linhas. L1 e L2 com prefixo "> ". L3 é continuação da L2 (sem ">", indent 2ch).
+  const hintLines = useMemo<Array<string | { text: string; continuation?: boolean }>>(() => {
     const intro = firstName
-      ? `${firstName}, convide até 8 pessoas próximas`
-      : "convide até 8 pessoas próximas";
+      ? `${firstName}, convide até 8 pessoas próximas.`
+      : "convide até 8 pessoas próximas.";
     return [
       intro,
-      "que conhecem você.",
-      "as respostas delas alimentam suas",
-      "leituras com perspectiva externa.",
+      "as respostas delas alimentam",
+      { text: "suas leituras com outra perspectiva.", continuation: true },
     ];
   }, [firstName]);
-  const voiceSlots = useMemo(() => [
-    { first: diablosRef.current[0], reverseAfterFirst: true },
-    { first: diablosRef.current[1], reverseAfterFirst: true },
-    { first: hintLines[0] }, // first do slot[2] não usado em modo multilineHint, mas precisa pra calcular timing
-  ], [hintLines]);
+  const voiceSlots = useMemo(() => {
+    const first = hintLines[0];
+    const firstText = typeof first === "string" ? first : first.text;
+    return [
+      { first: diablosRef.current[0], reverseAfterFirst: true },
+      { first: diablosRef.current[1], reverseAfterFirst: true },
+      { first: firstText }, // first do slot[2] não usado em modo multilineHint, mas precisa pra calcular timing
+    ];
+  }, [hintLines]);
 
   const loadAll = async () => {
     setLoading(true);
