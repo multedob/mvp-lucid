@@ -65,11 +65,11 @@ const POOLS: Record<FlowDestination, FlowPool> = {
       "reed presta atenção.",
       "reed não julga.",
       "reed lê com você.",
-      "reed não dá conselhos.",
       "reed devolve perguntas.",
       "reed não tem pressa.",
       "reed escuta antes.",
-      "reed pergunta. você responde.",
+      "reed acompanha você.",
+      "reed escuta sem pressa.",
     ],
     diabloB: [
       "fala por texto ou áudio.",

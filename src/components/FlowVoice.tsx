@@ -170,65 +170,79 @@ function FlowVoiceModeB() {
   const { flow, isFlowReady, clearFlow, _setHintShown } = useFlow();
   const [line1, setLine1] = useState("");
   const [line2, setLine2] = useState("");
-  const [hintText, setHintText] = useState(""); // 3ª linha (hint) — vazio até ready
+  const [hintText, setHintText] = useState(""); // 3ª linha — vazio até ready
   const [fading, setFading] = useState(false);
 
-  const stepRef = useRef(2); // próximo índice do pool a usar (pool[0]=line1 inicial; pool[1]=line2 entry)
-  const nextLineRef = useRef<1 | 2>(1); // próxima linha a substituir
+  // Refs pra ler valor mais atual dentro dos callbacks do setInterval/setTimeout
+  const isFlowReadyRef = useRef(isFlowReady);
+  useEffect(() => { isFlowReadyRef.current = isFlowReady; }, [isFlowReady]);
+  const hintTextRef = useRef(hintText);
+  useEffect(() => { hintTextRef.current = hintText; }, [hintText]);
 
-  // Mount: linha 1 = pool[0]
+  // Único useEffect que orquestra a sequência inteira (só re-roda quando flow muda).
+  // Sem deps mudando no meio (line1/line2) → setInterval não é recriado a cada tick.
   useEffect(() => {
     if (!flow) {
       setLine1("");
       setLine2("");
       setHintText("");
       setFading(false);
-      stepRef.current = 2;
-      nextLineRef.current = 1;
       return;
     }
+
+    // Estado inicial: linha 1 entra
     setLine1(flow.pool[0] ?? "");
     setLine2("");
     setHintText("");
     setFading(false);
-    stepRef.current = 2;
-    nextLineRef.current = 1;
+
+    let cancelled = false;
+    let step = 1;
+    let intervalId: number | null = null;
+
+    // T1: linha 2 entra após B_LINE2_DELAY_MS
+    const t1 = window.setTimeout(() => {
+      if (cancelled) return;
+      // Se ready já chegou antes da linha 2 entrar, pula direto pra hint
+      if (isFlowReadyRef.current) {
+        setHintText(flow.hint);
+        return;
+      }
+      setLine2(flow.pool[1] ?? flow.pool[0] ?? "");
+      step = 2;
+
+      // Inicia tick periódico
+      intervalId = window.setInterval(() => {
+        if (cancelled) return;
+        if (hintTextRef.current) return; // hint já apareceu, pausa o loop
+        if (isFlowReadyRef.current) {
+          // Ready chegou: vira pra hint e para o loop
+          setHintText(flow.hint);
+          if (intervalId !== null) {
+            window.clearInterval(intervalId);
+            intervalId = null;
+          }
+          return;
+        }
+        const phrase = flow.pool[step % flow.pool.length];
+        if (step % 2 === 0) {
+          setLine1(phrase);
+        } else {
+          setLine2(phrase);
+        }
+        step += 1;
+      }, B_STEP_MS);
+    }, B_LINE2_DELAY_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t1);
+      if (intervalId !== null) window.clearInterval(intervalId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flow]);
 
-  // Entrada inicial da linha 2 — 2000ms após mount (logo após linha 1 completar)
-  useEffect(() => {
-    if (!flow) return;
-    if (line2 !== "") return;
-    if (hintText) return;
-    const t = window.setTimeout(() => {
-      setLine2(flow.pool[1] ?? flow.pool[0] ?? "");
-    }, B_LINE2_DELAY_MS);
-    return () => window.clearTimeout(t);
-  }, [flow, line2, hintText]);
-
-  // Tick interval — substitui linhas alternadamente (só após linha 2 entrar e !ready/!hint)
-  useEffect(() => {
-    if (!flow) return;
-    if (line2 === "") return;
-    if (hintText) return;
-    if (isFlowReady) return; // hint cuidado pelo useEffect abaixo
-
-    const interval = window.setInterval(() => {
-      const phrase = flow.pool[stepRef.current % flow.pool.length];
-      if (nextLineRef.current === 1) {
-        setLine1(phrase);
-        nextLineRef.current = 2;
-      } else {
-        setLine2(phrase);
-        nextLineRef.current = 1;
-      }
-      stepRef.current += 1;
-    }, B_STEP_MS);
-
-    return () => window.clearInterval(interval);
-  }, [flow, line2, hintText, isFlowReady]);
-
-  // Quando isFlowReady, hint entra como 3ª linha NOVA (linhas 1 e 2 mantêm seu texto)
+  // Quando ready vira true, hint entra (se ainda não entrou via interval)
   useEffect(() => {
     if (!flow) return;
     if (!isFlowReady) return;
@@ -236,7 +250,7 @@ function FlowVoiceModeB() {
     setHintText(flow.hint);
   }, [flow, isFlowReady, hintText]);
 
-  // Quando hint setada, notifica + arma fade-out
+  // Quando hint vira true: notifica + arma fade-out
   useEffect(() => {
     _setHintShown(!!hintText);
     if (!hintText) return;

@@ -10,7 +10,7 @@
 // re-anima quando muda; prefixo permanece estável). Disclaimer espera o
 // contador terminar (delayMs=700) pra digitar — sequencial, não simultâneo.
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Copy, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -478,13 +478,18 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
 
       // 2. Puxa invites de TODOS os ciclos do user (não só o atual) — necessário
       //    pra agrupar por ciclo na view "convites enviados".
-      const idsCsv = cycleIds.map((id) => `"${id}"`).join(",");
-      const invR = await fetch(
-        `${SUPABASE_URL}/rest/v1/third_party_invites?ipe_cycle_id=in.(${idsCsv})&order=created_at.desc`,
-        { headers }
-      );
-      const rawInvs: ThirdPartyInvite[] = await invR.json();
-      const invs = rawInvs.map((i) => ({ ...i, cycle_number: cycleMap[(i as any).ipe_cycle_id] }));
+      let invs: (ThirdPartyInvite & { cycle_number?: number })[] = [];
+      if (cycleIds.length > 0) {
+        const idsCsv = cycleIds.map((id) => `"${id}"`).join(",");
+        const invR = await fetch(
+          `${SUPABASE_URL}/rest/v1/third_party_invites?ipe_cycle_id=in.(${idsCsv})&order=created_at.desc`,
+          { headers }
+        );
+        const rawInvs: ThirdPartyInvite[] = await invR.json();
+        if (Array.isArray(rawInvs)) {
+          invs = rawInvs.map((i) => ({ ...i, cycle_number: cycleMap[i.ipe_cycle_id] }));
+        }
+      }
       setInvites(invs);
 
       // Carrega responses dos invites com status submitted.
