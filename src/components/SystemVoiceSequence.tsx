@@ -26,6 +26,10 @@ const KEYFRAMES = `
   from { width: 0; }
   to   { width: var(--rdwth-w, 100%); }
 }
+@keyframes rdwth-voice-appear {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
 `;
 
 function injectStyles() {
@@ -124,6 +128,9 @@ export default function SystemVoiceSequence({
             whiteSpace: "pre-wrap",
             margin: 0,
             minHeight: `${Math.round(fontSize * 1.7)}px`,
+            // Linha inteira (incluindo "> ") só aparece quando typewriter começa
+            opacity: 0,
+            animation: `rdwth-voice-appear 1ms ${line.startMs}ms forwards`,
           }}
         >
           <span aria-hidden="true">{"> "}</span>
@@ -142,7 +149,8 @@ export default function SystemVoiceSequence({
               verticalAlign: "bottom",
               width: 0,
               animation: `rdwth-voice-type ${line.typeMs}ms steps(${line.text.length || 1}) ${line.startMs}ms forwards`,
-              ["--rdwth-w" as keyof React.CSSProperties as string]: `${line.text.length}ch`,
+              // +2ch compensa o letter-spacing 0.04em acumulado (~0.04 × N chars)
+              ["--rdwth-w" as keyof React.CSSProperties as string]: `calc(${line.text.length}ch + 2ch)`,
             } as React.CSSProperties}
           >
             {line.text}

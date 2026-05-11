@@ -551,8 +551,10 @@ export default function Questionnaire() {
   // Render
   // ─────────────────────────────────────
 
-  // Loading screen sobreposta enquanto phase==='loading' OU enquanto a animação ainda não terminou
-  const showLoadingOverlay = phase === 'loading' || !loadingScreenDone
+  // Loading overlay: só renderiza quando NÃO veio do flow (navegação direta).
+  // Quando fromFlow=true, a voz inline (SystemVoiceSequence) cobre o tempo de
+  // carregamento — não precisamos do LoadingScreen.
+  const showLoadingOverlay = !fromFlow && (phase === 'loading' || !loadingScreenDone)
   const loadingOverlay = showLoadingOverlay ? (
     <QuestionnaireLoadingScreen
       loadComplete={phase !== 'loading'}
@@ -560,7 +562,9 @@ export default function Questionnaire() {
     />
   ) : null
 
-  if (phase === 'loading') return <>{loadingOverlay}</>
+  // Early return só sem flow — com flow, cai no return principal e o slot
+  // superior mostra a voz enquanto phase ainda é 'loading'.
+  if (phase === 'loading' && !fromFlow) return <>{loadingOverlay}</>
 
   if (phase === 'transition') return (
     <>
