@@ -56,22 +56,23 @@ const FADE_OUT_MS = 400;
 export interface Slot {
   first: string;
   second?: string;
+  third?: string;
+}
+
+interface ComputedPhrase {
+  text: string;
+  startMs: number;
+  typeMs: number;
+  /** Se a frase é apagada antes da próxima entrar */
+  reverseStartMs?: number;
+  reverseMs?: number;
 }
 
 interface ComputedSlot {
   promptStartMs: number;
-  first: {
-    text: string;
-    startMs: number;
-    typeMs: number;
-    reverseStartMs?: number;
-    reverseMs?: number;
-  };
-  second?: {
-    text: string;
-    startMs: number;
-    typeMs: number;
-  };
+  first: ComputedPhrase;
+  second?: ComputedPhrase;
+  third?: ComputedPhrase;
 }
 
 interface Props {
@@ -100,40 +101,55 @@ export default function SystemVoiceSequence({
 
     const typeMs = (t: string) => Math.max(150, t.length * TYPE_MS_PER_CHAR);
     const revMs = (t: string) => Math.max(150, t.length * REV_MS_PER_CHAR);
-
     const lower = (t: string | undefined) => (t ?? "").toLowerCase();
 
     const s0First = lower(slots[0].first);
     const s0Second = slots[0].second ? lower(slots[0].second) : undefined;
+    const s0Third = slots[0].third ? lower(slots[0].third) : undefined;
     const s1First = lower(slots[1].first);
     const s1Second = slots[1].second ? lower(slots[1].second) : undefined;
+    const s1Third = slots[1].third ? lower(slots[1].third) : undefined;
     const hint = lower(slots[2].first);
 
-    // slot[0].first: t=0 → typeMs(s0First)
+    // Ciclo 1: first
     const s0FirstStart = 0;
     const s0FirstType = typeMs(s0First);
-
-    // slot[1].first: entra após slot[0].first terminar
     const s1FirstStart = s0FirstStart + s0FirstType;
     const s1FirstType = typeMs(s1First);
 
-    // Reverse simultâneo: após slot[1].first terminar + HOLD
-    const hasReverse = !!(s0Second && s1Second);
-    const reverseStart = s1FirstStart + s1FirstType + HOLD_MS;
-    const s0Rev = hasReverse ? revMs(s0First) : 0;
-    const s1Rev = hasReverse ? revMs(s1First) : 0;
-    const reverseEnd = hasReverse ? reverseStart + Math.max(s0Rev, s1Rev) : reverseStart;
+    // Reverse 1 simultâneo (se há second em ambos) — após s1First + HOLD
+    const hasSecond = !!(s0Second && s1Second);
+    const reverse1Start = s1FirstStart + s1FirstType + HOLD_MS;
+    const s0Rev1 = hasSecond ? revMs(s0First) : 0;
+    const s1Rev1 = hasSecond ? revMs(s1First) : 0;
+    const reverse1End = hasSecond ? reverse1Start + Math.max(s0Rev1, s1Rev1) : reverse1Start;
 
-    // slot[0].second (substituição na linha 1)
-    const s0SecondStart = hasReverse ? reverseEnd : 0;
+    // Ciclo 2: second
+    const s0SecondStart = hasSecond ? reverse1End : 0;
     const s0SecondType = s0Second ? typeMs(s0Second) : 0;
-
-    // slot[1].second (substituição na linha 2 — entra após slot[0].second terminar)
-    const s1SecondStart = hasReverse ? s0SecondStart + s0SecondType : 0;
+    const s1SecondStart = hasSecond ? s0SecondStart + s0SecondType : 0;
     const s1SecondType = s1Second ? typeMs(s1Second) : 0;
 
-    // Hint: após slot[1].second terminar + HOLD (ou após reverse se não há second)
-    const lastEnd = hasReverse ? s1SecondStart + s1SecondType : s1FirstStart + s1FirstType;
+    // Reverse 2 simultâneo (se há third em ambos) — após s1Second + HOLD
+    const hasThird = !!(s0Third && s1Third);
+    const reverse2Start = hasSecond
+      ? s1SecondStart + s1SecondType + HOLD_MS
+      : reverse1Start;
+    const s0Rev2 = hasThird ? revMs(s0Second!) : 0;
+    const s1Rev2 = hasThird ? revMs(s1Second!) : 0;
+    const reverse2End = hasThird ? reverse2Start + Math.max(s0Rev2, s1Rev2) : reverse2Start;
+
+    // Ciclo 3: third
+    const s0ThirdStart = hasThird ? reverse2End : 0;
+    const s0ThirdType = s0Third ? typeMs(s0Third) : 0;
+    const s1ThirdStart = hasThird ? s0ThirdStart + s0ThirdType : 0;
+    const s1ThirdType = s1Third ? typeMs(s1Third) : 0;
+
+    // Hint: após último ciclo + HOLD
+    let lastEnd: number;
+    if (hasThird) lastEnd = s1ThirdStart + s1ThirdType;
+    else if (hasSecond) lastEnd = s1SecondStart + s1SecondType;
+    else lastEnd = s1FirstStart + s1FirstType;
     const hintStart = lastEnd + HOLD_MS;
     const hintType = typeMs(hint);
 
@@ -144,11 +160,20 @@ export default function SystemVoiceSequence({
           text: s0First,
           startMs: s0FirstStart,
           typeMs: s0FirstType,
-          reverseStartMs: hasReverse ? reverseStart : undefined,
-          reverseMs: hasReverse ? s0Rev : undefined,
+          reverseStartMs: hasSecond ? reverse1Start : undefined,
+          reverseMs: hasSecond ? s0Rev1 : undefined,
         },
         second: s0Second
-          ? { text: s0Second, startMs: s0SecondStart, typeMs: s0SecondType }
+          ? {
+              text: s0Second,
+              startMs: s0SecondStart,
+              typeMs: s0SecondType,
+              reverseStartMs: hasThird ? reverse2Start : undefined,
+              reverseMs: hasThird ? s0Rev2 : undefined,
+            }
+          : undefined,
+        third: s0Third
+          ? { text: s0Third, startMs: s0ThirdStart, typeMs: s0ThirdType }
           : undefined,
       },
       {
@@ -157,11 +182,20 @@ export default function SystemVoiceSequence({
           text: s1First,
           startMs: s1FirstStart,
           typeMs: s1FirstType,
-          reverseStartMs: hasReverse ? reverseStart : undefined,
-          reverseMs: hasReverse ? s1Rev : undefined,
+          reverseStartMs: hasSecond ? reverse1Start : undefined,
+          reverseMs: hasSecond ? s1Rev1 : undefined,
         },
         second: s1Second
-          ? { text: s1Second, startMs: s1SecondStart, typeMs: s1SecondType }
+          ? {
+              text: s1Second,
+              startMs: s1SecondStart,
+              typeMs: s1SecondType,
+              reverseStartMs: hasThird ? reverse2Start : undefined,
+              reverseMs: hasThird ? s1Rev2 : undefined,
+            }
+          : undefined,
+        third: s1Third
+          ? { text: s1Third, startMs: s1ThirdStart, typeMs: s1ThirdType }
           : undefined,
       },
       {
@@ -266,10 +300,9 @@ export default function SystemVoiceSequence({
               {slot.first.text}
             </span>
 
-            {/* Second phrase (substituição) — absolute sobre o slot, à direita do prompt */}
+            {/* Second phrase (1ª substituição) — absolute, à direita do prompt */}
             {slot.second && secondWidth && (
               <>
-                {/* Prompt > pra second (aparece no momento de second entrar) */}
                 <span
                   aria-hidden="true"
                   style={{
@@ -293,11 +326,49 @@ export default function SystemVoiceSequence({
                     whiteSpace: "nowrap",
                     verticalAlign: "bottom",
                     width: 0,
-                    animation: `rdwth-voice-fwd ${slot.second.typeMs}ms steps(${slot.second.text.length || 1}) ${slot.second.startMs}ms forwards`,
+                    animation:
+                      slot.second.reverseStartMs !== undefined && slot.second.reverseMs !== undefined
+                        ? `rdwth-voice-fwd ${slot.second.typeMs}ms steps(${slot.second.text.length || 1}) ${slot.second.startMs}ms forwards, rdwth-voice-rev ${slot.second.reverseMs}ms steps(${slot.second.text.length || 1}) ${slot.second.reverseStartMs}ms forwards`
+                        : `rdwth-voice-fwd ${slot.second.typeMs}ms steps(${slot.second.text.length || 1}) ${slot.second.startMs}ms forwards`,
                     ["--rdwth-w" as keyof React.CSSProperties as string]: secondWidth,
                   } as React.CSSProperties}
                 >
                   {slot.second.text}
+                </span>
+              </>
+            )}
+
+            {/* Third phrase (2ª substituição) — absolute, igual estrutura */}
+            {slot.third && (
+              <>
+                <span
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                    display: "inline-block",
+                    opacity: 0,
+                    animation: `rdwth-voice-appear 1ms ${slot.third.startMs}ms forwards`,
+                  }}
+                >
+                  {"> "}
+                </span>
+                <span
+                  style={{
+                    position: "absolute",
+                    left: "2ch",
+                    top: 0,
+                    display: "inline-block",
+                    overflow: "hidden",
+                    whiteSpace: "nowrap",
+                    verticalAlign: "bottom",
+                    width: 0,
+                    animation: `rdwth-voice-fwd ${slot.third.typeMs}ms steps(${slot.third.text.length || 1}) ${slot.third.startMs}ms forwards`,
+                    ["--rdwth-w" as keyof React.CSSProperties as string]: `calc(${slot.third.text.length}ch + 2ch)`,
+                  } as React.CSSProperties}
+                >
+                  {slot.third.text}
                 </span>
               </>
             )}

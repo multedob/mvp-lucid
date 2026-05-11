@@ -173,14 +173,18 @@ export default function Questionnaire() {
   //   - Voz fade-out APÓS pergunta visível
   const [voiceHintReady, setVoiceHintReady] = useState(false)
   const [voiceFadeOut, setVoiceFadeOut] = useState(false)
-  // Slots: [linha 1 (diablo1 → extras[0]), linha 2 (diablo2 → extras[1]), hint]
-  // Com reverse + substituição no meio pra preencher melhor o tempo de load.
+  // Slots: 3 ciclos de frases + hint
+  //   linha 1: diablo1 → extras[0] → extras[2]
+  //   linha 2: diablo2 → extras[1] → extras[3]
+  //   hint
+  // Cobre ~10-11s de animação antes da hint aparecer.
   const voiceSlots = useMemo(() => {
     if (!fromFlow || !flow) return null
     const extras = flow.extras ?? []
+    // Pool tem ~5 frases extras; usa em ordem com fallback se acabar
     return [
-      { first: flow.diablo1, second: extras[0] },
-      { first: flow.diablo2, second: extras[1] ?? extras[0] },
+      { first: flow.diablo1, second: extras[0], third: extras[2] ?? extras[0] },
+      { first: flow.diablo2, second: extras[1] ?? extras[0], third: extras[3] ?? extras[1] ?? extras[0] },
       { first: flow.hint },
     ]
   }, [fromFlow, flow])
