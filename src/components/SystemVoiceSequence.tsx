@@ -41,6 +41,10 @@ const KEYFRAMES = `
   from { opacity: 1; }
   to   { opacity: 0; }
 }
+@keyframes rdwth-voice-typewriter-multiline {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
+}
 `;
 
 function injectStyles() {
@@ -413,32 +417,39 @@ export default function SystemVoiceSequence({
       })}
 
       {/* Hint multi-linha — posicionada no topo (sobre a área das linhas 1/2 que
-          fizeram reverse e desapareceram). Fade-in suave, sem typewriter, com
-          white-space pre-wrap pra quebra natural. */}
-      {multilineHint && hintSlot && (
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            fontFamily: "var(--r-font-sys)",
-            fontWeight: 300,
-            fontSize,
-            lineHeight: 1.7,
-            color: "var(--r-voice-sys)",
-            letterSpacing: "0.04em",
-            whiteSpace: "pre-wrap",
-            margin: 0,
-            opacity: 0,
-            animation: `rdwth-voice-appear 600ms ${hintStartMs}ms forwards`,
-          }}
-          onAnimationEnd={() => onHintReady?.()}
-        >
-          <span aria-hidden="true">{"> "}</span>
-          {hintText}
-        </div>
-      )}
+          fizeram reverse e desapareceram). Typewriter via clip-path (revela da
+          esquerda pra direita em todas as linhas simultaneamente) — funciona com
+          white-space: pre-wrap (quebra natural). */}
+      {multilineHint && hintSlot && (() => {
+        // Tempo proporcional ao comprimento do texto (~25ms por char).
+        // Steps ~ length/3 dá granularidade visível em multi-linha.
+        const dur = Math.max(1200, hintText.length * 25);
+        const steps = Math.max(20, Math.floor(hintText.length / 2));
+        return (
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              fontFamily: "var(--r-font-sys)",
+              fontWeight: 300,
+              fontSize,
+              lineHeight: 1.7,
+              color: "var(--r-voice-sys)",
+              letterSpacing: "0.04em",
+              whiteSpace: "pre-wrap",
+              margin: 0,
+              clipPath: "inset(0 100% 0 0)",
+              animation: `rdwth-voice-typewriter-multiline ${dur}ms steps(${steps}) ${hintStartMs}ms forwards`,
+            }}
+            onAnimationEnd={() => onHintReady?.()}
+          >
+            <span aria-hidden="true">{"> "}</span>
+            {hintText}
+          </div>
+        );
+      })()}
     </div>
   );
 }
