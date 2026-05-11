@@ -58,7 +58,8 @@ function injectStyles() {
 
 const TYPE_MS_PER_CHAR = 30;
 const REV_MS_PER_CHAR = 18;
-const HOLD_MS = 1500;
+const HOLD_MS = 2500;            // tempo de leitura após cada frase diablo
+const HINT_LINE_HOLD_MS = 400;   // pausa entre linhas sequenciais da hint multi
 const FADE_OUT_MS = 400;
 
 export interface Slot {
@@ -91,11 +92,13 @@ interface Props {
   onHintReady?: () => void;
   onFinish?: () => void;
   fontSize?: number;
-  /** Quando true, a hint (slot[2]) é renderizada como texto longo multi-linha,
-   *  com fade-in (não typewriter) e posicionada no topo. As linhas 1 e 2 ainda
-   *  fazem typewriter + reverse normalmente — quando elas somem, a hint fica
-   *  visível ocupando a área da linha 1. */
+  /** Quando true E hintLines fornecido, renderiza hint multi-linha (cada linha
+   *  com seu próprio typewriter, em sequência). Posicionada no topo (absolute),
+   *  aparece após reverse das linhas 1 e 2 do voice. */
   multilineHint?: boolean;
+  /** Linhas da hint multi (typewriter sequencial). Cada string vira uma linha
+   *  visual. Cabe nowrap em mobile — preferir ≤38 chars por linha. */
+  hintLines?: string[];
 }
 
 export default function SystemVoiceSequence({
@@ -105,6 +108,7 @@ export default function SystemVoiceSequence({
   onFinish,
   fontSize = 11,
   multilineHint = false,
+  hintLines,
 }: Props) {
   const [hidden, setHidden] = useState(false);
 
@@ -416,15 +420,20 @@ export default function SystemVoiceSequence({
         );
       })}
 
-      {/* Hint multi-linha — posicionada no topo (sobre a área das linhas 1/2 que
-          fizeram reverse e desapareceram). Typewriter via clip-path (revela da
-          esquerda pra direita em todas as linhas simultaneamente) — funciona com
-          white-space: pre-wrap (quebra natural). */}
-      {multilineHint && hintSlot && (() => {
-        // Tempo proporcional ao comprimento do texto (~25ms por char).
-        // Steps ~ length/3 dá granularidade visível em multi-linha.
-        const dur = Math.max(1200, hintText.length * 25);
-        const steps = Math.max(20, Math.floor(hintText.length / 2));
+      {/* Hint multi-linha SEQUENCIAL — cada linha tem seu próprio typewriter
+          (CSS animation de width), com delay calculado pra entrar em sequência.
+          Position absolute top:0 — ocupa visualmente a área das linhas 1 e 2
+          que fizeram reverse e desapareceram. */}
+      {multilineHint && hintLines && hintLines.length > 0 && (() => {
+        const lowered = hintLines.map((l) => l.toLowerCase());
+        let cursor = hintStartMs;
+        const computedLines = lowered.map((text) => {
+          const typeMs = Math.max(150, text.length * TYPE_MS_PER_CHAR);
+          const startMs = cursor;
+          cursor += typeMs + HINT_LINE_HOLD_MS;
+          return { text, startMs, typeMs };
+        });
+        const lastIdx = computedLines.length - 1;
         return (
           <div
             style={{
@@ -432,21 +441,47 @@ export default function SystemVoiceSequence({
               top: 0,
               left: 0,
               right: 0,
-              fontFamily: "var(--r-font-sys)",
-              fontWeight: 300,
-              fontSize,
-              lineHeight: 1.7,
-              color: "var(--r-voice-sys)",
-              letterSpacing: "0.04em",
-              whiteSpace: "pre-wrap",
-              margin: 0,
-              clipPath: "inset(0 100% 0 0)",
-              animation: `rdwth-voice-typewriter-multiline ${dur}ms steps(${steps}) ${hintStartMs}ms forwards`,
+              display: "flex",
+              flexDirection: "column",
+              gap: 0,
             }}
-            onAnimationEnd={() => onHintReady?.()}
           >
-            <span aria-hidden="true">{"> "}</span>
-            {hintText}
+            {computedLines.map((line, i) => (
+              <div
+                key={i}
+                style={{
+                  fontFamily: "var(--r-font-sys)",
+                  fontWeight: 300,
+                  fontSize,
+                  lineHeight: 1.7,
+                  color: "var(--r-voice-sys)",
+                  letterSpacing: "0.04em",
+                  whiteSpace: "pre-wrap",
+                  margin: 0,
+                  minHeight: `${Math.round(fontSize * 1.7)}px`,
+                  opacity: 0,
+                  animation: `rdwth-voice-appear 1ms ${line.startMs}ms forwards`,
+                }}
+              >
+                <span aria-hidden="true">{"> "}</span>
+                <span
+                  style={{
+                    display: "inline-block",
+                    overflow: "hidden",
+                    whiteSpace: "nowrap",
+                    verticalAlign: "bottom",
+                    width: 0,
+                    animation: `rdwth-voice-fwd ${line.typeMs}ms steps(${line.text.length || 1}) ${line.startMs}ms forwards`,
+                    ["--rdwth-w" as keyof React.CSSProperties as string]: `calc(${line.text.length}ch + 3ch)`,
+                  } as React.CSSProperties}
+                  onAnimationEnd={
+                    i === lastIdx ? () => onHintReady?.() : undefined
+                  }
+                >
+                  {line.text}
+                </span>
+              </div>
+            ))}
           </div>
         );
       })()}

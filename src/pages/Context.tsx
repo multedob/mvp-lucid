@@ -418,18 +418,28 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   // Voz fluida (SystemVoiceSequence):
   //   linha 1: diablo1 → reverse → some
   //   linha 2: diablo2 → reverse → some
-  //   hint (entra na linha 1, multi-linha): texto longo de boas-vindas — FICA pra sempre
-  // Conteúdo principal entra após fade-in da hint completar.
+  //   hint multi-linha: cada linha typewriter SEQUENCIAL — fica pra sempre
+  // Conteúdo principal entra após última linha da hint completar.
   const diablosRef = useRef<[string, string]>(pickTwoDistinct(THIRD_PARTY_DIABLOS));
   const [contentVisible, setContentVisible] = useState(false);
-  const hintTextLong = userName
-    ? `${userName.toLowerCase()}, convide até 8 pessoas próximas que conhecem você. as respostas delas alimentam suas leituras com perspectiva externa.`
-    : "convide até 8 pessoas próximas que conhecem você. as respostas delas alimentam suas leituras com perspectiva externa.";
+  const firstName = (userName ?? "").toLowerCase().trim().split(/\s+/)[0] ?? "";
+  // Cada linha cabe em mobile (≤38 chars com nowrap). Frase original preservada.
+  const hintLines = useMemo(() => {
+    const intro = firstName
+      ? `${firstName}, convide até 8 pessoas próximas`
+      : "convide até 8 pessoas próximas";
+    return [
+      intro,
+      "que conhecem você.",
+      "as respostas delas alimentam suas",
+      "leituras com perspectiva externa.",
+    ];
+  }, [firstName]);
   const voiceSlots = useMemo(() => [
     { first: diablosRef.current[0], reverseAfterFirst: true },
     { first: diablosRef.current[1], reverseAfterFirst: true },
-    { first: hintTextLong },
-  ], [hintTextLong]);
+    { first: hintLines[0] }, // first do slot[2] não usado em modo multilineHint, mas precisa pra calcular timing
+  ], [hintLines]);
 
   const loadAll = async () => {
     setLoading(true);
@@ -595,6 +605,7 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
           slots={voiceSlots}
           fadeOut={false}
           multilineHint
+          hintLines={hintLines}
           onHintReady={() => setContentVisible(true)}
         />
 
