@@ -165,9 +165,14 @@ export default function Questionnaire() {
 
   const [phase, setPhase] = useState<Phase>('loading')
 
-  // Voz inline (SystemVoiceSequence): quando vem do flow, renderiza no slot
-  // superior 3 frases (2 diablo + hint). Fade-out quando dados carregados.
-  const voiceDone = fromFlow && phase !== 'loading' && phase !== 'transition'
+  // Voz inline (SystemVoiceSequence): quando vem do flow.
+  // Orquestração:
+  //   - voiceHintReady: hint completou typewriter (CSS animation end callback)
+  //   - phase != loading: dados carregados
+  //   - Pergunta entra quando AMBOS (hint ready E dados prontos)
+  //   - Voz fade-out APÓS pergunta visível
+  const [voiceHintReady, setVoiceHintReady] = useState(false)
+  const [voiceFadeOut, setVoiceFadeOut] = useState(false)
   const voicePhrases = useMemo(() => {
     if (!fromFlow || !flow) return null
     return [flow.diablo1, flow.diablo2, flow.hint]
@@ -200,15 +205,17 @@ export default function Questionnaire() {
 
   // Cascade.
   // Sem flow: cadência original (3500/4200/5000) que espera a voz própria da página.
-  // Com flow: pergunta entra QUANDO voiceDone=true (dados carregados → voz começa fade-out).
-  //          Pequeno delay pra deixar a voz iniciar fade antes do conteúdo aparecer.
+  // Com flow: pergunta entra quando AMBOS — hint completou typewriter E dados carregaram.
+  //          A voz fade-out DEPOIS que a pergunta apareceu (cuidado por outro effect abaixo).
+  const dataReady = phase !== 'loading' && phase !== 'transition'
+  const canShowContent = !fromFlow ? true : voiceHintReady && dataReady
   useEffect(() => {
     if (cascadeArmedRef.current) return
-    if (fromFlow && !voiceDone) return
+    if (!canShowContent) return
     cascadeArmedRef.current = true
-    const qDelay = fromFlow ? 400 : 3500
-    const iDelay = fromFlow ? 1100 : 4200
-    const aDelay = fromFlow ? 1900 : 5000
+    const qDelay = fromFlow ? 200 : 3500
+    const iDelay = fromFlow ? 900 : 4200
+    const aDelay = fromFlow ? 1700 : 5000
 
     const t1 = window.setTimeout(() => setQuestionReady(true), qDelay)
     const t2 = window.setTimeout(() => setInputReady(true), iDelay)
@@ -228,7 +235,7 @@ export default function Questionnaire() {
       window.clearTimeout(t2)
       if (t3) window.clearTimeout(t3)
     }
-  }, [fromFlow, voiceDone])
+  }, [fromFlow, canShowContent])
 
   // voiceDone já é derivado de phase; SystemVoiceSequence reage diretamente —
   // não precisa mais sinalizar via markFlowReady.
@@ -236,6 +243,16 @@ export default function Questionnaire() {
   // Visibilidade real: cascade armed E dados prontos (phase fora de loading).
   const questionVisible = questionReady && phase !== 'loading' && phase !== 'transition'
   const inputVisible = inputReady && phase !== 'loading' && phase !== 'transition'
+
+  // Dispara fade-out da voz APÓS a pergunta entrar (não antes).
+  // Espera 600ms desde questionVisible ficar true (tempo do fade-in da pergunta + folga).
+  useEffect(() => {
+    if (!fromFlow) return
+    if (!questionVisible) return
+    if (voiceFadeOut) return
+    const t = window.setTimeout(() => setVoiceFadeOut(true), 600)
+    return () => window.clearTimeout(t)
+  }, [fromFlow, questionVisible, voiceFadeOut])
 
   const [loadingScreenDone, setLoadingScreenDone] = useState(fromFlow)
 
@@ -575,7 +592,8 @@ export default function Questionnaire() {
         {fromFlow && voicePhrases && (
           <SystemVoiceSequence
             phrases={voicePhrases}
-            done={voiceDone}
+            fadeOut={voiceFadeOut}
+            onHintReady={() => setVoiceHintReady(true)}
             onFinish={clearFlow}
           />
         )}

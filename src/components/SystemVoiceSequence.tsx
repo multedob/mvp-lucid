@@ -1,18 +1,22 @@
 // src/components/SystemVoiceSequence.tsx
 // Sequência de voz do sistema 100% CSS-driven.
-// Cada linha entra com typewriter (CSS animation width: 0 → Nch via steps).
-// Sem JS timers — roda na GPU, não suspende quando JS thread está bloqueado
-// por loads pesados do componente pai.
+// Cada linha entra com typewriter (CSS animation). Sem JS timers — anima na GPU.
 //
-// Sequência (calculada por comprimento das frases):
-//   t=0          → linha 1 entra (typewriter)
-//   t=enter2     → linha 2 entra
-//   t=enterHint  → hint entra
-//   hint fica visível indefinidamente até `done=true` (parent controla)
-//   done=true   → container faz fade-out
+// API:
+//   phrases     — frases a renderizar em sequência (typewriter forward)
+//   onHintReady — disparado quando a ÚLTIMA frase (hint) terminou typewriter.
+//                 Usa onAnimationEnd da CSS animation (robusto a thread blocking).
+//   fadeOut     — quando vira true, container faz fade-out 400ms.
+//                 Parent só seta true APÓS o conteúdo principal entrar
+//                 (= voz sai DEPOIS da pergunta aparecer).
+//   onFinish    — callback após fade-out completar (pra clearFlow etc).
 //
-// Usage:
-//   <SystemVoiceSequence phrases={[d1, d2, hint]} done={loadFinished} />
+// Sequência típica de uso (Questionnaire):
+//   t=0           render → voz começa
+//   t=~hint_ready onHintReady dispara → parent marca voiceHintReady
+//   parent espera: hintReady && dataReady → revela pergunta
+//   após pergunta visível → parent seta fadeOut=true → voz sai
+//   onFinish → clearFlow
 
 import { useEffect, useMemo, useState } from "react";
 
@@ -44,19 +48,21 @@ interface Line {
 }
 
 interface Props {
-  /** Frases da voz. Pode ter 1, 2 ou 3 frases. A última é tratada como hint
-   *  (fica visível indefinidamente após typewriter). */
   phrases: string[];
-  /** Quando vira true, container faz fade-out (load do pai terminou) */
-  done: boolean;
-  /** Callback chamado após fade-out completar (pra clearFlow etc) */
+  /** Quando vira true, container faz fade-out. Parent controla quando isso acontece
+   *  (idealmente DEPOIS de o conteúdo principal já estar visível). */
+  fadeOut: boolean;
+  /** Disparado quando a hint (última frase) terminar typewriter. */
+  onHintReady?: () => void;
+  /** Callback após fade-out completar. */
   onFinish?: () => void;
   fontSize?: number;
 }
 
 export default function SystemVoiceSequence({
   phrases,
-  done,
+  fadeOut,
+  onHintReady,
   onFinish,
   fontSize = 11,
 }: Props) {
@@ -66,8 +72,6 @@ export default function SystemVoiceSequence({
     injectStyles();
   }, []);
 
-  // Calcula timing pra cada linha (sequencial).
-  // Hint = última. Anteriores: typewriter + hold antes da próxima entrar.
   const lines = useMemo<Line[]>(() => {
     const arr: Line[] = [];
     let cursor = 0;
@@ -80,9 +84,9 @@ export default function SystemVoiceSequence({
     return arr;
   }, [phrases]);
 
-  // Quando `done` vira true, espera fade-out e chama onFinish
+  // Após fade-out completar, esconde e chama onFinish
   useEffect(() => {
-    if (!done) return;
+    if (!fadeOut) return;
     const tHide = window.setTimeout(() => setHidden(true), FADE_OUT_MS);
     const tFinish = window.setTimeout(() => onFinish?.(), FADE_OUT_MS + 50);
     return () => {
@@ -90,9 +94,11 @@ export default function SystemVoiceSequence({
       window.clearTimeout(tFinish);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [done]);
+  }, [fadeOut]);
 
   if (hidden) return null;
+
+  const hintIndex = lines.length - 1;
 
   return (
     <div
@@ -100,7 +106,7 @@ export default function SystemVoiceSequence({
         display: "flex",
         flexDirection: "column",
         gap: 0,
-        opacity: done ? 0 : 1,
+        opacity: fadeOut ? 0 : 1,
         transition: `opacity ${FADE_OUT_MS}ms ease`,
         pointerEvents: "none",
       }}
@@ -122,6 +128,13 @@ export default function SystemVoiceSequence({
         >
           <span aria-hidden="true">{"> "}</span>
           <span
+            onAnimationEnd={
+              idx === hintIndex
+                ? () => {
+                    onHintReady?.();
+                  }
+                : undefined
+            }
             style={{
               display: "inline-block",
               overflow: "hidden",
