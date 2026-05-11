@@ -173,14 +173,25 @@ function FlowVoiceModeB() {
   const [hintText, setHintText] = useState(""); // 3ª linha — vazio até ready
   const [fading, setFading] = useState(false);
 
-  // Refs pra ler valor mais atual dentro dos callbacks do setInterval/setTimeout
-  const isFlowReadyRef = useRef(isFlowReady);
-  useEffect(() => { isFlowReadyRef.current = isFlowReady; }, [isFlowReady]);
+  // Ref pra ler hintText mais atual no callback do setInterval (evita pausar tarde demais)
   const hintTextRef = useRef(hintText);
   useEffect(() => { hintTextRef.current = hintText; }, [hintText]);
 
-  // Único useEffect que orquestra a sequência inteira (só re-roda quando flow muda).
-  // Sem deps mudando no meio (line1/line2) → setInterval não é recriado a cada tick.
+  // Sequência fixa por TIMER (independente de isFlowReady):
+  //   t=0      → linha 1
+  //   t=2000   → linha 2
+  //   t=5500   → substituição linha 1
+  //   t=9000   → substituição linha 2
+  //   t=HINT_AT (~7000)  → hint aparece (3ª linha)
+  //
+  // A hint aparece após HINT_SHOW_AT_MS desde o início, INDEPENDENTE do destino.
+  // O destino (Questionnaire) inicia seu load APENAS após hintShown=true — evitando
+  // bloquear o JS thread durante as substituições.
+  //
+  // isFlowReady aqui sinaliza "conteúdo do destino pronto" — usado pra encerrar
+  // a voz (fade-out). Até lá, a hint fica visível indefinidamente.
+  const HINT_SHOW_AT_MS = 7000;
+
   useEffect(() => {
     if (!flow) {
       setLine1("");
@@ -190,7 +201,6 @@ function FlowVoiceModeB() {
       return;
     }
 
-    // Estado inicial: linha 1 entra
     setLine1(flow.pool[0] ?? "");
     setLine2("");
     setHintText("");
@@ -200,74 +210,64 @@ function FlowVoiceModeB() {
     let step = 1;
     let intervalId: number | null = null;
 
-    // T1: linha 2 entra após B_LINE2_DELAY_MS
     const t1 = window.setTimeout(() => {
       if (cancelled) return;
-      // Se ready já chegou antes da linha 2 entrar, pula direto pra hint
-      if (isFlowReadyRef.current) {
-        setHintText(flow.hint);
-        return;
-      }
       setLine2(flow.pool[1] ?? flow.pool[0] ?? "");
       step = 2;
 
-      // Inicia tick periódico
+      // Substituições a cada B_STEP_MS — até hint aparecer
       intervalId = window.setInterval(() => {
         if (cancelled) return;
-        if (hintTextRef.current) return; // hint já apareceu, pausa o loop
-        if (isFlowReadyRef.current) {
-          // Ready chegou: vira pra hint e para o loop
-          setHintText(flow.hint);
-          if (intervalId !== null) {
-            window.clearInterval(intervalId);
-            intervalId = null;
-          }
-          return;
-        }
+        if (hintTextRef.current) return; // hint apareceu, pausa
         const phrase = flow.pool[step % flow.pool.length];
-        if (step % 2 === 0) {
-          setLine1(phrase);
-        } else {
-          setLine2(phrase);
-        }
+        if (step % 2 === 0) setLine1(phrase);
+        else setLine2(phrase);
         step += 1;
       }, B_STEP_MS);
     }, B_LINE2_DELAY_MS);
 
+    // Hint aparece após HINT_SHOW_AT_MS — independente de ready
+    const tHint = window.setTimeout(() => {
+      if (cancelled) return;
+      setHintText(flow.hint);
+      if (intervalId !== null) {
+        window.clearInterval(intervalId);
+        intervalId = null;
+      }
+    }, HINT_SHOW_AT_MS);
+
     return () => {
       cancelled = true;
       window.clearTimeout(t1);
+      window.clearTimeout(tHint);
       if (intervalId !== null) window.clearInterval(intervalId);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flow]);
 
-  // Quando ready vira true, hint entra (se ainda não entrou via interval)
-  useEffect(() => {
-    if (!flow) return;
-    if (!isFlowReady) return;
-    if (hintText) return;
-    setHintText(flow.hint);
-  }, [flow, isFlowReady, hintText]);
-
-  // Quando hint vira true: notifica + arma fade-out
+  // Notifica hintShown sempre que hint aparece
   useEffect(() => {
     _setHintShown(!!hintText);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hintText]);
+
+  // Fade-out só quando isFlowReady (conteúdo do destino pronto) E hint visível.
+  // Hint fica visível indefinidamente até conteúdo estar pronto.
+  useEffect(() => {
     if (!hintText) return;
-    const tFade = window.setTimeout(
-      () => setFading(true),
-      B_HINT_TYPE_MS + B_HINT_HOLD_MS
-    );
+    if (!isFlowReady) return;
+    // Espera typewriter da hint completar + breve hold pra ler
+    const tFade = window.setTimeout(() => setFading(true), B_HINT_HOLD_MS);
     const tClear = window.setTimeout(
       () => clearFlow(),
-      B_HINT_TYPE_MS + B_HINT_HOLD_MS + FADE_OUT_MS
+      B_HINT_HOLD_MS + FADE_OUT_MS
     );
     return () => {
       window.clearTimeout(tFade);
       window.clearTimeout(tClear);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hintText]);
+  }, [hintText, isFlowReady]);
 
   if (!flow) return null;
 

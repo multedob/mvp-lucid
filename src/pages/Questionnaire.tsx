@@ -241,7 +241,18 @@ export default function Questionnaire() {
   // ─────────────────────────────────────
   // Init
   // ─────────────────────────────────────
-  useEffect(() => { init() }, [])
+  // Adia o init() pesado até a voz do sistema ter chegado na hint.
+  // Sem essa proteção, init() bloqueia o JS thread e o setInterval do FlowVoice
+  // fica suspenso — voz congela em vez de animar as substituições durante o load.
+  // Quando fromFlow=false (navegação direta sem flow), inicia imediato.
+  const initStartedRef = useRef(false)
+  useEffect(() => {
+    if (initStartedRef.current) return
+    if (fromFlow && !hintShown) return // espera FlowVoice chegar na hint
+    initStartedRef.current = true
+    init()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fromFlow, hintShown])
 
   async function init() {
     try {
