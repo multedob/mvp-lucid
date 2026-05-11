@@ -173,9 +173,16 @@ export default function Questionnaire() {
   //   - Voz fade-out APÓS pergunta visível
   const [voiceHintReady, setVoiceHintReady] = useState(false)
   const [voiceFadeOut, setVoiceFadeOut] = useState(false)
-  const voicePhrases = useMemo(() => {
+  // Slots: [linha 1 (diablo1 → extras[0]), linha 2 (diablo2 → extras[1]), hint]
+  // Com reverse + substituição no meio pra preencher melhor o tempo de load.
+  const voiceSlots = useMemo(() => {
     if (!fromFlow || !flow) return null
-    return [flow.diablo1, flow.diablo2, flow.hint]
+    const extras = flow.extras ?? []
+    return [
+      { first: flow.diablo1, second: extras[0] },
+      { first: flow.diablo2, second: extras[1] ?? extras[0] },
+      { first: flow.hint },
+    ]
   }, [fromFlow, flow])
 
   const [cycleId, setCycleId] = useState<string | null>(null)
@@ -593,9 +600,9 @@ export default function Questionnaire() {
           Com flow: SystemVoiceSequence inline (CSS-only, não suspende durante load).
           Sem flow: counter + empty state da página. */}
       <div style={{ minHeight: 110, flexShrink: 0, padding: '12px 24px 0' }}>
-        {fromFlow && voicePhrases && (
+        {fromFlow && voiceSlots && (
           <SystemVoiceSequence
-            phrases={voicePhrases}
+            slots={voiceSlots}
             fadeOut={voiceFadeOut}
             onHintReady={() => setVoiceHintReady(true)}
             onFinish={clearFlow}
