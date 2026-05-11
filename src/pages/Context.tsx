@@ -296,7 +296,7 @@ function ContextDeep({ cycle, onBack, userName }: { cycle: CycleData; onBack: ()
   return (
     <>
       {/* Voz sistema sempre no topo — posição canônica */}
-      <div style={{ padding: "10px 24px 0", flexShrink: 0 }}>
+      <div style={{ padding: "12px 24px 0", flexShrink: 0 }}>
         <SystemTerminalLine text={disclaimerText} />
       </div>
 
@@ -1025,7 +1025,7 @@ export default function Context() {
     <>
       {/* Voice slot — espaço reservado (~110px). Sem flow: counter + disclaimer.
           Com flow: vazio (FlowVoice ocupa via overlay). Após flow: vazio. */}
-      <div style={{ minHeight: 110, flexShrink: 0, padding: "10px 24px 0" }}>
+      <div style={{ minHeight: 110, flexShrink: 0, padding: "12px 24px 0" }}>
         {!fromFlow && cycle && (
           <>
             {cycle.questionnaireRemaining > 0 && (

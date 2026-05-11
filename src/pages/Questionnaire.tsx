@@ -565,7 +565,7 @@ export default function Questionnaire() {
       {/* Voice slot — espaço reservado no topo (~110px).
           Quando flow ativo, FlowVoice cobre. Quando termina, fica em branco.
           Sem flow: counter + empty message ocupam o slot. */}
-      <div style={{ minHeight: 110, flexShrink: 0, padding: '10px 24px 0' }}>
+      <div style={{ minHeight: 110, flexShrink: 0, padding: '12px 24px 0' }}>
         {!fromFlow && (
           <>
             <SystemTerminalCounter
