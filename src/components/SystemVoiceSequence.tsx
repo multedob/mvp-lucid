@@ -37,6 +37,10 @@ const KEYFRAMES = `
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+@keyframes rdwth-voice-disappear {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
 `;
 
 function injectStyles() {
@@ -244,11 +248,19 @@ export default function SystemVoiceSequence({
           ? `calc(${slot.second.text.length}ch + 2ch)`
           : undefined;
 
-        // Animation do span first: forward sempre, + opcional reverse
+        // Animation do span first: forward sempre, + opcional reverse + disappear final.
+        // disappear opacity garante que sobras de pixel após reverse fiquem invisíveis.
         const firstAnim =
           slot.first.reverseStartMs !== undefined && slot.first.reverseMs !== undefined
-            ? `rdwth-voice-fwd ${slot.first.typeMs}ms steps(${slot.first.text.length || 1}) ${slot.first.startMs}ms forwards, rdwth-voice-rev ${slot.first.reverseMs}ms steps(${slot.first.text.length || 1}) ${slot.first.reverseStartMs}ms forwards`
+            ? `rdwth-voice-fwd ${slot.first.typeMs}ms steps(${slot.first.text.length || 1}) ${slot.first.startMs}ms forwards, rdwth-voice-rev ${slot.first.reverseMs}ms steps(${slot.first.text.length || 1}) ${slot.first.reverseStartMs}ms forwards, rdwth-voice-disappear 1ms ${slot.first.reverseStartMs + slot.first.reverseMs}ms forwards`
             : `rdwth-voice-fwd ${slot.first.typeMs}ms steps(${slot.first.text.length || 1}) ${slot.first.startMs}ms forwards`;
+
+        // Animation do prompt > do slot — também precisa desaparecer com o first quando há reverse,
+        // pra evitar o ">" persistente quando a frase apaga.
+        const promptAnim =
+          slot.first.reverseStartMs !== undefined && slot.first.reverseMs !== undefined
+            ? `rdwth-voice-appear 1ms ${slot.promptStartMs}ms forwards, rdwth-voice-disappear 1ms ${slot.first.reverseStartMs + slot.first.reverseMs}ms forwards`
+            : `rdwth-voice-appear 1ms ${slot.promptStartMs}ms forwards`;
 
         return (
           <div
@@ -266,13 +278,13 @@ export default function SystemVoiceSequence({
               position: "relative",
             }}
           >
-            {/* Prompt > — aparece junto com a primeira frase do slot */}
+            {/* Prompt > — aparece com a primeira frase e some com o reverse dela */}
             <span
               aria-hidden="true"
               style={{
                 display: "inline-block",
                 opacity: 0,
-                animation: `rdwth-voice-appear 1ms ${slot.promptStartMs}ms forwards`,
+                animation: promptAnim,
               }}
             >
               {"> "}
@@ -311,7 +323,10 @@ export default function SystemVoiceSequence({
                     top: 0,
                     display: "inline-block",
                     opacity: 0,
-                    animation: `rdwth-voice-appear 1ms ${slot.second.startMs}ms forwards`,
+                    animation:
+                      slot.second.reverseStartMs !== undefined && slot.second.reverseMs !== undefined
+                        ? `rdwth-voice-appear 1ms ${slot.second.startMs}ms forwards, rdwth-voice-disappear 1ms ${slot.second.reverseStartMs + slot.second.reverseMs}ms forwards`
+                        : `rdwth-voice-appear 1ms ${slot.second.startMs}ms forwards`,
                   }}
                 >
                   {"> "}
@@ -328,7 +343,7 @@ export default function SystemVoiceSequence({
                     width: 0,
                     animation:
                       slot.second.reverseStartMs !== undefined && slot.second.reverseMs !== undefined
-                        ? `rdwth-voice-fwd ${slot.second.typeMs}ms steps(${slot.second.text.length || 1}) ${slot.second.startMs}ms forwards, rdwth-voice-rev ${slot.second.reverseMs}ms steps(${slot.second.text.length || 1}) ${slot.second.reverseStartMs}ms forwards`
+                        ? `rdwth-voice-fwd ${slot.second.typeMs}ms steps(${slot.second.text.length || 1}) ${slot.second.startMs}ms forwards, rdwth-voice-rev ${slot.second.reverseMs}ms steps(${slot.second.text.length || 1}) ${slot.second.reverseStartMs}ms forwards, rdwth-voice-disappear 1ms ${slot.second.reverseStartMs + slot.second.reverseMs}ms forwards`
                         : `rdwth-voice-fwd ${slot.second.typeMs}ms steps(${slot.second.text.length || 1}) ${slot.second.startMs}ms forwards`,
                     ["--rdwth-w" as keyof React.CSSProperties as string]: secondWidth,
                   } as React.CSSProperties}
