@@ -10,7 +10,8 @@
 // re-anima quando muda; prefixo permanece estável). Disclaimer espera o
 // contador terminar (delayMs=700) pra digitar — sequencial, não simultâneo.
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import SystemVoiceSequence from "@/components/SystemVoiceSequence";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Copy, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -373,7 +374,6 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   const [invites, setInvites] = useState<(ThirdPartyInvite & { cycle_number?: number })[]>([]);
   const [responses, setResponses] = useState<Record<string, ThirdPartyResponse[]>>({});
   const [loading, setLoading] = useState(true);
-  const [loadingScreenDone, setLoadingScreenDone] = useState(false);
   const [creating, setCreating] = useState(false);
   const [view, setView] = useState<"main" | "history">("main");
   const [openCycle, setOpenCycle] = useState<number | null>(null);
@@ -415,50 +415,19 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
     : "convide até 8 pessoas próximas. as respostas delas alimentam suas leituras com perspectiva externa.";
 
   // ─── Voice sequence (abertura da página de Terceiros) ──────────────
-  // Phase 1: linha 1 (diablo) entra com typewriter.
-  // Phase 2: linha 2 (diablo) entra após ~2000ms.
-  // Phase 3: ambas reverse pra "" após ~5000ms.
-  // Phase 4: linha 1 = headerText (typewriter forward) após reverse completar.
-  // Phase 5: depois do typewriter da headerText, conteúdo aparece + voz fade-out.
+  // Voz fluida (SystemVoiceSequence):
+  //   linha 1: diablo1 → reverse → some
+  //   linha 2: diablo2 → reverse → some
+  //   hint (3ª linha): frase curta sobre os 8 convites — FICA pra sempre
+  // Conteúdo principal entra logo após hint typewriter completar.
   const diablosRef = useRef<[string, string]>(pickTwoDistinct(THIRD_PARTY_DIABLOS));
-  const [voiceLine1, setVoiceLine1] = useState("");
-  const [voiceLine2, setVoiceLine2] = useState("");
-  const [voiceHeader, setVoiceHeader] = useState("");
   const [contentVisible, setContentVisible] = useState(false);
-  const [voiceFading, setVoiceFading] = useState(false);
-
-  useEffect(() => {
-    // Reset quando o cycleId muda (caso user troque de ciclo)
-    setVoiceLine1(diablosRef.current[0]);
-    setVoiceLine2("");
-    setVoiceHeader("");
-    setContentVisible(false);
-    setVoiceFading(false);
-
-    const t1 = window.setTimeout(() => setVoiceLine2(diablosRef.current[1]), 2000);
-    const t2 = window.setTimeout(() => {
-      // Reverse das duas linhas (CyclingLine apaga até "")
-      setVoiceLine1("");
-      setVoiceLine2("");
-    }, 5000);
-    const t3 = window.setTimeout(() => {
-      // Phase 4: linha 1 vira headerText
-      setVoiceLine1(headerText);
-    }, 5800);
-    // Conteúdo aparece após typewriter da headerText (~headerText.length × 30ms + 300 buffer)
-    const headerTypeTime = headerText.length * 30 + 300;
-    const t4 = window.setTimeout(() => setContentVisible(true), 5800 + headerTypeTime);
-    // Voz fade-out 1500ms após conteúdo aparecer
-    const t5 = window.setTimeout(() => setVoiceFading(true), 5800 + headerTypeTime + 1500);
-
-    return () => {
-      window.clearTimeout(t1);
-      window.clearTimeout(t2);
-      window.clearTimeout(t3);
-      window.clearTimeout(t4);
-      window.clearTimeout(t5);
-    };
-  }, [headerText]);
+  const hintText = "convide até 8 pessoas próximas.";
+  const voiceSlots = useMemo(() => [
+    { first: diablosRef.current[0], reverseAfterFirst: true },
+    { first: diablosRef.current[1], reverseAfterFirst: true },
+    { first: hintText },
+  ], []);
 
   const loadAll = async () => {
     setLoading(true);
@@ -582,15 +551,6 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   const activeCount = invites.filter(i => i.status === "pending" || i.status === "submitted").length;
   const submittedCount = invites.filter(i => i.status === "submitted").length;
 
-  if (!loadingScreenDone) {
-    return <LoadingScreen
-      loadComplete={!loading}
-      onDone={() => setLoadingScreenDone(true)}
-      section="contexto"
-      active="context"
-    />;
-  }
-
   // Helpers de UI
   const minimalBtn = {
     display: "flex" as const,
@@ -627,32 +587,17 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   return (
     <>
       <div className="r-scroll" style={{ padding: "28px 24px 16px", display: "flex", flexDirection: "column", gap: 20 }}>
-        {/* Voz do sistema — phase 1: 2 diablos alternando, phase 2: reverse,
-            phase 3: headerText, phase 4: fade-out junto com conteúdo já visível */}
-        <div
-          style={{
-            opacity: voiceFading ? 0 : 1,
-            transition: "opacity 400ms ease",
-            display: "flex",
-            flexDirection: "column",
-            gap: 0,
-            minHeight: 60,
-          }}
-        >
-          {!voiceHeader && (
-            <>
-              <SystemCyclingLine text={voiceLine1} />
-              <SystemCyclingLine text={voiceLine2} />
-            </>
-          )}
-          {voiceHeader && <SystemCyclingLine text={voiceHeader} />}
-        </div>
+        {/* Voz do sistema — diablo1 → diablo2 → reverse → hint (fica pra sempre).
+            Conteúdo entra logo após hint completar typewriter (~5s). */}
+        <SystemVoiceSequence
+          slots={voiceSlots}
+          fadeOut={false}
+          onHintReady={() => setContentVisible(true)}
+        />
 
-        {/* Conteúdo só aparece após voz terminar de falar */}
+        {/* Conteúdo só aparece após hint typewriter terminar */}
         {contentVisible && view === "main" && (
           <>
-            <div style={{ height: 1, background: "var(--r-ghost)", opacity: 0.4 }} />
-
             {/* KPIs */}
             {!loading && invites.length > 0 && (
               <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 9, color: "var(--r-ghost)", letterSpacing: "0.12em" }}>
@@ -736,8 +681,6 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
             <div style={minimalBtn} onClick={() => { setView("main"); setOpenCycle(null); }}>
               <span style={{ ...minimalBtnLabel, color: "var(--r-muted)" }}>‹ voltar</span>
             </div>
-
-            <div style={{ height: 1, background: "var(--r-ghost)", opacity: 0.4 }} />
 
             {!loading && invites.length === 0 && (
               <div className="r-sub" style={{ textAlign: "center", padding: "20px 0" }}>

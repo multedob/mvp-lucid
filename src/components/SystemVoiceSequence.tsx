@@ -61,6 +61,8 @@ export interface Slot {
   first: string;
   second?: string;
   third?: string;
+  /** Quando true e não há second: first faz forward + reverse e desaparece. */
+  reverseAfterFirst?: boolean;
 }
 
 interface ComputedPhrase {
@@ -110,9 +112,11 @@ export default function SystemVoiceSequence({
     const s0First = lower(slots[0].first);
     const s0Second = slots[0].second ? lower(slots[0].second) : undefined;
     const s0Third = slots[0].third ? lower(slots[0].third) : undefined;
+    const s0ReverseOnly = !!slots[0].reverseAfterFirst && !s0Second;
     const s1First = lower(slots[1].first);
     const s1Second = slots[1].second ? lower(slots[1].second) : undefined;
     const s1Third = slots[1].third ? lower(slots[1].third) : undefined;
+    const s1ReverseOnly = !!slots[1].reverseAfterFirst && !s1Second;
     const hint = lower(slots[2].first);
 
     // Ciclo 1: first
@@ -121,12 +125,13 @@ export default function SystemVoiceSequence({
     const s1FirstStart = s0FirstStart + s0FirstType;
     const s1FirstType = typeMs(s1First);
 
-    // Reverse 1 simultâneo (se há second em ambos) — após s1First + HOLD
+    // Reverse 1 simultâneo — se há second em ambos OU se reverseAfterFirst — após s1First + HOLD
     const hasSecond = !!(s0Second && s1Second);
+    const hasReverseFirst = hasSecond || (s0ReverseOnly && s1ReverseOnly);
     const reverse1Start = s1FirstStart + s1FirstType + HOLD_MS;
-    const s0Rev1 = hasSecond ? revMs(s0First) : 0;
-    const s1Rev1 = hasSecond ? revMs(s1First) : 0;
-    const reverse1End = hasSecond ? reverse1Start + Math.max(s0Rev1, s1Rev1) : reverse1Start;
+    const s0Rev1 = hasReverseFirst ? revMs(s0First) : 0;
+    const s1Rev1 = hasReverseFirst ? revMs(s1First) : 0;
+    const reverse1End = hasReverseFirst ? reverse1Start + Math.max(s0Rev1, s1Rev1) : reverse1Start;
 
     // Ciclo 2: second
     const s0SecondStart = hasSecond ? reverse1End : 0;
@@ -149,10 +154,11 @@ export default function SystemVoiceSequence({
     const s1ThirdStart = hasThird ? s0ThirdStart + s0ThirdType : 0;
     const s1ThirdType = s1Third ? typeMs(s1Third) : 0;
 
-    // Hint: após último ciclo + HOLD
+    // Hint: após último ciclo + HOLD curto (ou após reverse-only direto)
     let lastEnd: number;
     if (hasThird) lastEnd = s1ThirdStart + s1ThirdType;
     else if (hasSecond) lastEnd = s1SecondStart + s1SecondType;
+    else if (s0ReverseOnly && s1ReverseOnly) lastEnd = reverse1End; // reverse-only: hint entra após reverse
     else lastEnd = s1FirstStart + s1FirstType;
     const hintStart = lastEnd + HOLD_MS;
     const hintType = typeMs(hint);
@@ -164,8 +170,8 @@ export default function SystemVoiceSequence({
           text: s0First,
           startMs: s0FirstStart,
           typeMs: s0FirstType,
-          reverseStartMs: hasSecond ? reverse1Start : undefined,
-          reverseMs: hasSecond ? s0Rev1 : undefined,
+          reverseStartMs: hasReverseFirst ? reverse1Start : undefined,
+          reverseMs: hasReverseFirst ? s0Rev1 : undefined,
         },
         second: s0Second
           ? {
@@ -186,8 +192,8 @@ export default function SystemVoiceSequence({
           text: s1First,
           startMs: s1FirstStart,
           typeMs: s1FirstType,
-          reverseStartMs: hasSecond ? reverse1Start : undefined,
-          reverseMs: hasSecond ? s1Rev1 : undefined,
+          reverseStartMs: hasReverseFirst ? reverse1Start : undefined,
+          reverseMs: hasReverseFirst ? s1Rev1 : undefined,
         },
         second: s1Second
           ? {
