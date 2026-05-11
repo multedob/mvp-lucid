@@ -6,13 +6,14 @@
 // (copy "perguntas restantes: X", animação backspace+retype só do número).
 // EmptyStateMessage recebe delayMs=700 pra encadear com o contador (igual Context).
 
-import { useState, useEffect, useRef, forwardRef, type ReactNode } from 'react'
+import { useState, useEffect, useMemo, useRef, forwardRef, type ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { callEdgeFunction, getCurrentUserVersion } from '@/lib/api'
 import { useShell } from '@/hooks/useShell'
 import { useFlow } from '@/hooks/useFlow'
 import { FLOW_HINT_DELAY_MS } from '@/components/FlowVoice'
+import SystemVoiceSequence from '@/components/SystemVoiceSequence'
 import { triggerDeepReadingRefresh } from '@/lib/deepReading'
 import { QUESTIONS, getQuestionText, type BlockId } from '@/data/questions'
 import { AudioRecorder } from '@/components/AudioRecorder'
@@ -160,9 +161,18 @@ export default function Questionnaire() {
   const fromFlow = !!(location.state as { fromFlow?: boolean } | null)?.fromFlow
 
   useShell({ section: "questionário", active: "questionnaire" })
-  const { markFlowReady, hintShown } = useFlow()
+  const { flow, clearFlow } = useFlow()
 
   const [phase, setPhase] = useState<Phase>('loading')
+
+  // Voz inline (SystemVoiceSequence): quando vem do flow, renderiza no slot
+  // superior 3 frases (2 diablo + hint). Fade-out quando dados carregados.
+  const voiceDone = fromFlow && phase !== 'loading' && phase !== 'transition'
+  const voicePhrases = useMemo(() => {
+    if (!fromFlow || !flow) return null
+    return [flow.diablo1, flow.diablo2, flow.hint]
+  }, [fromFlow, flow])
+
   const [cycleId, setCycleId] = useState<string | null>(null)
   const [stateId, setStateId] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
@@ -190,15 +200,15 @@ export default function Questionnaire() {
 
   // Cascade.
   // Sem flow: cadência original (3500/4200/5000) que espera a voz própria da página.
-  // Com flow (Modo B): aguarda hintShown (linha 3 hint apareceu); pergunta entra
-  // logo abaixo (FLOW_HINT_DELAY_MS), input +700ms, pulse áudio +1500ms.
+  // Com flow: pergunta entra QUANDO voiceDone=true (dados carregados → voz começa fade-out).
+  //          Pequeno delay pra deixar a voz iniciar fade antes do conteúdo aparecer.
   useEffect(() => {
     if (cascadeArmedRef.current) return
-    if (fromFlow && !hintShown) return
+    if (fromFlow && !voiceDone) return
     cascadeArmedRef.current = true
-    const qDelay = fromFlow ? FLOW_HINT_DELAY_MS : 3500
-    const iDelay = fromFlow ? FLOW_HINT_DELAY_MS + 700 : 4200
-    const aDelay = fromFlow ? FLOW_HINT_DELAY_MS + 1500 : 5000
+    const qDelay = fromFlow ? 400 : 3500
+    const iDelay = fromFlow ? 1100 : 4200
+    const aDelay = fromFlow ? 1900 : 5000
 
     const t1 = window.setTimeout(() => setQuestionReady(true), qDelay)
     const t2 = window.setTimeout(() => setInputReady(true), iDelay)
@@ -218,14 +228,10 @@ export default function Questionnaire() {
       window.clearTimeout(t2)
       if (t3) window.clearTimeout(t3)
     }
-  }, [fromFlow, hintShown])
+  }, [fromFlow, voiceDone])
 
-  // Sinaliza pro FlowVoice que os dados do questionário estão prontos (phase saiu de loading)
-  useEffect(() => {
-    if (!fromFlow) return
-    if (phase === 'loading' || phase === 'transition') return
-    markFlowReady()
-  }, [fromFlow, phase, markFlowReady])
+  // voiceDone já é derivado de phase; SystemVoiceSequence reage diretamente —
+  // não precisa mais sinalizar via markFlowReady.
 
   // Visibilidade real: cascade armed E dados prontos (phase fora de loading).
   const questionVisible = questionReady && phase !== 'loading' && phase !== 'transition'
@@ -241,18 +247,7 @@ export default function Questionnaire() {
   // ─────────────────────────────────────
   // Init
   // ─────────────────────────────────────
-  // Adia o init() pesado até a voz do sistema ter chegado na hint.
-  // Sem essa proteção, init() bloqueia o JS thread e o setInterval do FlowVoice
-  // fica suspenso — voz congela em vez de animar as substituições durante o load.
-  // Quando fromFlow=false (navegação direta sem flow), inicia imediato.
-  const initStartedRef = useRef(false)
-  useEffect(() => {
-    if (initStartedRef.current) return
-    if (fromFlow && !hintShown) return // espera FlowVoice chegar na hint
-    initStartedRef.current = true
-    init()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fromFlow, hintShown])
+  useEffect(() => { init() }, [])
 
   async function init() {
     try {
@@ -573,10 +568,17 @@ export default function Questionnaire() {
     {loadingOverlay}
     <>
 
-      {/* Voice slot — espaço reservado no topo (~110px).
-          Quando flow ativo, FlowVoice cobre. Quando termina, fica em branco.
-          Sem flow: counter + empty message ocupam o slot. */}
+      {/* Voice slot — 110px no topo do canvas.
+          Com flow: SystemVoiceSequence inline (CSS-only, não suspende durante load).
+          Sem flow: counter + empty state da página. */}
       <div style={{ minHeight: 110, flexShrink: 0, padding: '12px 24px 0' }}>
+        {fromFlow && voicePhrases && (
+          <SystemVoiceSequence
+            phrases={voicePhrases}
+            done={voiceDone}
+            onFinish={clearFlow}
+          />
+        )}
         {!fromFlow && (
           <>
             <SystemTerminalCounter
