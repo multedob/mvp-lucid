@@ -18,8 +18,16 @@ export default function SystemCyclingLine({ text: rawText, fontSize = 11 }: Prop
   const text = rawText.toLowerCase();
   const [displayed, setDisplayed] = useState("");
   const targetRef = useRef(text);
+  // Flag que força reverse completo até "" antes de começar forward com novo texto.
+  // Evita a "otimização" do startsWith() pular o reverse do prefixo comum
+  // (visualmente parecia que a frase mudava só na parte do final).
+  const reversingRef = useRef(false);
 
   useEffect(() => {
+    // Se já havia texto anterior diferente, marca pra fazer reverse completo.
+    if (targetRef.current !== "" && targetRef.current !== text) {
+      reversingRef.current = true;
+    }
     targetRef.current = text;
   }, [text]);
 
@@ -27,11 +35,22 @@ export default function SystemCyclingLine({ text: rawText, fontSize = 11 }: Prop
     const interval = window.setInterval(() => {
       setDisplayed((prev) => {
         const target = targetRef.current;
+
+        // Modo "full reverse": apaga tudo até vazio antes de liberar forward.
+        if (reversingRef.current) {
+          if (prev.length === 0) {
+            reversingRef.current = false;
+            return prev; // próximo tick entra em forward
+          }
+          return prev.slice(0, Math.max(0, prev.length - 2));
+        }
+
         if (prev === target) return prev;
         if (target.startsWith(prev)) {
           return target.slice(0, prev.length + 1); // forward — 1 char
         }
-        // reverse — 2 chars (~2x mais rápido)
+        // Fallback (texto mudou mid-typing sem prefixo comum): força reverse total.
+        reversingRef.current = true;
         return prev.slice(0, Math.max(0, prev.length - 2));
       });
     }, TICK_MS);
