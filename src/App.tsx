@@ -24,6 +24,7 @@ import Terms from "./pages/Terms";
 import Sobre from "./pages/Sobre";
 import ResetPassword from "./pages/ResetPassword";
 import ThirdParty from "./pages/ThirdParty";
+import ThirdPartyPage from "./pages/ThirdPartyPage";
 import NotFound from "./pages/NotFound";
 import AppShell from "./components/AppShell";
 import { trackPageView, identifyUser, resetUser } from "./lib/analytics";
@@ -186,6 +187,7 @@ const App = () => (
             <Route path="/pills" element={<Pills />} />
             <Route path="/questionnaire" element={<Questionnaire />} />
             <Route path="/context" element={<Context />} />
+            <Route path="/terceiros" element={<ThirdPartyPage />} />
             <Route path="/reed" element={<Reed />} />
             <Route path="/settings" element={<Settings />} />
           </Route>

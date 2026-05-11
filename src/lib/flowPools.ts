@@ -6,7 +6,7 @@
 //   diablo[]  — frases curadas, contextuais. 2 são sorteadas distintas por flow.
 //   hints[]   — 3 variações da frase de chamada final (1 sorteada).
 
-export type FlowDestination = "pills" | "questionnaire" | "reed" | "context";
+export type FlowDestination = "pills" | "questionnaire" | "reed" | "context" | "thirdparty";
 
 export interface FlowPool {
   /** Frases gerais (usado quando A/B não estão definidos). */
@@ -103,6 +103,24 @@ const POOLS: Record<FlowDestination, FlowPool> = {
       "o que o sistema viu até aqui.",
     ],
   },
+
+  thirdparty: {
+    diablo: [
+      "olhares de fora afinam o ciclo.",
+      "terceiros veem o que você não vê.",
+      "perspectiva externa amplia a leitura.",
+      "pessoas próximas refletem padrões.",
+      "pontos cegos viram visíveis.",
+      "quem te conhece te lê melhor.",
+      "olhares próximos revelam ângulos.",
+      "o de fora amplia o de dentro.",
+    ],
+    hints: [
+      "convide até 8 pessoas próximas.",
+      "envie até 8 convites.",
+      "convide quem te conhece.",
+    ],
+  },
 };
 
 function pickRandom<T>(pool: T[], excluding: T[] = []): T {
@@ -164,6 +182,7 @@ export const PATH_TO_DEST: Record<string, FlowDestination> = {
   "/questionnaire": "questionnaire",
   "/reed": "reed",
   "/context": "context",
+  "/terceiros": "thirdparty",
 };
 
 /** Section do header por destino. */
@@ -172,12 +191,14 @@ export const DEST_SECTION: Record<FlowDestination, string> = {
   questionnaire: "questionário",
   reed: "reed",
   context: "contexto",
+  thirdparty: "terceiros",
 };
 
 /** Active do NavBottom por destino. */
-export const DEST_ACTIVE: Record<FlowDestination, "pills" | "questionnaire" | "reed" | "context"> = {
+export const DEST_ACTIVE: Record<FlowDestination, "pills" | "questionnaire" | "reed" | "context" | "thirdparty"> = {
   pills: "pills",
   questionnaire: "questionnaire",
   reed: "reed",
   context: "context",
+  thirdparty: "thirdparty",
 };

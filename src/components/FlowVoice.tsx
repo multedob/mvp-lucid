@@ -300,8 +300,9 @@ function FlowVoiceModeB() {
 export default function FlowVoice() {
   const { flow } = useFlow();
   if (!flow) return null;
-  // Questionnaire renderiza sua própria voz INLINE (SystemVoiceSequence),
-  // pra evitar JS timers que congelam quando o thread bloqueia no load.
+  // Questionnaire e ThirdParty renderizam voz INLINE (SystemVoiceSequence),
+  // pra evitar JS timers congelando quando o thread bloqueia no load.
   if (flow.dest === "questionnaire") return null;
+  if (flow.dest === "thirdparty") return null;
   return <FlowVoiceModeA />;
 }

@@ -364,12 +364,12 @@ interface ThirdPartyResponse {
 // NOTA W20.5b/W20.6.5: mini_insight do terceiro NUNCA é exibido pro user.
 // Por isso esse componente NÃO faz fetch de third_party_mini_insights — só
 // `service_role` tem permissão de leitura (defesa em profundidade).
-function ContextThirdParty({ ipeCycleId, onBack, userName }: {
+export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   ipeCycleId: string;
   onBack: () => void;
   userName: string | null;
 }) {
-  useShell({ section: "contexto · terceiros", active: "context" });
+  // useShell é responsabilidade do caller (ThirdPartyPage seta section="terceiros").
   const navigate = useNavigate();
   const [invites, setInvites] = useState<(ThirdPartyInvite & { cycle_number?: number })[]>([]);
   const [responses, setResponses] = useState<Record<string, ThirdPartyResponse[]>>({});
@@ -418,16 +418,18 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   // Voz fluida (SystemVoiceSequence):
   //   linha 1: diablo1 → reverse → some
   //   linha 2: diablo2 → reverse → some
-  //   hint (3ª linha): frase curta sobre os 8 convites — FICA pra sempre
-  // Conteúdo principal entra logo após hint typewriter completar.
+  //   hint (entra na linha 1, multi-linha): texto longo de boas-vindas — FICA pra sempre
+  // Conteúdo principal entra após fade-in da hint completar.
   const diablosRef = useRef<[string, string]>(pickTwoDistinct(THIRD_PARTY_DIABLOS));
   const [contentVisible, setContentVisible] = useState(false);
-  const hintText = "convide até 8 pessoas próximas.";
+  const hintTextLong = userName
+    ? `${userName.toLowerCase()}, convide até 8 pessoas próximas que conhecem você. as respostas delas alimentam suas leituras com perspectiva externa.`
+    : "convide até 8 pessoas próximas que conhecem você. as respostas delas alimentam suas leituras com perspectiva externa.";
   const voiceSlots = useMemo(() => [
     { first: diablosRef.current[0], reverseAfterFirst: true },
     { first: diablosRef.current[1], reverseAfterFirst: true },
-    { first: hintText },
-  ], []);
+    { first: hintTextLong },
+  ], [hintTextLong]);
 
   const loadAll = async () => {
     setLoading(true);
@@ -592,6 +594,7 @@ function ContextThirdParty({ ipeCycleId, onBack, userName }: {
         <SystemVoiceSequence
           slots={voiceSlots}
           fadeOut={false}
+          multilineHint
           onHintReady={() => setContentVisible(true)}
         />
 
@@ -798,15 +801,9 @@ export default function Context() {
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [showDeep, setShowDeep] = useState(false);
   const [showCycle, setShowCycle] = useState(false);
-  const [showThirdParty, setShowThirdParty] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingScreenDone, setLoadingScreenDone] = useState(fromFlow);
 
-  // Onboardings consolidados em /sistema (item #7) — sem overlays primeira-visita.
-  const handleOpenThirdParty = () => {
-    track("context_third_party_panel_opened");
-    setShowThirdParty(true);
-  };
 
   useEffect(() => { loadCycles(); }, []);
 
@@ -935,15 +932,7 @@ export default function Context() {
   // Subviews
   if (showDeep && cycles[selectedIdx]) return <ContextDeep cycle={cycles[selectedIdx]} onBack={() => setShowDeep(false)} userName={userName} />;
   if (showCycle && cycles[selectedIdx]) return <ContextCycle cycle={cycles[selectedIdx]} onBack={() => setShowCycle(false)} userName={userName} />;
-  if (showThirdParty && cycles[selectedIdx]) {
-    // Pega ipe_cycle_id real (CycleData.id é tipo "C1"; precisa do uuid).
-    // ipeCyclesRef guardado em closure: vamos buscar de novo.
-    return <ContextThirdParty
-      ipeCycleId={cycles[selectedIdx].ipeCycleId}
-      onBack={() => setShowThirdParty(false)}
-      userName={userName}
-    />;
-  }
+  // Terceiros agora é rota standalone (/terceiros via NavBottom), não acessado por dentro do Context.
 
   // Empty state — nenhum ciclo ainda
   if (!loading && cycles.length === 0) return (
@@ -999,8 +988,6 @@ export default function Context() {
         {/* TOP — leitura atual */}
         {cycle && (
           <div style={{ flexShrink: 0 }}>
-            <div style={{ height: 1, background: "var(--r-ghost)", opacity: 0.4, marginBottom: 14 }} />
-
             {/* Descrição — scroll interno */}
             <div style={{ overflowY: "auto", maxHeight: 120, marginBottom: 14 }}>
               <div style={{ fontFamily: "var(--r-font-ed)", fontWeight: 800, fontSize: 14, lineHeight: 1.65, color: "var(--r-text)" }}>
@@ -1026,8 +1013,6 @@ export default function Context() {
 
         {/* BOTTOM */}
         <div style={{ flexShrink: 0 }}>
-          <div style={{ height: 1, background: "var(--r-ghost)", opacity: 0.4, marginBottom: 16 }} />
-
           {/* Cycles */}
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 9, color: "var(--r-ghost)", letterSpacing: "0.12em", marginBottom: 10 }}>
@@ -1056,18 +1041,7 @@ export default function Context() {
                 ))}
               </div>
 
-              {/* Terceiros — escondido em leitura inicial (warmup-only, sem ciclo real) */}
-              {cycle && cycle.ipeCycleId && (
-                <div
-                  onClick={handleOpenThirdParty}
-                  style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
-                >
-                  <div style={{ width: 1, height: 12, background: "var(--r-ghost)", flexShrink: 0 }} />
-                  <span style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, color: "var(--r-muted)", letterSpacing: "0.06em" }}>
-                    terceiros
-                  </span>
-                </div>
-              )}
+              {/* Terceiros agora é acessado pelo NavBottom (não mais aqui dentro) */}
             </div>
           </div>
 

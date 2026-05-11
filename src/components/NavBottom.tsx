@@ -14,7 +14,7 @@ import { useNavigate } from 'react-router-dom'
 import { useOptionalFlow } from '@/hooks/useFlow'
 import { PATH_TO_DEST } from '@/lib/flowPools'
 
-export type ActivePage = 'reed' | 'pills' | 'questionnaire' | 'context' | 'system' | 'home' | 'settings' | 'none'
+export type ActivePage = 'reed' | 'pills' | 'questionnaire' | 'context' | 'thirdparty' | 'system' | 'home' | 'settings' | 'none'
 
 interface NavBottomProps {
   active?: ActivePage
@@ -140,8 +140,8 @@ export default function NavBottom({ active = 'none', pulseOnce = false }: NavBot
   const centerItems = [
     { label: 'pills',         slug: 'pills' as ActivePage,         path: '/pills' },
     { label: 'questionário',  slug: 'questionnaire' as ActivePage, path: '/questionnaire' },
+    { label: 'terceiros',     slug: 'thirdparty' as ActivePage,    path: '/terceiros' },
     { label: 'contexto',      slug: 'context' as ActivePage,       path: '/context' },
-    { label: 'sistema',       slug: 'system' as ActivePage,        path: '/como-funciona' },
   ]
 
   // Layout único — 6 elementos equidistantes (space-between), mesma baseline

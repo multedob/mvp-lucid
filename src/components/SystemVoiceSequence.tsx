@@ -87,6 +87,11 @@ interface Props {
   onHintReady?: () => void;
   onFinish?: () => void;
   fontSize?: number;
+  /** Quando true, a hint (slot[2]) é renderizada como texto longo multi-linha,
+   *  com fade-in (não typewriter) e posicionada no topo. As linhas 1 e 2 ainda
+   *  fazem typewriter + reverse normalmente — quando elas somem, a hint fica
+   *  visível ocupando a área da linha 1. */
+  multilineHint?: boolean;
 }
 
 export default function SystemVoiceSequence({
@@ -95,6 +100,7 @@ export default function SystemVoiceSequence({
   onHintReady,
   onFinish,
   fontSize = 11,
+  multilineHint = false,
 }: Props) {
   const [hidden, setHidden] = useState(false);
 
@@ -235,12 +241,19 @@ export default function SystemVoiceSequence({
 
   const hintIdx = computed.length - 1;
 
+  // Pra modo multilineHint, calcula quando a hint deve aparecer (após o reverse
+  // das linhas 1 e 2). Mostra como texto multi-linha posicionado absoluto no topo.
+  const hintSlot = multilineHint ? computed[hintIdx] : null;
+  const hintStartMs = hintSlot?.first.startMs ?? 0;
+  const hintText = hintSlot?.first.text ?? "";
+
   return (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
         gap: 0,
+        position: multilineHint ? "relative" : undefined,
         opacity: fadeOut ? 0 : 1,
         transition: `opacity ${FADE_OUT_MS}ms ease`,
         pointerEvents: "none",
@@ -248,6 +261,8 @@ export default function SystemVoiceSequence({
     >
       {computed.map((slot, idx) => {
         const isHint = idx === hintIdx;
+        // Em modo multilineHint, slot[2] é renderizado separadamente abaixo
+        if (isHint && multilineHint) return null;
         // Width final do span first (compensa letter-spacing 0.04em com +2ch)
         const firstWidth = `calc(${slot.first.text.length}ch + 3ch)`;
         const secondWidth = slot.second
@@ -396,6 +411,34 @@ export default function SystemVoiceSequence({
           </div>
         );
       })}
+
+      {/* Hint multi-linha — posicionada no topo (sobre a área das linhas 1/2 que
+          fizeram reverse e desapareceram). Fade-in suave, sem typewriter, com
+          white-space pre-wrap pra quebra natural. */}
+      {multilineHint && hintSlot && (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            fontFamily: "var(--r-font-sys)",
+            fontWeight: 300,
+            fontSize,
+            lineHeight: 1.7,
+            color: "var(--r-voice-sys)",
+            letterSpacing: "0.04em",
+            whiteSpace: "pre-wrap",
+            margin: 0,
+            opacity: 0,
+            animation: `rdwth-voice-appear 600ms ${hintStartMs}ms forwards`,
+          }}
+          onAnimationEnd={() => onHintReady?.()}
+        >
+          <span aria-hidden="true">{"> "}</span>
+          {hintText}
+        </div>
+      )}
     </div>
   );
 }
