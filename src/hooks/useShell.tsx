@@ -30,7 +30,9 @@ export function useShell(options: UseShellOptions = {}): void {
 
   useEffect(() => {
     if (!ctx) return;
-    if (section !== undefined) ctx.setSection(section);
+    // Sempre seta section — passar undefined limpa o header (Home).
+    // Sem isso, /home herdaria "terceiros" / "contexto" / etc da página anterior.
+    ctx.setSection(section);
     if (active !== undefined) ctx.setActive(active);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [section, active]);
