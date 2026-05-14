@@ -422,6 +422,8 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   // Conteúdo principal entra após última linha da hint completar.
   const diablosRef = useRef<[string, string]>(pickTwoDistinct(THIRD_PARTY_DIABLOS));
   const [contentVisible, setContentVisible] = useState(false);
+  const [voiceFadeOut, setVoiceFadeOut] = useState(false);
+  const [voiceHidden, setVoiceHidden] = useState(false);
   const firstName = (userName ?? "").toLowerCase().trim().split(/\s+/)[0] ?? "";
   // 3 linhas. L1 e L2 com prefixo "> ". L3 é continuação da L2 (sem ">", indent 2ch).
   const hintLines = useMemo<Array<string | { text: string; continuation?: boolean }>>(() => {
@@ -602,15 +604,23 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   return (
     <>
       <div className="r-scroll" style={{ padding: "28px 24px 16px", display: "flex", flexDirection: "column", gap: 20 }}>
-        {/* Voz do sistema — diablo1 → diablo2 → reverse → hint (fica pra sempre).
-            Conteúdo entra logo após hint completar typewriter (~5s). */}
-        <SystemVoiceSequence
-          slots={voiceSlots}
-          fadeOut={false}
-          multilineHint
-          hintLines={hintLines}
-          onHintReady={() => setContentVisible(true)}
-        />
+        {/* Voz do sistema — diablo1 → diablo2 → reverse → hint typewriter.
+            Após hint completar: conteúdo entra + timer de leitura (3500ms) +
+            fade-out da voz (400ms). Voz some pra liberar espaço pro conteúdo. */}
+        {!voiceHidden && (
+          <SystemVoiceSequence
+            slots={voiceSlots}
+            fadeOut={voiceFadeOut}
+            multilineHint
+            hintLines={hintLines}
+            onHintReady={() => {
+              setContentVisible(true);
+              // Tempo de leitura da hint antes do fade out
+              window.setTimeout(() => setVoiceFadeOut(true), 3500);
+            }}
+            onFinish={() => setVoiceHidden(true)}
+          />
+        )}
 
         {/* Conteúdo só aparece após hint typewriter terminar */}
         {contentVisible && view === "main" && (
