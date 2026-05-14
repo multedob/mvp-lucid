@@ -247,7 +247,10 @@ export default function SystemVoiceSequence({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fadeOut]);
 
-  if (hidden) return null;
+  // NOTA: intencionalmente NÃO retornamos null após fade-out — mantemos o DOM
+  // com opacity 0 pra preservar a altura reservada e evitar que o conteúdo
+  // abaixo "suba" quando a voz some.
+  void hidden;
 
   const hintIdx = computed.length - 1;
 

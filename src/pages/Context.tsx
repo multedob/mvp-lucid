@@ -423,7 +423,6 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   const diablosRef = useRef<[string, string]>(pickTwoDistinct(THIRD_PARTY_DIABLOS));
   const [contentVisible, setContentVisible] = useState(false);
   const [voiceFadeOut, setVoiceFadeOut] = useState(false);
-  const [voiceHidden, setVoiceHidden] = useState(false);
   const firstName = (userName ?? "").toLowerCase().trim().split(/\s+/)[0] ?? "";
   // 3 linhas. L1 e L2 com prefixo "> ". L3 é continuação da L2 (sem ">", indent 2ch).
   const hintLines = useMemo<Array<string | { text: string; continuation?: boolean }>>(() => {
@@ -605,26 +604,25 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
     <>
       <div className="r-scroll" style={{ padding: "28px 24px 16px", display: "flex", flexDirection: "column", gap: 20 }}>
         {/* Voz do sistema — diablo1 → diablo2 → reverse → hint typewriter.
-            Após hint completar: conteúdo entra + timer de leitura (3500ms) +
-            fade-out da voz (400ms). Voz some pra liberar espaço pro conteúdo. */}
-        {!voiceHidden && (
-          <SystemVoiceSequence
-            slots={voiceSlots}
-            fadeOut={voiceFadeOut}
-            multilineHint
-            hintLines={hintLines}
-            onHintReady={() => {
-              setContentVisible(true);
-              // Tempo de leitura da hint antes do fade out
-              window.setTimeout(() => setVoiceFadeOut(true), 3500);
-            }}
-            onFinish={() => setVoiceHidden(true)}
-          />
-        )}
+            Após hint completar: conteúdo entra + timer de leitura (1500ms) +
+            fade-out da voz (400ms). Voz fica no DOM com opacity 0 pra
+            preservar a posição do conteúdo (não sobe). */}
+        <SystemVoiceSequence
+          slots={voiceSlots}
+          fadeOut={voiceFadeOut}
+          multilineHint
+          hintLines={hintLines}
+          onHintReady={() => {
+            setContentVisible(true);
+            // Tempo de leitura da hint antes do fade out
+            window.setTimeout(() => setVoiceFadeOut(true), 1500);
+          }}
+        />
 
-        {/* Conteúdo só aparece após hint typewriter terminar */}
+        {/* Conteúdo só aparece após hint typewriter terminar.
+            marginTop extra pra dar respiro entre a voz e os KPIs. */}
         {contentVisible && view === "main" && (
-          <>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20, marginTop: 12 }}>
             {/* KPIs */}
             {!loading && invites.length > 0 && (
               <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 9, color: "var(--r-ghost)", letterSpacing: "0.12em" }}>
@@ -699,7 +697,7 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
                 )}
               </div>
             )}
-          </>
+          </div>
         )}
 
         {/* History view — convites agrupados por ciclo, cada ciclo expansível */}
