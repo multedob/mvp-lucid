@@ -56,7 +56,7 @@ export default function ThirdPartyPage() {
   return (
     <ContextThirdParty
       ipeCycleId={ipeCycleId}
-      onBack={() => navigate("/home")}
+      onBack={() => navigate(-1)}
       userName={userName}
     />
   );

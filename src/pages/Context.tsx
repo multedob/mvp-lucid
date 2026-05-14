@@ -700,13 +700,11 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
           </div>
         )}
 
-        {/* History view — convites agrupados por ciclo, cada ciclo expansível */}
+        {/* History view — convites agrupados por ciclo, cada ciclo expansível.
+            NB: botão "‹ voltar" removido — usar o ‹ do footer (que volta
+            contextualmente pro main view dentro desta página). */}
         {contentVisible && view === "history" && (
           <>
-            <div style={minimalBtn} onClick={() => { setView("main"); setOpenCycle(null); }}>
-              <span style={{ ...minimalBtnLabel, color: "var(--r-muted)" }}>‹ voltar</span>
-            </div>
-
             {!loading && invites.length === 0 && (
               <div className="r-sub" style={{ textAlign: "center", padding: "20px 0" }}>
                 nenhum convite enviado ainda.
@@ -802,7 +800,19 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
 
       <div className="r-line" />
       <div style={{ height: 52, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, flexShrink: 0 }}>
-        <span onClick={onBack} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
+        {/* ‹ contextual: se está em history view, volta pro main view (mesma rota);
+            senão, dispara onBack (que volta pra página anterior via navigate(-1)). */}
+        <span
+          onClick={() => {
+            if (view === "history") {
+              setView("main");
+              setOpenCycle(null);
+            } else {
+              onBack();
+            }
+          }}
+          style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}
+        >‹</span>
       </div>
     </>
   );
