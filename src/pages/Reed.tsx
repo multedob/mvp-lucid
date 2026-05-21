@@ -52,7 +52,7 @@ faço parte do rdwth. não sou humano, e não tento ser. mas presto total atenç
 
 o sistema tem quatro partes que se cruzam: esta conversa, as pills, o questionário e o questionário de terceiros.
 
-leio o que você trás e o que isso mostra. quanto mais se envolve nas suas respostas, mais eu te entendo e mais este papo vai a algum lugar.
+leio o que você traz e o que isso mostra. quanto mais se envolve nas suas respostas, mais eu te entendo e mais este papo vai a algum lugar.
 
 pode parecer simples, mas conforme você completa ciclos, novas camadas suas mais profundas se revelam.
 

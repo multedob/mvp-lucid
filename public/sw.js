@@ -1,10 +1,12 @@
 // public/sw.js
 // Service worker — PWA install + cache shell.
 // v2 (2026-05-05): network-first em tudo (HTML + assets) pra evitar bundle antigo
-// permanente em cache. Cache fica como fallback offline. Bump do CACHE_NAME
-// invalida cache anterior automaticamente em todos os browsers.
-
-const CACHE_NAME = 'rdwth-shell-v2';
+// permanente em cache. Cache fica como fallback offline.
+//
+// CACHE_NAME é reescrito automaticamente no build pelo plugin `sw-versioning`
+// (ver vite.config.ts) injetando o commit SHA curto. Em dev (sem build) usa
+// 'rdwth-shell-dev'. NÃO editar manualmente o valor abaixo — será sobrescrito.
+const CACHE_NAME = 'rdwth-shell-dev';
 const SHELL_URLS = ['/', '/index.html', '/icon.svg', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
