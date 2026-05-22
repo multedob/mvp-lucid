@@ -13,6 +13,7 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import CatastrophicError from "./CatastrophicError";
 import { track } from "@/lib/analytics";
+import { captureException } from "@/lib/sentry";
 
 interface Props {
   /** Identificador no log (ex: 'appshell', 'pillflow', 'thirdparty'). */
@@ -34,8 +35,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // Log estruturado no PostHog. Try/catch defensivo — se posthog não tiver
-    // inicializado (erro antes do mount), não bloqueia o fallback.
+    // Log estruturado no PostHog (funnel/intent).
     try {
       track("app_error", {
         boundary: this.props.boundaryName,
@@ -47,6 +47,12 @@ export default class ErrorBoundary extends Component<Props, State> {
     } catch {
       /* swallow — não bloqueia render do fallback */
     }
+
+    // Forward pro Sentry (stack trace + breadcrumbs + alerts).
+    captureException(error, {
+      boundary: this.props.boundaryName,
+      component_stack: errorInfo.componentStack,
+    });
 
     // Log no console pra debug em dev.
     if (typeof console !== "undefined") {

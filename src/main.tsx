@@ -1,8 +1,11 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import { initAnalytics } from "./lib/analytics";
+import { initSentry } from "./lib/sentry";
 import "./index.css";
 
+// Init Sentry primeiro — captura erros que aconteçam no boot do app.
+initSentry();
 initAnalytics();
 
 // Service worker — só em produção (evita conflito com Vite HMR em dev)

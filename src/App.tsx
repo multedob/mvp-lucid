@@ -38,6 +38,7 @@ const Sobre          = lazy(() => import("./pages/Sobre"));
 const ResetPassword  = lazy(() => import("./pages/ResetPassword"));
 
 import { trackPageView, identifyUser, resetUser } from "./lib/analytics";
+import { setSentryUser, clearSentryUser } from "./lib/sentry";
 
 const queryClient = new QueryClient();
 
@@ -156,14 +157,16 @@ function PageViewTracker() {
   return null;
 }
 
-// ─── AuthIdentifier — identify/reset PostHog ao mudar sessão ──────
+// ─── AuthIdentifier — identify/reset PostHog + Sentry ao mudar sessão ──────
 function AuthIdentifier() {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session?.user) {
         identifyUser(session.user.id, { email: session.user.email });
+        setSentryUser(session.user.id, session.user.email);
       } else if (event === "SIGNED_OUT") {
         resetUser();
+        clearSentryUser();
       }
     });
     return () => subscription.unsubscribe();
