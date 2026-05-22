@@ -40,22 +40,11 @@ function swVersioningPlugin() {
   };
 }
 
-// F6 — Bundle optimization. Separa vendors em chunks dedicados pra reduzir
-// tamanho do bundle inicial e permitir cache mais granular entre deploys
-// (atualizar app code não invalida vendor-react etc).
-function manualChunks(id: string): string | undefined {
-  if (!id.includes("node_modules")) return;
-  if (/node_modules\/(react|react-dom|react-router|react-router-dom|scheduler)\//.test(id)) {
-    return "vendor-react";
-  }
-  if (id.includes("@radix-ui")) return "vendor-radix";
-  if (id.includes("@supabase")) return "vendor-supabase";
-  if (id.includes("@tanstack")) return "vendor-query";
-  if (id.includes("posthog-js")) return "vendor-analytics";
-  if (id.includes("lucide-react")) return "vendor-icons";
-  if (id.includes("recharts") || id.includes("d3")) return "vendor-charts";
-  return "vendor";
-}
+// F6 — Bundle optimization. manualChunks REMOVIDO (causava race condition
+// em prod: vendors separados tentavam usar React.createContext antes do
+// chunk react carregar — "Cannot read properties of undefined" em runtime).
+// React.lazy() nas rotas continua ativo — Vite gera chunks por rota
+// automaticamente. Vendor split fica como dívida pra reavaliar com cuidado.
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -77,11 +66,6 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    rollupOptions: {
-      output: {
-        manualChunks,
-      },
-    },
     chunkSizeWarningLimit: 600,
   },
 }));
