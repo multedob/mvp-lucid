@@ -40,6 +40,23 @@ function swVersioningPlugin() {
   };
 }
 
+// F6 — Bundle optimization. Separa vendors em chunks dedicados pra reduzir
+// tamanho do bundle inicial e permitir cache mais granular entre deploys
+// (atualizar app code não invalida vendor-react etc).
+function manualChunks(id: string): string | undefined {
+  if (!id.includes("node_modules")) return;
+  if (/node_modules\/(react|react-dom|react-router|react-router-dom|scheduler)\//.test(id)) {
+    return "vendor-react";
+  }
+  if (id.includes("@radix-ui")) return "vendor-radix";
+  if (id.includes("@supabase")) return "vendor-supabase";
+  if (id.includes("@tanstack")) return "vendor-query";
+  if (id.includes("posthog-js")) return "vendor-analytics";
+  if (id.includes("lucide-react")) return "vendor-icons";
+  if (id.includes("recharts") || id.includes("d3")) return "vendor-charts";
+  return "vendor";
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
@@ -58,5 +75,13 @@ export default defineConfig(({ mode }) => ({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks,
+      },
+    },
+    chunkSizeWarningLimit: 600,
   },
 }));

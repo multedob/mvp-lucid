@@ -3,8 +3,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { useEffect, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+
+// ── Eager: entry path, leve, ou frequente ──
 import Splash from "./pages/Splash";
 import Auth from "./pages/Auth";
 import Home from "./pages/Home";
@@ -13,20 +15,27 @@ import AgeCheck from "./pages/AgeCheck";
 import Consent from "./pages/Consent";
 import Onboarding from "./pages/Onboarding";
 import Warmup from "./pages/Warmup";
-import Pills from "./pages/Pills";
-import PillFlow from "./pages/pill/PillFlow";
-import Context, { ContextSystem } from "./pages/Context";
-import Reed from "./pages/Reed";
-import Settings from "./pages/Settings";
-import Questionnaire from "./pages/Questionnaire";
-import Privacy from "./pages/Privacy";
-import Terms from "./pages/Terms";
-import Sobre from "./pages/Sobre";
-import ResetPassword from "./pages/ResetPassword";
-import ThirdParty from "./pages/ThirdParty";
-import ThirdPartyPage from "./pages/ThirdPartyPage";
 import NotFound from "./pages/NotFound";
 import AppShell from "./components/AppShell";
+
+// ── Lazy: pesado ou visitado depois do entry path ──
+// F6 — Bundle optimization. Reduz bundle inicial separando rotas internas
+// e institucionais em chunks sob demanda. Suspense fallback = null
+// (transições são curtas, sem flash visível).
+const Pills          = lazy(() => import("./pages/Pills"));
+const PillFlow       = lazy(() => import("./pages/pill/PillFlow"));
+const Context        = lazy(() => import("./pages/Context"));
+const ContextSystem  = lazy(() => import("./pages/Context").then((m) => ({ default: m.ContextSystem })));
+const Reed           = lazy(() => import("./pages/Reed"));
+const Questionnaire  = lazy(() => import("./pages/Questionnaire"));
+const Settings       = lazy(() => import("./pages/Settings"));
+const ThirdPartyPage = lazy(() => import("./pages/ThirdPartyPage"));
+const ThirdParty     = lazy(() => import("./pages/ThirdParty"));
+const Privacy        = lazy(() => import("./pages/Privacy"));
+const Terms          = lazy(() => import("./pages/Terms"));
+const Sobre          = lazy(() => import("./pages/Sobre"));
+const ResetPassword  = lazy(() => import("./pages/ResetPassword"));
+
 import { trackPageView, identifyUser, resetUser } from "./lib/analytics";
 
 const queryClient = new QueryClient();
@@ -169,41 +178,43 @@ const App = () => (
       <BrowserRouter>
         <PageViewTracker />
         <AuthIdentifier />
-        <Routes>
-          <Route path="/" element={<RootRedirect />} />
-          <Route path="/auth" element={<Navigate to="/signin" replace />} />
-          <Route path="/signin" element={<Auth />} />
-          <Route path="/signup" element={<Auth />} />
-          <Route path="/age" element={<AgeCheck />} />
-          <Route path="/consent" element={<Consent />} />
-          <Route path="/letter" element={<OnboardingLetter />} />
-          <Route path="/onboarding" element={<Onboarding />} />
-          <Route path="/warmup" element={<ProtectedRoute><Warmup /></ProtectedRoute>} />
-          {/* AppShell — header + footer persistentes pra rotas autenticadas que
-              compartilham canvas. Transições entre essas rotas usam flowTo() —
-              ver hooks/useFlow.tsx. */}
-          <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
-            <Route path="/home" element={<Home />} />
-            <Route path="/pills" element={<Pills />} />
-            <Route path="/questionnaire" element={<Questionnaire />} />
-            <Route path="/context" element={<Context />} />
-            <Route path="/terceiros" element={<ThirdPartyPage />} />
-            <Route path="/reed" element={<Reed />} />
-            <Route path="/settings" element={<Settings />} />
-          </Route>
-          <Route path="/pill/:pillId" element={<ProtectedRoute><PillFlow /></ProtectedRoute>} />
-          <Route path="/como-funciona" element={<ProtectedRoute><ContextSystem /></ProtectedRoute>} />
-          <Route path="/privacy" element={<Privacy />} />
-          <Route path="/privacy-policy" element={<Privacy />} />
-          <Route path="/terms" element={<Terms />} />
-          <Route path="/terms-of-use" element={<Terms />} />
-          <Route path="/sobre" element={<Sobre />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          {/* W20.2 — Third-party questionnaire (público, sem auth do app) */}
-          <Route path="/third-party/:token" element={<ThirdParty />} />
-          <Route path="/test" element={<Navigate to="/home" replace />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <Suspense fallback={null}>
+          <Routes>
+            <Route path="/" element={<RootRedirect />} />
+            <Route path="/auth" element={<Navigate to="/signin" replace />} />
+            <Route path="/signin" element={<Auth />} />
+            <Route path="/signup" element={<Auth />} />
+            <Route path="/age" element={<AgeCheck />} />
+            <Route path="/consent" element={<Consent />} />
+            <Route path="/letter" element={<OnboardingLetter />} />
+            <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/warmup" element={<ProtectedRoute><Warmup /></ProtectedRoute>} />
+            {/* AppShell — header + footer persistentes pra rotas autenticadas que
+                compartilham canvas. Transições entre essas rotas usam flowTo() —
+                ver hooks/useFlow.tsx. */}
+            <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
+              <Route path="/home" element={<Home />} />
+              <Route path="/pills" element={<Pills />} />
+              <Route path="/questionnaire" element={<Questionnaire />} />
+              <Route path="/context" element={<Context />} />
+              <Route path="/terceiros" element={<ThirdPartyPage />} />
+              <Route path="/reed" element={<Reed />} />
+              <Route path="/settings" element={<Settings />} />
+            </Route>
+            <Route path="/pill/:pillId" element={<ProtectedRoute><PillFlow /></ProtectedRoute>} />
+            <Route path="/como-funciona" element={<ProtectedRoute><ContextSystem /></ProtectedRoute>} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/privacy-policy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/terms-of-use" element={<Terms />} />
+            <Route path="/sobre" element={<Sobre />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            {/* W20.2 — Third-party questionnaire (público, sem auth do app) */}
+            <Route path="/third-party/:token" element={<ThirdParty />} />
+            <Route path="/test" element={<Navigate to="/home" replace />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
