@@ -10,18 +10,13 @@ import AppHeader from "@/components/AppHeader";
 
 const ABOUT = [
   "rdwth oferece leituras reflexivas estruturais baseadas nas suas respostas.",
-  "Não é diagnóstico clínico.",
-  "Não substitui psicólogos, psiquiatras ou outros profissionais de saúde.",
-  "Não determina identidade nem valor humano.",
-  "Nenhuma configuração estrutural implica superioridade.",
+  "Não é diagnóstico clínico, nem substitui psicólogos ou psiquiatras.",
 ];
 
 const DATA = [
-  "Coletamos o que você compartilha conosco.",
-  "Geramos leituras estruturais a partir das suas respostas.",
-  "Guardamos seu histórico se você escolher continuar.",
   "As conversas com Reed são processadas pela Anthropic (Claude).",
   "Seus dados são armazenados no Supabase.",
+  "Guardamos seu histórico enquanto você continuar usando.",
   "Você pode apagar seus dados a qualquer momento.",
   "Você pode solicitar uma cópia dos seus dados a qualquer momento.",
 ];
