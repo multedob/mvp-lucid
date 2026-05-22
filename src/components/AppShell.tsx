@@ -16,6 +16,7 @@ import NavBottom, { type ActivePage } from "./NavBottom";
 import { ShellContext, type ShellState } from "@/hooks/useShell";
 import { FlowProvider } from "@/hooks/useFlow";
 import FlowVoice from "./FlowVoice";
+import ErrorBoundary from "./ErrorBoundary";
 
 interface AppShellProps {
   children?: ReactNode;
@@ -35,10 +36,14 @@ export default function AppShell({ children }: AppShellProps) {
       <FlowProvider>
         <div className="r-screen">
           <AppHeader section={section} />
-          {/* main com position relative pra FlowVoice (overlay absoluto) coexistir com Outlet */}
+          {/* main com position relative pra FlowVoice (overlay absoluto) coexistir com Outlet.
+              ErrorBoundary wrappa só o conteúdo das rotas — Header e NavBottom continuam
+              renderizando caso o conteúdo trave, dando saída pelo Nav. */}
           <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, position: "relative" }}>
             <FlowVoice />
-            {children ?? <Outlet />}
+            <ErrorBoundary boundaryName="appshell">
+              {children ?? <Outlet />}
+            </ErrorBoundary>
           </div>
           <NavBottom active={active} />
         </div>

@@ -17,6 +17,7 @@ import Onboarding from "./pages/Onboarding";
 import Warmup from "./pages/Warmup";
 import NotFound from "./pages/NotFound";
 import AppShell from "./components/AppShell";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 // ── Lazy: pesado ou visitado depois do entry path ──
 // F6 — Bundle optimization. Reduz bundle inicial separando rotas internas
@@ -188,7 +189,7 @@ const App = () => (
             <Route path="/consent" element={<Consent />} />
             <Route path="/letter" element={<OnboardingLetter />} />
             <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/warmup" element={<ProtectedRoute><Warmup /></ProtectedRoute>} />
+            <Route path="/warmup" element={<ProtectedRoute><ErrorBoundary boundaryName="warmup"><Warmup /></ErrorBoundary></ProtectedRoute>} />
             {/* AppShell — header + footer persistentes pra rotas autenticadas que
                 compartilham canvas. Transições entre essas rotas usam flowTo() —
                 ver hooks/useFlow.tsx. */}
@@ -201,7 +202,7 @@ const App = () => (
               <Route path="/reed" element={<Reed />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
-            <Route path="/pill/:pillId" element={<ProtectedRoute><PillFlow /></ProtectedRoute>} />
+            <Route path="/pill/:pillId" element={<ProtectedRoute><ErrorBoundary boundaryName="pillflow"><PillFlow /></ErrorBoundary></ProtectedRoute>} />
             <Route path="/como-funciona" element={<ProtectedRoute><ContextSystem /></ProtectedRoute>} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/privacy-policy" element={<Privacy />} />
@@ -210,7 +211,7 @@ const App = () => (
             <Route path="/sobre" element={<Sobre />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             {/* W20.2 — Third-party questionnaire (público, sem auth do app) */}
-            <Route path="/third-party/:token" element={<ThirdParty />} />
+            <Route path="/third-party/:token" element={<ErrorBoundary boundaryName="thirdparty"><ThirdParty /></ErrorBoundary>} />
             <Route path="/test" element={<Navigate to="/home" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
