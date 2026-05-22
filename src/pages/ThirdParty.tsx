@@ -82,8 +82,8 @@ interface ValidateResponse {
   responder?: { email: string | null; name: string | null };
 }
 
-const SUPABASE_URL = "https://tomtximafvrhmuchjyqt.supabase.co";
-const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRvbXR4aW1hZnZyaG11Y2hqeXF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MjE4MzYsImV4cCI6MjA4NzI5NzgzNn0.4e7TbCSrL8fecsgKCHDBEerXO8ePd5-5QeaC6czEkzo";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
 function callEdge(path: string, body: unknown) {
   return fetch(`${SUPABASE_URL}/functions/v1/${path}`, {

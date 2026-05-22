@@ -46,8 +46,8 @@ import { fetchQuestionnaireProgress } from "@/lib/questionnaireProgress";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { track } from "@/lib/analytics";
 
-const SUPABASE_URL = "https://tomtximafvrhmuchjyqt.supabase.co";
-const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRvbXR4aW1hZnZyaG11Y2hqeXF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MjE4MzYsImV4cCI6MjA4NzI5NzgzNn0.4e7TbCSrL8fecsgKCHDBEerXO8ePd5-5QeaC6czEkzo";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
 // Capitaliza primeira letra de cada palavra (ex: "bruno" → "Bruno", "maria-clara" → "Maria-clara")
 function capitalizeName(s: string | null | undefined): string {
