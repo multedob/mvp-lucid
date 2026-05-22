@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { markOnboardingStep } from "@/hooks/useOnboardingState";
 import AppHeader from "@/components/AppHeader";
+import { AudioRecorder } from "@/components/AudioRecorder";
 import { track } from "@/lib/analytics";
 
 // Telemetria one-time helper — evita disparo duplicado em React strict mode / re-renders.
@@ -76,18 +77,29 @@ function Typewriter({ text, charDelayMs = 38 }: { text: string; charDelayMs?: nu
   );
 }
 
+const AUDIO_PULSE_KEY = "rdwth_audio_pulse_seen_warmup";
+
 export default function Warmup() {
   const navigate = useNavigate();
   const [phase, setPhase] = useState<Phase>("q1");
   const [answers, setAnswers] = useState<[string, string]>(["", ""]);
   const [eco, setEco] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   // Cascata sequencial — controla entrada dos elementos de cima pra baixo
   const [showQuestion, setShowQuestion] = useState(false);
   const [showInput, setShowInput] = useState(false);
   const [showButton, setShowButton] = useState(false);
   const [showDoneButton, setShowDoneButton] = useState(false);
+  const [audioPulseFirst, setAudioPulseFirst] = useState(false);
+
+  // Pega userId — necessário pro AudioRecorder (storage path)
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.id) setUserId(session.user.id);
+    });
+  }, []);
 
   // Telemetria — chegada na tela
   useOnceTrack("warmup_started");
@@ -112,10 +124,20 @@ export default function Warmup() {
       const t1 = window.setTimeout(() => setShowQuestion(true), CASCADE_QUESTION_MS);
       const t2 = window.setTimeout(() => setShowInput(true), CASCADE_INPUT_MS);
       const t3 = window.setTimeout(() => setShowButton(true), CASCADE_BUTTON_MS);
+      // Pulse áudio 1ª vez — depois do input, dá tempo de ler.
+      const alreadySeen = typeof window !== "undefined" && localStorage.getItem(AUDIO_PULSE_KEY) === "1";
+      let t4: number | null = null;
+      if (!alreadySeen) {
+        t4 = window.setTimeout(() => {
+          setAudioPulseFirst(true);
+          try { localStorage.setItem(AUDIO_PULSE_KEY, "1"); } catch {}
+        }, CASCADE_BUTTON_MS + 400);
+      }
       return () => {
         window.clearTimeout(t1);
         window.clearTimeout(t2);
         window.clearTimeout(t3);
+        if (t4 !== null) window.clearTimeout(t4);
       };
     }
 
@@ -288,33 +310,64 @@ export default function Warmup() {
                 {QUESTIONS[currentIdx]}
               </div>
 
-              {/* 3. Textarea — fade-in após pergunta */}
+              {/* 3. Input — fade-in após pergunta.
+                  Padrão r-input-wrap (linha base + textarea + áudio pulsando + send dot). */}
               <div
                 style={{
                   opacity: showInput ? 1 : 0,
                   transition: "opacity 600ms ease-in",
                 }}
               >
-                <textarea
-                  className="r-textarea"
-                  value={currentAnswer}
-                  onChange={(e) => {
-                    const next: [string, string] = [...answers] as [string, string];
-                    next[currentIdx] = e.target.value;
-                    setAnswers(next);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                      e.preventDefault();
-                      handleQuestionContinue();
-                    }
-                  }}
-                  placeholder="..."
-                  rows={3}
-                  autoFocus={showInput}
-                  disabled={!showInput}
-                  style={{ width: "100%", resize: "none", fontSize: 13 }}
-                />
+                <div className="r-input-wrap">
+                  <textarea
+                    className="r-textarea"
+                    value={currentAnswer}
+                    onChange={(e) => {
+                      const next: [string, string] = [...answers] as [string, string];
+                      next[currentIdx] = e.target.value;
+                      setAnswers(next);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                        e.preventDefault();
+                        handleQuestionContinue();
+                      }
+                    }}
+                    placeholder="se preferir, pressione e grave um áudio"
+                    rows={1}
+                    autoFocus={showInput}
+                    disabled={!showInput}
+                  />
+                  {userId && (
+                    <AudioRecorder
+                      userId={userId}
+                      cycleId="warmup"
+                      pillId="warmup"
+                      moment="warmup"
+                      language="pt-BR"
+                      breathingPulseOnce={audioPulseFirst}
+                      onLiveTranscript={(text) => {
+                        const next: [string, string] = [...answers] as [string, string];
+                        next[currentIdx] = text;
+                        setAnswers(next);
+                      }}
+                      onFinalTranscript={(text) => {
+                        const next: [string, string] = [...answers] as [string, string];
+                        next[currentIdx] = text;
+                        setAnswers(next);
+                      }}
+                      disabled={!showInput}
+                    />
+                  )}
+                  <button
+                    type="button"
+                    className={`r-send-dot${canContinueQuestion ? " active" : ""}`}
+                    onClick={canContinueQuestion ? handleQuestionContinue : undefined}
+                    disabled={!canContinueQuestion}
+                    aria-label="enviar"
+                    style={{ cursor: canContinueQuestion ? "pointer" : "default" }}
+                  />
+                </div>
               </div>
             </div>
 
