@@ -354,7 +354,8 @@ function getTipo(line_id: LineId | string, plan: ExecutionPlan): "SEMPRE" | "CON
 async function handlePlan(
   supabase: ReturnType<typeof createClient>,
   user_id: string,
-  ipe_cycle_id: string
+  ipe_cycle_id: string,
+  req: Request,
 ): Promise<Response> {
   // Verificar ciclo
   // deno-lint-ignore no-explicit-any
@@ -447,7 +448,8 @@ async function handleNextBlock(
   supabase: ReturnType<typeof createClient>,
   user_id: string,
   ipe_cycle_id: string,
-  block_response?: Record<string, unknown>
+  block_response: Record<string, unknown> | undefined,
+  req: Request,
 ): Promise<Response> {
   // B4 FIX: verificar ownership do ciclo antes de carregar estado
   // Sem isso, qualquer token válido com ipe_cycle_id conhecido pode avançar
@@ -753,12 +755,12 @@ async function handleNextBlock(
     );
     return await finalizarNextBlock(supabase, (state as any).id, ipe_cycle_id, nextAfterLate as { line_id: LineId | null; dimension_transition: string | null }, plan,
       current_position, orcamento_global, orcamento_d3, contador_d3,
-      resultados, flags, ((state as any).last_block_completed as LineId | null));
+      resultados, flags, ((state as any).last_block_completed as LineId | null), req);
   }
 
   return await finalizarNextBlock(supabase, (state as any).id, ipe_cycle_id, nextResult as { line_id: LineId | null; dimension_transition: string | null }, plan,
     current_position, orcamento_global, orcamento_d3, contador_d3,
-    resultados, flags, ((state as any).last_block_completed as LineId | null));
+    resultados, flags, ((state as any).last_block_completed as LineId | null), req);
 }
 
 // ─────────────────────────────────────────
@@ -957,7 +959,8 @@ async function finalizarNextBlock(
   contador_d3: number,
   resultados: Record<string, ResultadoBloco>,
   flags: QuestionnaireFlags,
-  last_block_completed: LineId | null
+  last_block_completed: LineId | null,
+  req: Request,
 ): Promise<Response> {
   const done = nextResult.line_id === null;
 
@@ -1192,7 +1195,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   if (path === "plan") {
     // deno-lint-ignore no-explicit-any
-    return await handlePlan(supabase as any, user.id, body.ipe_cycle_id as string);
+    return await handlePlan(supabase as any, user.id, body.ipe_cycle_id as string, req);
   }
 
   // next-block
@@ -1201,6 +1204,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
     supabase as any,
     user.id,
     body.ipe_cycle_id as string,
-    body.block_response as Record<string, unknown> | undefined
+    body.block_response as Record<string, unknown> | undefined,
+    req,
   );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`ipe-questionnaire-engine: internal_error: ${message}`);
+    return json({ error: "internal_error" }, 500, req);
+  }
 });

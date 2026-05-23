@@ -341,6 +341,7 @@ function buildCorpusFromQuestionnaire(rows: QuestionnaireResponseRow[]): string 
 async function handleWarmupOnly(
   admin: ReturnType<typeof createClient>,
   user_id: string,
+  req: Request,
 ): Promise<Response> {
   console.log(`[lucid-deep-reading WARMUP-ONLY] user=${user_id}`);
 
@@ -354,7 +355,8 @@ async function handleWarmupOnly(
 
   if (wErr) {
     console.error("[warmup-only] fetch warmups err:", wErr);
-    return json({ error: "Failed to fetch warmups", detail: wErr.message }, 500, req);
+    console.error(`lucid-deep-reading: warmup_fetch_failed user=${user_id} err=${wErr.message}`);
+    return json({ error: "internal_error" }, 500, req);
   }
   if (!warmups || warmups.length === 0) {
     return json({ ok: true, skipped: "no warmups yet", debug_fingerprint: DEPLOY_FINGERPRINT }, 200, req);
@@ -446,8 +448,8 @@ async function handleWarmupOnly(
     const c = response.content[0];
     if (c && "text" in c) fullText = c.text.trim();
   } catch (err: any) {
-    console.error("[warmup-only] Anthropic error:", err.message);
-    return json({ error: "LLM error", detail: err.message, debug_fingerprint: DEPLOY_FINGERPRINT }, 500, req);
+    console.error(`lucid-deep-reading: anthropic_error user=${user_id} err=${err.message}`);
+    return json({ error: "internal_error" }, 500, req);
   }
   if (!fullText) {
     return json({ error: "Empty LLM response", debug_fingerprint: DEPLOY_FINGERPRINT }, 500, req);
@@ -494,7 +496,8 @@ async function handleWarmupOnly(
 
   if (insErr) {
     console.error("[warmup-only] insert err:", insErr);
-    return json({ error: "Persist failed", detail: insErr.message, debug_fingerprint: DEPLOY_FINGERPRINT }, 500, req);
+    console.error(`lucid-deep-reading: persist_failed user=${user_id} err=${insErr.message}`);
+    return json({ error: "internal_error" }, 500, req);
   }
 
   return json({
@@ -539,7 +542,7 @@ Deno.serve(async (req) => {
 
   // TA-S6.1b — Modo WARMUP-ONLY: sem cycle_id, gera leitura inicial baseada só no warmup
   if (!ipe_cycle_id) {
-    return await handleWarmupOnly(admin, user_id);
+    return await handleWarmupOnly(admin, user_id, req);
   }
 
   // Confirma que o cycle pertence ao user
@@ -695,8 +698,8 @@ Deno.serve(async (req) => {
     const c = response.content[0];
     if (c && "text" in c) deep_reading = c.text.trim();
   } catch (err: any) {
-    console.error("[lucid-deep-reading] Anthropic error:", err.message);
-    return json({ error: "LLM error", detail: err.message, debug_fingerprint: DEPLOY_FINGERPRINT }, 500, req);
+    console.error(`lucid-deep-reading: anthropic_error user=${user_id} err=${err.message}`);
+    return json({ error: "internal_error" }, 500, req);
   }
 
   if (!deep_reading) {
@@ -713,8 +716,8 @@ Deno.serve(async (req) => {
     })
     .eq("id", ipe_cycle_id);
   if (updErr) {
-    console.error("[lucid-deep-reading] persist error:", updErr);
-    return json({ error: "Persist failed", detail: updErr.message, debug_fingerprint: DEPLOY_FINGERPRINT }, 500, req);
+    console.error(`lucid-deep-reading: persist_error user=${user_id} err=${updErr.message}`);
+    return json({ error: "internal_error" }, 500, req);
   }
 
   return json({
