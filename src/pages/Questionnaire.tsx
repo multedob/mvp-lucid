@@ -387,7 +387,22 @@ export default function Questionnaire() {
       }
 
       if (res.done) {
-        track('questionnaire_completed', { cycle_id: cid })
+        // F4-Gap2 — distinguir primeiro ciclo (Ativação Q1) dos subsequentes.
+        // localStorage como flag local — suficiente pra alpha; edge case de "troca de device" aceitável.
+        const FIRST_CYCLE_FLAG = 'rdwth_first_cycle_completed'
+        const isFirstCycle = !localStorage.getItem(FIRST_CYCLE_FLAG)
+
+        track('questionnaire_completed', {
+          cycle_id: cid,
+          is_first_cycle: isFirstCycle,
+        })
+
+        if (isFirstCycle) {
+          localStorage.setItem(FIRST_CYCLE_FLAG, new Date().toISOString())
+          // Evento dedicado pra facilitar queries de ativação no PostHog.
+          track('ipe_first_cycle_completed', { cycle_id: cid })
+        }
+
         setPhase('done')
         await callLucidEngine(cid)
         return
