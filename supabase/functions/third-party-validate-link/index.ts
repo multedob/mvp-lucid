@@ -7,23 +7,58 @@
 //  - respostas parciais já salvas (se houver)
 //
 // SEM AUTH (terceiro não tem conta no app).
+// F4 hardening: CORS restrito, rate limit, body limit, token regex,
+// erros unificados, expiração 30d, try/catch global.
 // ============================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const DEPLOY_FINGERPRINT = "w20.2-validate-link-v2-alphabeta";
+const DEPLOY_FINGERPRINT = "w20.2-validate-link-v3-f4-hardening";
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, content-type, apikey",
+const ALLOWED_ORIGINS = new Set([
+  "https://rdwth.com",
+  "https://www.rdwth.com",
+  "http://localhost:8080",
+  "http://localhost:5173",
+]);
+
+function corsHeaders(origin: string | null): Record<string, string> {
+  const allowed = origin && ALLOWED_ORIGINS.has(origin) ? origin : "https://rdwth.com";
+  return {
+    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, content-type, apikey",
+    "Vary": "Origin",
+  };
+}
+
+const json = (data: unknown, status = 200, req?: Request) => {
+  const origin = req?.headers.get("origin") ?? null;
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
+  });
 };
 
-const json = (data: unknown, status = 200) =>
-  new Response(JSON.stringify(data), {
-    status,
-    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
-  });
+const TOKEN_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const INVITE_TTL_DAYS = 30;
+
+// Rate limit simples: max 30 requests/min por IP
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 30;
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || entry.resetAt < now) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT_MAX) return false;
+  entry.count++;
+  return true;
+}
 
 // Calibration aparece em ambos os sets
 const CALIBRATION = {
@@ -165,59 +200,79 @@ const BETA_QUESTIONS = [
 
 Deno.serve(async (req) => {
   console.log(`[${DEPLOY_FINGERPRINT}] invoked, method:`, req.method);
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
-  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders(req.headers.get("origin")) });
+  }
 
-  const body = await req.json().catch(() => ({}));
-  const { token } = body;
-  if (!token || typeof token !== "string") return json({ error: "Missing token" }, 400);
+  try {
+    if (req.method !== "POST") return json({ error: "Method not allowed" }, 405, req);
 
-  const supabase_url = Deno.env.get("SUPABASE_URL");
-  const service_role = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!supabase_url || !service_role) return json({ error: "Missing config" }, 500);
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
+    if (!checkRateLimit(ip)) return json({ error: "Too many requests" }, 429, req);
 
-  const admin = createClient(supabase_url, service_role);
+    const contentLength = parseInt(req.headers.get("content-length") ?? "0");
+    if (contentLength > 10_000) return json({ error: "Payload too large" }, 413, req);
 
-  // Busca invite + dados do user (incluindo question_set + user_pronoun)
-  const { data: invite, error: invErr } = await admin
-    .from("third_party_invites")
-    .select("id, ipe_cycle_id, user_id, status, responder_email, responder_name, created_at, question_set, user_pronoun")
-    .eq("token", token)
-    .single();
-  if (invErr || !invite) return json({ error: "Invalid or expired link" }, 404);
+    const body = await req.json().catch(() => ({}));
+    const { token } = body;
+    if (!token || typeof token !== "string" || !TOKEN_REGEX.test(token)) {
+      return json({ error: "Invalid link" }, 400, req);
+    }
 
-  if (invite.status === "revoked") return json({ error: "This link was revoked", status: "revoked" }, 403);
-  if (invite.status === "submitted") return json({ error: "This link was already submitted", status: "submitted" }, 403);
+    const supabase_url = Deno.env.get("SUPABASE_URL");
+    const service_role = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabase_url || !service_role) return json({ error: "Missing config" }, 500, req);
 
-  // Pega nome do dono via auth.users (display_name no metadata)
-  const { data: userInfo } = await admin.auth.admin.getUserById(invite.user_id);
-  const user_name =
-    (userInfo?.user?.user_metadata?.display_name as string) ??
-    (userInfo?.user?.email as string)?.split("@")[0] ??
-    "alguém";
+    const admin = createClient(supabase_url, service_role);
 
-  // Carrega respostas parciais existentes (pra retomar de onde parou)
-  const { data: existing } = await admin
-    .from("third_party_responses")
-    .select("question_id, scale_value, open_text, episode_text")
-    .eq("invite_id", invite.id);
+    const { data: invite, error: invErr } = await admin
+      .from("third_party_invites")
+      .select("id, ipe_cycle_id, user_id, status, responder_email, responder_name, created_at, question_set, user_pronoun")
+      .eq("token", token)
+      .single();
+    if (invErr || !invite) return json({ error: "Link unavailable" }, 404, req);
 
-  // Seleciona conjunto de perguntas baseado no question_set do invite
-  const set = invite.question_set === "beta" ? BETA_QUESTIONS : ALPHA_QUESTIONS;
-  const questions = [CALIBRATION, ...set];
+    if (invite.status === "revoked" || invite.status === "submitted") {
+      return json({ error: "Link unavailable", status: invite.status }, 403, req);
+    }
 
-  return json({
-    valid: true,
-    invite_id: invite.id,
-    user_name,
-    user_pronoun: invite.user_pronoun ?? "ela",
-    question_set: invite.question_set ?? "alpha",
-    questions,
-    existing_responses: existing ?? [],
-    responder: {
-      email: invite.responder_email,
-      name: invite.responder_name,
-    },
-    debug_fingerprint: DEPLOY_FINGERPRINT,
-  });
+    // Expiração 30d
+    const createdAt = new Date(invite.created_at);
+    const ageMs = Date.now() - createdAt.getTime();
+    if (ageMs > INVITE_TTL_DAYS * 24 * 60 * 60 * 1000) {
+      return json({ error: "Link unavailable", status: "expired" }, 403, req);
+    }
+
+    const { data: userInfo } = await admin.auth.admin.getUserById(invite.user_id);
+    const user_name =
+      (userInfo?.user?.user_metadata?.display_name as string) ??
+      (userInfo?.user?.email as string)?.split("@")[0] ??
+      "alguém";
+
+    const { data: existing } = await admin
+      .from("third_party_responses")
+      .select("question_id, scale_value, open_text, episode_text")
+      .eq("invite_id", invite.id);
+
+    const set = invite.question_set === "beta" ? BETA_QUESTIONS : ALPHA_QUESTIONS;
+    const questions = [CALIBRATION, ...set];
+
+    return json({
+      valid: true,
+      invite_id: invite.id,
+      user_name,
+      user_pronoun: invite.user_pronoun ?? "ela",
+      question_set: invite.question_set ?? "alpha",
+      questions,
+      existing_responses: existing ?? [],
+      responder: {
+        email: invite.responder_email,
+        name: invite.responder_name,
+      },
+      debug_fingerprint: DEPLOY_FINGERPRINT,
+    }, 200, req);
+  } catch (err) {
+    console.error(`[${DEPLOY_FINGERPRINT}] unhandled error:`, err);
+    return json({ error: "Internal error" }, 500, req);
+  }
 });
