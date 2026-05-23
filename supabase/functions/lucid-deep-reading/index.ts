@@ -476,6 +476,14 @@ async function handleWarmupOnly(
         content: `Aqui estão as respostas que a pessoa deu no warm-up:\n\n${warmupCorpus}${node_section}\n\nGere a leitura inicial agora, seguindo todas as regras.`,
       }],
     });
+    console.log(JSON.stringify({
+      kind: "anthropic_call",
+      fn: "lucid-deep-reading",
+      user_id,
+      model: "claude-sonnet-4-5",
+      duration_ms: Date.now() - startedAt,
+      timestamp: new Date().toISOString(),
+    }));
     const c = response.content[0];
     if (c && "text" in c) fullText = c.text.trim();
   } catch (err: any) {
@@ -548,6 +556,12 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req.headers.get("origin")) });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405, req);
 
+  const anthropicEnabled = (Deno.env.get("ANTHROPIC_ENABLED") ?? "true").toLowerCase() !== "false";
+  if (!anthropicEnabled) {
+    console.warn("lucid-deep-reading: anthropic disabled via env var");
+    return json({ error: "service_unavailable" }, 503, req);
+  }
+
   const contentLength = parseInt(req.headers.get("content-length") ?? "0");
   if (contentLength > 50_000) return json({ error: "payload_too_large" }, 413, req);
 
@@ -570,6 +584,13 @@ Deno.serve(async (req) => {
   const { data: auth_data, error: auth_err } = await supabase.auth.getUser(token);
   if (auth_err || !auth_data.user) return json({ error: "Unauthorized" }, 401, req);
   const user_id = auth_data.user.id;
+
+  const rateCheck = checkAnthropicRateLimit(user_id);
+  if (!rateCheck.ok) {
+    console.warn(`lucid-deep-reading: rate_limited user=${user_id} reason=${rateCheck.reason}`);
+    return json({ error: "rate_limited", reason: rateCheck.reason }, 429, req);
+  }
+
 
   const body = await req.json().catch(() => ({}));
   const { ipe_cycle_id } = body;
@@ -718,6 +739,7 @@ Deno.serve(async (req) => {
   const anthropic = new Anthropic({ apiKey: anthropic_key });
 
   let deep_reading = "";
+  const _tDeep = Date.now();
   try {
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-5-20250929",
@@ -729,6 +751,14 @@ Deno.serve(async (req) => {
         content: `Aqui estão as respostas desta pessoa neste ciclo:\n\n${corpus}${node_section}\n\nEscreva agora a leitura consolidada em prosa fluida, seguindo todas as regras do system prompt.`,
       }],
     });
+    console.log(JSON.stringify({
+      kind: "anthropic_call",
+      fn: "lucid-deep-reading",
+      user_id,
+      model: "claude-sonnet-4-5",
+      duration_ms: Date.now() - _tDeep,
+      timestamp: new Date().toISOString(),
+    }));
     const c = response.content[0];
     if (c && "text" in c) deep_reading = c.text.trim();
   } catch (err: any) {
