@@ -1153,7 +1153,7 @@ async function callScoringBlock(
 // MAIN HANDLER — roteamento por path
 // ─────────────────────────────────────────
 Deno.serve(async (req: Request): Promise<Response> => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(req.headers.get("origin")) });
   if (req.method !== "POST") return json({ error: "INVALID_INPUT", message: "Method not allowed" }, 400, req);
 
   const authHeader = req.headers.get("Authorization");

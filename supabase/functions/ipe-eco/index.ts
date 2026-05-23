@@ -359,7 +359,7 @@ Deno.serve(async (req) => {
   console.log("[ipe-eco] deploy_fingerprint:", DEPLOY_FINGERPRINT);
   // Wave 12 — identificador de versão pra confirmar deploy efetivo
   console.log("[ipe-eco WAVE12-FIX-924829c] invoked, method:", req.method);
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req.headers.get("origin")) });
 
   const auth_header = req.headers.get("Authorization");
   if (!auth_header) return json({ error: "Missing authorization" }, 401, req);

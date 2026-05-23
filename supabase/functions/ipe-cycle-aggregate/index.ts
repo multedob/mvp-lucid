@@ -78,7 +78,7 @@ interface AggregatedLine {
 
 Deno.serve(async (req) => {
   console.log(`[${DEPLOY_FINGERPRINT}] invoked, method:`, req.method);
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req.headers.get("origin")) });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405, req);
 
   const auth_header = req.headers.get("Authorization");

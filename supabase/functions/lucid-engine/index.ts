@@ -335,7 +335,7 @@ function streamLanguageResponse(
 
   return new Response(stream, {
     headers: {
-      ...CORS_HEADERS,
+      ...corsHeaders(req.headers.get("origin")),
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       Connection: "keep-alive",
@@ -417,7 +417,7 @@ User input: "${user_text}"`;
 
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: CORS_HEADERS });
+    return new Response(null, { headers: corsHeaders(req.headers.get("origin")) });
   }
 
   if (req.method !== "POST") {

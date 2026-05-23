@@ -269,7 +269,7 @@ function extractFollowUp(fullText: string): { eco: string; follow: string } {
 // ─── Handler ────────────────────────────────────────────────────────
 Deno.serve(async (req) => {
   console.log(`[warmup-eco ${DEPLOY_FINGERPRINT}] invoked, method:`, req.method);
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req.headers.get("origin")) });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405, req);
 
   const auth_header = req.headers.get("Authorization");
@@ -444,7 +444,7 @@ Deno.serve(async (req) => {
 
   return new Response(stream, {
     headers: {
-      ...CORS_HEADERS,
+      ...corsHeaders(req.headers.get("origin")),
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       "Connection": "keep-alive",
