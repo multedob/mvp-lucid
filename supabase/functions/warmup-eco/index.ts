@@ -54,6 +54,54 @@ function json(body: unknown, status = 200, req?: Request): Response {
   });
 }
 
+// ─── Cost guard Anthropic (F4-05) ───────────────────────────────
+// In-memory rate limit por user_id. Resets em cold start (aceitável pra alpha).
+// Pós-beta: evoluir pra tabela Postgres anthropic_usage.
+const RATE_LIMIT_HOUR = 5;
+const RATE_LIMIT_DAY = 10;
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
+
+interface RateLimitEntry {
+  hourCount: number;
+  hourResetAt: number;
+  dayCount: number;
+  dayResetAt: number;
+}
+
+const rateLimitMap = new Map<string, RateLimitEntry>();
+
+function checkAnthropicRateLimit(userId: string): { ok: boolean; reason?: string } {
+  const now = Date.now();
+  let entry = rateLimitMap.get(userId);
+
+  if (!entry) {
+    entry = {
+      hourCount: 0,
+      hourResetAt: now + HOUR_MS,
+      dayCount: 0,
+      dayResetAt: now + DAY_MS,
+    };
+    rateLimitMap.set(userId, entry);
+  }
+
+  if (entry.hourResetAt < now) {
+    entry.hourCount = 0;
+    entry.hourResetAt = now + HOUR_MS;
+  }
+  if (entry.dayResetAt < now) {
+    entry.dayCount = 0;
+    entry.dayResetAt = now + DAY_MS;
+  }
+
+  if (entry.hourCount >= RATE_LIMIT_HOUR) return { ok: false, reason: "hourly_limit" };
+  if (entry.dayCount >= RATE_LIMIT_DAY) return { ok: false, reason: "daily_limit" };
+
+  entry.hourCount++;
+  entry.dayCount++;
+  return { ok: true };
+}
+
 function encodeSSE(obj: object): Uint8Array {
   return new TextEncoder().encode(`data: ${JSON.stringify(obj)}\n\n`);
 }
@@ -271,6 +319,12 @@ Deno.serve(async (req) => {
   console.log(`[warmup-eco ${DEPLOY_FINGERPRINT}] invoked, method:`, req.method);
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req.headers.get("origin")) });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405, req);
+
+  const anthropicEnabled = (Deno.env.get("ANTHROPIC_ENABLED") ?? "true").toLowerCase() !== "false";
+  if (!anthropicEnabled) {
+    console.warn("warmup-eco: anthropic disabled via env var");
+    return json({ error: "service_unavailable" }, 503, req);
+  }
 
   const contentLength = parseInt(req.headers.get("content-length") ?? "0");
   if (contentLength > 50_000) return json({ error: "payload_too_large" }, 413, req);
