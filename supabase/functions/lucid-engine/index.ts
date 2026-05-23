@@ -676,11 +676,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
         user_text,
         pill_context,
         user_name,
+        user_id,
+        req,
       );
     }
 
     // ─── Fluxo antigo (Questionnaire) — JSON response
     let llm_response = "";
+    const _tLang = Date.now();
     try {
       llm_response = await executeLlmLanguage(
         anthropic,
@@ -696,6 +699,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
         pill_context,
         user_name,
       );
+      console.log(JSON.stringify({
+        kind: "anthropic_call",
+        fn: "lucid-engine",
+        user_id,
+        model: LLM_MODEL_ID,
+        duration_ms: Date.now() - _tLang,
+        timestamp: new Date().toISOString(),
+      }));
     } catch (langErr) {
       console.error("LANGUAGE_EXECUTION_ERROR:", langErr);
       llm_response = "[linguistic layer unavailable]";
