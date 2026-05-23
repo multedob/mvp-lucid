@@ -19,17 +19,33 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const DEPLOY_FINGERPRINT = "w20.6-cycle-aggregate-v1";
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, content-type, apikey",
-};
+const ALLOWED_ORIGINS = new Set([
+  "https://rdwth.com",
+  "https://www.rdwth.com",
+  "http://localhost:8080",
+  "http://localhost:5173",
+]);
 
-const json = (data: unknown, status = 200) =>
-  new Response(JSON.stringify(data), {
+function corsHeaders(origin: string | null): Record<string, string> {
+  const allowed = origin && ALLOWED_ORIGINS.has(origin) ? origin : "https://rdwth.com";
+  return {
+    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Vary": "Origin",
+  };
+}
+
+// Backward-compat default (used by helpers that don't have req in scope).
+const CORS_HEADERS = corsHeaders(null);
+
+const json = (data: unknown, status = 200, req?: Request) => {
+  const origin = req?.headers.get("origin") ?? null;
+  return new Response(JSON.stringify(data), {
     status,
-    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
   });
+};
 
 const ALL_LINES = [
   "L1.1", "L1.2", "L1.3", "L1.4",
@@ -62,18 +78,22 @@ interface AggregatedLine {
 
 Deno.serve(async (req) => {
   console.log(`[${DEPLOY_FINGERPRINT}] invoked, method:`, req.method);
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
-  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req.headers.get("origin")) });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405, req);
 
+  const contentLength = parseInt(req.headers.get("content-length") ?? "0");
+  if (contentLength > 50_000) return json({ error: "payload_too_large" }, 413, req);
+
+  try {
   const auth_header = req.headers.get("Authorization");
-  if (!auth_header) return json({ error: "Missing authorization" }, 401);
+  if (!auth_header) return json({ error: "Missing authorization" }, 401, req);
   const token = auth_header.replace("Bearer ", "");
 
   const supabase_url = Deno.env.get("SUPABASE_URL");
   const supabase_anon = Deno.env.get("SUPABASE_ANON_KEY");
   const service_role = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!supabase_url || !supabase_anon || !service_role) {
-    return json({ error: "Missing config" }, 500);
+    return json({ error: "Missing config" }, 500, req);
   }
 
   const supabase = createClient(supabase_url, supabase_anon, {
@@ -82,12 +102,12 @@ Deno.serve(async (req) => {
   const admin = createClient(supabase_url, service_role);
 
   const { data: auth_data, error: auth_err } = await supabase.auth.getUser(token);
-  if (auth_err || !auth_data.user) return json({ error: "Unauthorized" }, 401);
+  if (auth_err || !auth_data.user) return json({ error: "Unauthorized" }, 401, req);
   const user_id = auth_data.user.id;
 
   const body = await req.json().catch(() => ({}));
   const { ipe_cycle_id } = body;
-  if (!ipe_cycle_id) return json({ error: "Missing ipe_cycle_id" }, 400);
+  if (!ipe_cycle_id) return json({ error: "Missing ipe_cycle_id" }, 400, req);
 
   // Confirma cycle pertence ao user
   const { data: cycle, error: cErr } = await supabase
@@ -96,7 +116,7 @@ Deno.serve(async (req) => {
     .eq("id", ipe_cycle_id)
     .single();
   if (cErr || !cycle || cycle.user_id !== user_id) {
-    return json({ error: "Cycle not found or unauthorized" }, 404);
+    return json({ error: "Cycle not found or unauthorized" }, 404, req);
   }
 
   // Lê questionnaire_state (auto)
@@ -191,5 +211,10 @@ Deno.serve(async (req) => {
     lines_complete_auto: ALL_LINES.filter(l => il_aggregated[l].il_auto !== null).length,
     il_aggregated,
     debug_fingerprint: DEPLOY_FINGERPRINT,
-  });
+  }, 200, req);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`ipe-cycle-aggregate: internal_error: ${message}`);
+    return json({ error: "internal_error" }, 500, req);
+  }
 });

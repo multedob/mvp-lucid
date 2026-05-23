@@ -26,16 +26,31 @@ const MODEL_ID = "claude-sonnet-4-5-20250929";
 const MAX_TOKENS = 600;
 const TEMPERATURE = 0.7;
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, content-type, apikey",
-};
+const ALLOWED_ORIGINS = new Set([
+  "https://rdwth.com",
+  "https://www.rdwth.com",
+  "http://localhost:8080",
+  "http://localhost:5173",
+]);
 
-function json(body: unknown, status = 200): Response {
+function corsHeaders(origin: string | null): Record<string, string> {
+  const allowed = origin && ALLOWED_ORIGINS.has(origin) ? origin : "https://rdwth.com";
+  return {
+    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Vary": "Origin",
+  };
+}
+
+// Backward-compat default (used by helpers that don't have req in scope).
+const CORS_HEADERS = corsHeaders(null);
+
+function json(body: unknown, status = 200, req?: Request): Response {
+  const origin = req?.headers.get("origin") ?? null;
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
   });
 }
 
@@ -254,27 +269,30 @@ function extractFollowUp(fullText: string): { eco: string; follow: string } {
 // ─── Handler ────────────────────────────────────────────────────────
 Deno.serve(async (req) => {
   console.log(`[warmup-eco ${DEPLOY_FINGERPRINT}] invoked, method:`, req.method);
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
-  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req.headers.get("origin")) });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405, req);
+
+  const contentLength = parseInt(req.headers.get("content-length") ?? "0");
+  if (contentLength > 50_000) return json({ error: "payload_too_large" }, 413, req);
 
   const auth_header = req.headers.get("Authorization");
-  if (!auth_header) return json({ error: "Missing authorization" }, 401);
+  if (!auth_header) return json({ error: "Missing authorization" }, 401, req);
 
   const supabase_url = Deno.env.get("SUPABASE_URL");
   const service_role = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const anon_key = Deno.env.get("SUPABASE_ANON_KEY");
   const anthropic_key = Deno.env.get("ANTHROPIC_API_KEY");
   if (!supabase_url || !service_role || !anon_key) {
-    return json({ error: "Missing Supabase env vars" }, 500);
+    return json({ error: "Missing Supabase env vars" }, 500, req);
   }
-  if (!anthropic_key) return json({ error: "Missing ANTHROPIC_API_KEY" }, 500);
+  if (!anthropic_key) return json({ error: "Missing ANTHROPIC_API_KEY" }, 500, req);
 
   // Cliente com JWT do user pra resolver auth.uid()
   const supabaseUser = createClient(supabase_url, anon_key, {
     global: { headers: { Authorization: auth_header } },
   });
   const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
-  if (userError || !user) return json({ error: "Invalid authorization" }, 401);
+  if (userError || !user) return json({ error: "Invalid authorization" }, 401, req);
 
   // Cliente admin (bypassa RLS) pra escritas
   const supabase = createClient(supabase_url, service_role);
@@ -284,7 +302,7 @@ Deno.serve(async (req) => {
   try {
     body = await req.json();
   } catch {
-    return json({ error: "Invalid JSON body" }, 400);
+    return json({ error: "Invalid JSON body" }, 400, req);
   }
   const questions: string[] = Array.isArray(body.questions)
     ? (body.questions as unknown[]).map(String)
@@ -293,10 +311,10 @@ Deno.serve(async (req) => {
     ? (body.responses as unknown[]).map(String)
     : [];
   if (questions.length !== 2 || responses.length !== 2) {
-    return json({ error: "Expected exactly 2 questions and 2 responses" }, 400);
+    return json({ error: "Expected exactly 2 questions and 2 responses" }, 400, req);
   }
   if (responses.some(r => r.trim().length === 0)) {
-    return json({ error: "Empty response" }, 400);
+    return json({ error: "Empty response" }, 400, req);
   }
 
   // Nome opcional (display_name > given_name > null)
@@ -429,7 +447,7 @@ Deno.serve(async (req) => {
 
   return new Response(stream, {
     headers: {
-      ...CORS_HEADERS,
+      ...corsHeaders(req.headers.get("origin")),
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       "Connection": "keep-alive",

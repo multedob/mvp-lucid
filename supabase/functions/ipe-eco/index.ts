@@ -27,18 +27,33 @@ interface EcoStructured {
   node_resonance_used: boolean;
 }
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  // Wave 12 — adicionado 'apikey' (supabase-js cliente envia por padrão; sem isso preflight CORS falha → "Failed to fetch")
-  "Access-Control-Allow-Headers": "authorization, x-client-info, content-type, apikey",
-};
+const ALLOWED_ORIGINS = new Set([
+  "https://rdwth.com",
+  "https://www.rdwth.com",
+  "http://localhost:8080",
+  "http://localhost:5173",
+]);
 
-const json = (data: unknown, status = 200) =>
-  new Response(JSON.stringify(data), {
+function corsHeaders(origin: string | null): Record<string, string> {
+  const allowed = origin && ALLOWED_ORIGINS.has(origin) ? origin : "https://rdwth.com";
+  return {
+    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Vary": "Origin",
+  };
+}
+
+// Backward-compat default (used by helpers that don't have req in scope).
+const CORS_HEADERS = corsHeaders(null);
+
+const json = (data: unknown, status = 200, req?: Request) => {
+  const origin = req?.headers.get("origin") ?? null;
+  return new Response(JSON.stringify(data), {
     status,
-    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
   });
+};
 
 const PILL_META: Record<string, { tensao: string; proibicoes: string }> = {
   PI:   { tensao: "I ↔ Belonging",        proibicoes: `"pertencimento", "você sempre foi", "lugar de origem".` },
@@ -344,38 +359,42 @@ Deno.serve(async (req) => {
   console.log("[ipe-eco] deploy_fingerprint:", DEPLOY_FINGERPRINT);
   // Wave 12 — identificador de versão pra confirmar deploy efetivo
   console.log("[ipe-eco WAVE12-FIX-924829c] invoked, method:", req.method);
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req.headers.get("origin")) });
 
+  const contentLength = parseInt(req.headers.get("content-length") ?? "0");
+  if (contentLength > 50_000) return json({ error: "payload_too_large" }, 413, req);
+
+  try {
   const auth_header = req.headers.get("Authorization");
-  if (!auth_header) return json({ error: "Missing authorization" }, 401);
+  if (!auth_header) return json({ error: "Missing authorization" }, 401, req);
 
   const token = auth_header.replace("Bearer ", "");
   const supabase_url = Deno.env.get("SUPABASE_URL");
   const supabase_key = Deno.env.get("SUPABASE_ANON_KEY");
-  if (!supabase_url || !supabase_key) return json({ error: "Missing config" }, 500);
+  if (!supabase_url || !supabase_key) return json({ error: "Missing config" }, 500, req);
 
   const supabase = createClient(supabase_url, supabase_key, {
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
 
   const { data: auth_data, error: auth_error } = await supabase.auth.getUser(token);
-  if (auth_error || !auth_data.user) return json({ error: "Unauthorized" }, 401);
+  if (auth_error || !auth_data.user) return json({ error: "Unauthorized" }, 401, req);
   const user_id = auth_data.user.id;
 
   const body = await req.json().catch(() => ({}));
   const { ipe_cycle_id, pill_id } = body;
   const force_regenerate = body?.force_regenerate === true;
-  if (!ipe_cycle_id || !pill_id) return json({ error: "Missing ipe_cycle_id or pill_id" }, 400);
+  if (!ipe_cycle_id || !pill_id) return json({ error: "Missing ipe_cycle_id or pill_id" }, 400, req);
 
   const { data: cycle_data, error: cycle_error } = await supabase
     .from("ipe_cycles").select("id, user_id").eq("id", ipe_cycle_id).single();
   if (cycle_error || !cycle_data || cycle_data.user_id !== user_id) {
-    return json({ error: "Cycle not found or unauthorized" }, 404);
+    return json({ error: "Cycle not found or unauthorized" }, 404, req);
   }
 
   const { data: pill_response_data, error: pill_error } = await supabase
     .from("pill_responses").select("*").eq("ipe_cycle_id", ipe_cycle_id).eq("pill_id", pill_id).single();
-  if (pill_error || !pill_response_data) return json({ error: "Pill response not found" }, 404);
+  if (pill_error || !pill_response_data) return json({ error: "Pill response not found" }, 404, req);
 
   const pill_response: PillResponse = pill_response_data;
   const component = `eco_${pill_id}`;
@@ -408,11 +427,11 @@ Deno.serve(async (req) => {
       cta_text: cached_cta,
       cached: true,
       debug_fingerprint: DEPLOY_FINGERPRINT,
-    });
+    }, 200, req);
   }
 
   const anthropic_key = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!anthropic_key) return json({ error: "missing ANTHROPIC_API_KEY" }, 500);
+  if (!anthropic_key) return json({ error: "missing ANTHROPIC_API_KEY" }, 500, req);
   const anthropic = new Anthropic({ apiKey: anthropic_key });
 
   const t0 = Date.now();
@@ -447,7 +466,7 @@ Deno.serve(async (req) => {
       cached: false,
       deterministic: false,
       debug_fingerprint: DEPLOY_FINGERPRINT,
-    });
+    }, 200, req);
   }
 
   // ─── ETAPA 2: NODE selector ─────────────────────────────────
@@ -468,7 +487,7 @@ Deno.serve(async (req) => {
     prompt_text = prompt_row.prompt_text;
     prompt_version_label = prompt_row.version ?? prompt_version_label;
   } else {
-    return json({ error: `prompt eco_${pill_id} not found in DB` }, 500);
+    return json({ error: `prompt eco_${pill_id} not found in DB` }, 500, req);
   }
 
   let eco: EcoStructured | null = null;
@@ -520,7 +539,7 @@ Deno.serve(async (req) => {
       cached: false,
       deterministic: false,
       debug_fingerprint: DEPLOY_FINGERPRINT,
-    });
+    }, 200, req);
   }
 
   // ─── ETAPA 4: CTA contextual ────────────────────────────────
@@ -544,5 +563,10 @@ Deno.serve(async (req) => {
     deterministic: false,
     prompt_version_used: prompt_version_label,
     debug_fingerprint: DEPLOY_FINGERPRINT,
-  });
+  }, 200, req);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`ipe-eco: internal_error: ${message}`);
+    return json({ error: "internal_error" }, 500, req);
+  }
 });

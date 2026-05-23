@@ -31,16 +31,31 @@ const LLM_PROVIDER = "anthropic";
 const LLM_MODEL_ID = "claude-haiku-4-5-20251001";
 const LLM_TEMPERATURE = 0.7;
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+const ALLOWED_ORIGINS = new Set([
+  "https://rdwth.com",
+  "https://www.rdwth.com",
+  "http://localhost:8080",
+  "http://localhost:5173",
+]);
 
-function json(body: unknown, status = 200): Response {
+function corsHeaders(origin: string | null): Record<string, string> {
+  const allowed = origin && ALLOWED_ORIGINS.has(origin) ? origin : "https://rdwth.com";
+  return {
+    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Vary": "Origin",
+  };
+}
+
+// Backward-compat default (used by helpers that don't have req in scope).
+const CORS_HEADERS = corsHeaders(null);
+
+function json(body: unknown, status = 200, req?: Request): Response {
+  const origin = req?.headers.get("origin") ?? null;
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
   });
 }
 
@@ -320,7 +335,7 @@ function streamLanguageResponse(
 
   return new Response(stream, {
     headers: {
-      ...CORS_HEADERS,
+      ...corsHeaders(req.headers.get("origin")),
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       Connection: "keep-alive",
@@ -402,23 +417,27 @@ User input: "${user_text}"`;
 
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: CORS_HEADERS });
+    return new Response(null, { headers: corsHeaders(req.headers.get("origin")) });
   }
 
   if (req.method !== "POST") {
-    return json({ error: "INVALID_INPUT", message: "Method not allowed" }, 400);
+    return json({ error: "INVALID_INPUT", message: "Method not allowed" }, 400, req);
   }
+
+  const contentLength = parseInt(req.headers.get("content-length") ?? "0");
+  if (contentLength > 50_000) return json({ error: "payload_too_large" }, 413, req);
+
 
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
-    return json({ error: "UNAUTHORIZED", message: "Missing authorization" }, 401);
+    return json({ error: "UNAUTHORIZED", message: "Missing authorization" }, 401, req);
   }
 
   let body: Record<string, unknown>;
   try {
     body = await req.json();
   } catch {
-    return json({ error: "INVALID_INPUT", message: "Body must be valid JSON" }, 400);
+    return json({ error: "INVALID_INPUT", message: "Body must be valid JSON" }, 400, req);
   }
 
   const FORBIDDEN = [
@@ -435,15 +454,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
   ];
   for (const f of FORBIDDEN) {
     if (f in body) {
-      return json({ error: "INVALID_INPUT", message: `Field "${f}" is forbidden in request` }, 400);
+      return json({ error: "INVALID_INPUT", message: `Field "${f}" is forbidden in request` }, 400, req);
     }
   }
 
   if (typeof body.base_version !== "number" || body.base_version < 0) {
-    return json({ error: "INVALID_INPUT", message: "base_version must be integer >= 0" }, 400);
+    return json({ error: "INVALID_INPUT", message: "base_version must be integer >= 0" }, 400, req);
   }
   if (typeof body.raw_input !== "object" || body.raw_input === null) {
-    return json({ error: "INVALID_INPUT", message: "raw_input must be object with d1-d4 and user_text" }, 400);
+    return json({ error: "INVALID_INPUT", message: "raw_input must be object with d1-d4 and user_text" }, 400, req);
   }
 
   const raw = body.raw_input as Record<string, unknown>;
@@ -455,12 +474,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   for (const key of ["d1", "d2", "d3", "d4"]) {
     if (!isQuad(raw[key])) {
-      return json({ error: "INVALID_INPUT", message: `raw_input.${key} must be array of exactly 4 numbers` }, 400);
+      return json({ error: "INVALID_INPUT", message: `raw_input.${key} must be array of exactly 4 numbers` }, 400, req);
     }
   }
 
   if (typeof raw.user_text !== "string" || raw.user_text.trim() === "") {
-    return json({ error: "INVALID_INPUT", message: "raw_input.user_text must be non-empty string" }, 400);
+    return json({ error: "INVALID_INPUT", message: "raw_input.user_text must be non-empty string" }, 400, req);
   }
 
   const radar_input: RadarInput = {
@@ -484,14 +503,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
     error: authError,
   } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
   if (authError || !user) {
-    return json({ error: "UNAUTHORIZED", message: "Invalid token" }, 401);
+    return json({ error: "UNAUTHORIZED", message: "Invalid token" }, 401, req);
   }
   const user_id = user.id;
 
   try {
     const bound_version = await resolveStructuralModelVersion(supabase);
     if (bound_version !== SUPPORTED_MODEL) {
-      return json({ error: "INTERNAL_ERROR", message: `RUNTIME_VERSION_NOT_IMPLEMENTED: ${bound_version}` }, 500);
+      return json({ error: "INTERNAL_ERROR", message: `RUNTIME_VERSION_NOT_IMPLEMENTED: ${bound_version}` }, 500, req);
     }
 
     const { snapshot: previous_snapshot, cycle_id: base_cycle_id } = await resolveSnapshot(
@@ -512,7 +531,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     const { data: ragCorpus, error: ragErr } = await supabase.from("rag_corpus").select("*");
     if (ragErr || !ragCorpus) {
-      return json({ error: "INTERNAL_ERROR", message: "Failed to load RAG corpus" }, 500);
+      return json({ error: "INTERNAL_ERROR", message: "Failed to load RAG corpus" }, 500, req);
     }
 
     const core_output = await executeStructuralCore({
@@ -645,17 +664,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
       audit_trace: core_output.audit_trace,
     };
 
-    return json(response, 200);
+    return json(response, 200, req);
   } catch (err) {
     if (err instanceof VersionConflictError) {
-      return json({ error: "VERSION_CONFLICT", message: err.message }, 409);
+      return json({ error: "VERSION_CONFLICT", message: err.message }, 409, req);
     }
     const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("INTERNAL_STRUCTURAL_INCONSISTENCY")) return json({ error: "INTERNAL_ERROR", message: msg }, 500);
-    if (msg.includes("INTERNAL_CONFIGURATION_ERROR")) return json({ error: "INTERNAL_ERROR", message: msg }, 500);
-    if (msg.includes("INTEGRITY_ERROR")) return json({ error: "INTERNAL_ERROR", message: msg }, 500);
-    if (msg.includes("CORE_INPUT_INVALID")) return json({ error: "INVALID_INPUT", message: msg }, 400);
+    if (msg.includes("INTERNAL_STRUCTURAL_INCONSISTENCY")) return json({ error: "INTERNAL_ERROR", message: msg }, 500, req);
+    if (msg.includes("INTERNAL_CONFIGURATION_ERROR")) return json({ error: "INTERNAL_ERROR", message: msg }, 500, req);
+    if (msg.includes("INTEGRITY_ERROR")) return json({ error: "INTERNAL_ERROR", message: msg }, 500, req);
+    if (msg.includes("CORE_INPUT_INVALID")) return json({ error: "INVALID_INPUT", message: msg }, 400, req);
     console.error("UNHANDLED_ERROR:", err);
-    return json({ error: "INTERNAL_ERROR", message: "Internal server error" }, 500);
+    return json({ error: "INTERNAL_ERROR", message: "Internal server error" }, 500, req);
   }
 });

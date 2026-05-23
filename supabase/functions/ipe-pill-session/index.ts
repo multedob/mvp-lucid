@@ -18,16 +18,31 @@ import {
   type M2CalSignals,
 } from "../_shared/ipe_types.ts";
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+const ALLOWED_ORIGINS = new Set([
+  "https://rdwth.com",
+  "https://www.rdwth.com",
+  "http://localhost:8080",
+  "http://localhost:5173",
+]);
 
-function json(body: unknown, status = 200): Response {
+function corsHeaders(origin: string | null): Record<string, string> {
+  const allowed = origin && ALLOWED_ORIGINS.has(origin) ? origin : "https://rdwth.com";
+  return {
+    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Vary": "Origin",
+  };
+}
+
+// Backward-compat default (used by helpers that don't have req in scope).
+const CORS_HEADERS = corsHeaders(null);
+
+function json(body: unknown, status = 200, req?: Request): Response {
+  const origin = req?.headers.get("origin") ?? null;
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
   });
 }
 
@@ -62,26 +77,30 @@ function validateMomentSequence(
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
-  if (req.method !== "POST")    return json({ error: "INVALID_INPUT", message: "Method not allowed" }, 400);
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(req.headers.get("origin")) });
+  if (req.method !== "POST")    return json({ error: "INVALID_INPUT", message: "Method not allowed" }, 400, req);
 
+  const contentLength = parseInt(req.headers.get("content-length") ?? "0");
+  if (contentLength > 50_000) return json({ error: "payload_too_large" }, 413, req);
+
+  try {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
-    return json({ error: "UNAUTHORIZED", message: "Missing authorization" }, 401);
+    return json({ error: "UNAUTHORIZED", message: "Missing authorization" }, 401, req);
   }
 
   let body: Record<string, unknown>;
   try { body = await req.json(); }
-  catch { return json({ error: "INVALID_INPUT", message: "Body must be valid JSON" }, 400); }
+  catch { return json({ error: "INVALID_INPUT", message: "Body must be valid JSON" }, 400, req); }
 
   if (typeof body.ipe_cycle_id !== "string")
-    return json({ error: "INVALID_INPUT", message: "ipe_cycle_id required" }, 400);
+    return json({ error: "INVALID_INPUT", message: "ipe_cycle_id required" }, 400, req);
   if (!VALID_PILLS.includes(body.pill_id as PillId))
-    return json({ error: "INVALID_INPUT", message: "pill_id inválido" }, 400);
+    return json({ error: "INVALID_INPUT", message: "pill_id inválido" }, 400, req);
   if (!VALID_MOMENTS.includes(body.moment as PillMoment))
-    return json({ error: "INVALID_INPUT", message: "moment inválido" }, 400);
+    return json({ error: "INVALID_INPUT", message: "moment inválido" }, 400, req);
   if (!body.payload || typeof body.payload !== "object")
-    return json({ error: "INVALID_INPUT", message: "payload required" }, 400);
+    return json({ error: "INVALID_INPUT", message: "payload required" }, 400, req);
 
   const ipe_cycle_id = body.ipe_cycle_id as string;
   const pill_id      = body.pill_id as PillId;
@@ -97,7 +116,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const { data: { user }, error: authError } = await supabase.auth.getUser(
     authHeader.replace("Bearer ", "")
   );
-  if (authError || !user) return json({ error: "UNAUTHORIZED", message: "Invalid token" }, 401);
+  if (authError || !user) return json({ error: "UNAUTHORIZED", message: "Invalid token" }, 401, req);
 
   const { data: cycle, error: cycleErr } = await supabase
     .from("ipe_cycles")
@@ -106,9 +125,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
     .eq("user_id", user.id)
     .single();
 
-  if (cycleErr || !cycle) return json({ error: "NOT_FOUND", message: "Cycle not found" }, 404);
+  if (cycleErr || !cycle) return json({ error: "NOT_FOUND", message: "Cycle not found" }, 404, req);
   if (cycle.status === "complete" || cycle.status === "abandoned") {
-    return json({ error: "INVALID_INPUT", message: `Cycle is ${cycle.status}` }, 400);
+    return json({ error: "INVALID_INPUT", message: `Cycle is ${cycle.status}` }, 400, req);
   }
 
   const { data: existing } = await supabase
@@ -123,7 +142,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // Sem isso, M4 pode ser enviado sem M3, corrompendo o corpus de scoring.
   const sequenceError = validateMomentSequence(moment, existing ?? null);
   if (sequenceError) {
-    return json({ error: "INVALID_INPUT", message: sequenceError }, 400);
+    return json({ error: "INVALID_INPUT", message: sequenceError }, 400, req);
   }
 
   const pill_response_id: string = existing?.id ?? crypto.randomUUID();
@@ -138,7 +157,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       // Pausa >= 8s = sinal de ressonância alta (PROTOCOLO §8.1)
       const tempo = payload.tempo_segundos;
       if (typeof tempo !== "number" || tempo < 0) {
-        return json({ error: "INVALID_INPUT", message: "M1 requires tempo_segundos: number >= 0" }, 400);
+        return json({ error: "INVALID_INPUT", message: "M1 requires tempo_segundos: number >= 0" }, 400, req);
       }
       // variation_key: tracks which content variation was shown to the user
       // Optional for backward compatibility (null = legacy/V1 hardcoded content)
@@ -169,7 +188,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     case "M2": {
       const resposta = payload.resposta;
       if (typeof resposta !== "string" || !resposta.trim()) {
-        return json({ error: "INVALID_INPUT", message: "M2 requires resposta: string" }, 400);
+        return json({ error: "INVALID_INPUT", message: "M2 requires resposta: string" }, 400, req);
       }
       // Optional audio metadata (present when user used the mic).
       // All four fields are nullable — text-only responses leave them null.
@@ -196,7 +215,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       const m3 = payload as Record<string, unknown>;
       const m3Error = validateM3(pill_id, m3);
       if (m3Error) {
-        return json({ error: "INVALID_INPUT", message: `M3 inválido para ${pill_id}: ${m3Error}` }, 400);
+        return json({ error: "INVALID_INPUT", message: `M3 inválido para ${pill_id}: ${m3Error}` }, 400, req);
       }
       update      = { m3_respostas: m3 };
       next_moment = "M4";
@@ -210,11 +229,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
       // outros: { percepcao, presenca_para_outros } → L4.4 corpus_transversal
       const m4 = payload.m4 as Record<string, unknown> | undefined;
       if (!m4 || typeof m4 !== "object") {
-        return json({ error: "INVALID_INPUT", message: "M4 requires payload.m4: object" }, 400);
+        return json({ error: "INVALID_INPUT", message: "M4 requires payload.m4: object" }, 400, req);
       }
       const m4Error = validateM4(pill_id, m4);
       if (m4Error) {
-        return json({ error: "INVALID_INPUT", message: `M4 inválido para ${pill_id}: ${m4Error}` }, 400);
+        return json({ error: "INVALID_INPUT", message: `M4 inválido para ${pill_id}: ${m4Error}` }, 400, req);
       }
       // Optional audio metadata (same pattern as M2).
       const audioUrl        = typeof payload.audio_url === "string" ? payload.audio_url : null;
@@ -254,7 +273,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   if (upsertErr) {
     console.error("PILL_RESPONSE_UPSERT_ERROR:", upsertErr);
-    return json({ error: "INTERNAL_ERROR", message: "Failed to persist pill response" }, 500);
+    return json({ error: "INTERNAL_ERROR", message: "Failed to persist pill response" }, 500, req);
   }
 
   // ─── M1 re-start: limpar ciclo e scoring antigo
@@ -304,7 +323,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     if (cycleUpdateErr) {
       console.error("CYCLE_UPDATE_ERROR:", cycleUpdateErr, { ipe_cycle_id, pill_id, completedSet: Array.from(completedSet) });
-      return json({ error: "CYCLE_UPDATE_FAILED", message: "pills_completed update failed" }, 500);
+      return json({ error: "CYCLE_UPDATE_FAILED", message: "pills_completed update failed" }, 500, req);
     }
   }
 
@@ -323,5 +342,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }).catch((err) => console.error("IPE_SCORING_TRIGGER_ERROR:", err));
   }
 
-  return json({ pill_response_id, next_moment, scoring_triggered }, 200);
+  return json({ pill_response_id, next_moment, scoring_triggered }, 200, req);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`ipe-pill-session: internal_error: ${message}`);
+    return json({ error: "internal_error" }, 500, req);
+  }
 });

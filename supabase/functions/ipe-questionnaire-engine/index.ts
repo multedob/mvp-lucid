@@ -36,16 +36,31 @@ import {
   calcMaxPerguntasBloco,
 } from "../_shared/ipe_types.ts";
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+const ALLOWED_ORIGINS = new Set([
+  "https://rdwth.com",
+  "https://www.rdwth.com",
+  "http://localhost:8080",
+  "http://localhost:5173",
+]);
 
-function json(body: unknown, status = 200): Response {
+function corsHeaders(origin: string | null): Record<string, string> {
+  const allowed = origin && ALLOWED_ORIGINS.has(origin) ? origin : "https://rdwth.com";
+  return {
+    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Vary": "Origin",
+  };
+}
+
+// Backward-compat default (used by helpers that don't have req in scope).
+const CORS_HEADERS = corsHeaders(null);
+
+function json(body: unknown, status = 200, req?: Request): Response {
+  const origin = req?.headers.get("origin") ?? null;
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
   });
 }
 
@@ -339,7 +354,8 @@ function getTipo(line_id: LineId | string, plan: ExecutionPlan): "SEMPRE" | "CON
 async function handlePlan(
   supabase: ReturnType<typeof createClient>,
   user_id: string,
-  ipe_cycle_id: string
+  ipe_cycle_id: string,
+  req: Request,
 ): Promise<Response> {
   // Verificar ciclo
   // deno-lint-ignore no-explicit-any
@@ -350,9 +366,9 @@ async function handlePlan(
     .eq("user_id", user_id)
     .single() as { data: any; error: any };
 
-  if (cycleErr || !cycle) return json({ error: "NOT_FOUND", message: "Cycle not found" }, 404);
+  if (cycleErr || !cycle) return json({ error: "NOT_FOUND", message: "Cycle not found" }, 404, req);
   if (cycle.status === "complete" || cycle.status === "abandoned") {
-    return json({ error: "INVALID_INPUT", message: `Cycle is ${cycle.status}` }, 400);
+    return json({ error: "INVALID_INPUT", message: `Cycle is ${cycle.status}` }, 400, req);
   }
 
   // Verificar se plano já existe (idempotência)
@@ -368,7 +384,7 @@ async function handlePlan(
       questionnaire_state_id: existingState.id,
       execution_plan: existingState.execution_plan,
       blocos_ativos_count: (existingState.execution_plan as ExecutionPlan)?.blocos_ativos?.length ?? 0,
-    }, 200);
+    }, 200, req);
   }
 
   // Carregar pill_scoring do ciclo
@@ -409,7 +425,7 @@ async function handlePlan(
 
   if (insertErr) {
     console.error("QUESTIONNAIRE_STATE_INSERT_ERROR:", insertErr);
-    return json({ error: "INTERNAL_ERROR", message: "Failed to persist plan" }, 500);
+    return json({ error: "INTERNAL_ERROR", message: "Failed to persist plan" }, 500, req);
   }
 
   // Atualizar ciclo para status questionnaire
@@ -422,7 +438,7 @@ async function handlePlan(
     questionnaire_state_id: stateId,
     execution_plan: plan,
     blocos_ativos_count: plan.blocos_ativos.length,
-  }, 200);
+  }, 200, req);
 }
 
 // ─────────────────────────────────────────
@@ -432,7 +448,8 @@ async function handleNextBlock(
   supabase: ReturnType<typeof createClient>,
   user_id: string,
   ipe_cycle_id: string,
-  block_response?: Record<string, unknown>
+  block_response: Record<string, unknown> | undefined,
+  req: Request,
 ): Promise<Response> {
   // B4 FIX: verificar ownership do ciclo antes de carregar estado
   // Sem isso, qualquer token válido com ipe_cycle_id conhecido pode avançar
@@ -445,7 +462,7 @@ async function handleNextBlock(
     .single();
 
   if (cycleCheckErr || !cycleCheck) {
-    return json({ error: "NOT_FOUND", message: "Cycle not found" }, 404);
+    return json({ error: "NOT_FOUND", message: "Cycle not found" }, 404, req);
   }
 
   // Carregar estado atual
@@ -459,12 +476,12 @@ async function handleNextBlock(
   const state = stateRaw as any;
 
   if (stateErr || !state) {
-    return json({ error: "NOT_FOUND", message: "questionnaire_state not found — call /plan first" }, 404);
+    return json({ error: "NOT_FOUND", message: "questionnaire_state not found — call /plan first" }, 404, req);
   }
   if (state.status === "complete") {
     return json({ done: true, next_block: null, variante_a_servir: null,
                   aguardando_variante: false, dimension_transition: null,
-                  questionnaire_state_id: state.id }, 200);
+                  questionnaire_state_id: state.id }, 200, req);
   }
 
   const flags = (state.flags ?? {}) as QuestionnaireFlags;
@@ -661,7 +678,7 @@ async function handleNextBlock(
             aguardando_variante: true,
             dimension_transition: null,
             questionnaire_state_id: state.id,
-          } as NextBlockOutput, 200);
+          } as NextBlockOutput, 200, req);
         }
 
         // Sem variante — finalizar bloco
@@ -738,12 +755,12 @@ async function handleNextBlock(
     );
     return await finalizarNextBlock(supabase, (state as any).id, ipe_cycle_id, nextAfterLate as { line_id: LineId | null; dimension_transition: string | null }, plan,
       current_position, orcamento_global, orcamento_d3, contador_d3,
-      resultados, flags, ((state as any).last_block_completed as LineId | null));
+      resultados, flags, ((state as any).last_block_completed as LineId | null), req);
   }
 
   return await finalizarNextBlock(supabase, (state as any).id, ipe_cycle_id, nextResult as { line_id: LineId | null; dimension_transition: string | null }, plan,
     current_position, orcamento_global, orcamento_d3, contador_d3,
-    resultados, flags, ((state as any).last_block_completed as LineId | null));
+    resultados, flags, ((state as any).last_block_completed as LineId | null), req);
 }
 
 // ─────────────────────────────────────────
@@ -942,7 +959,8 @@ async function finalizarNextBlock(
   contador_d3: number,
   resultados: Record<string, ResultadoBloco>,
   flags: QuestionnaireFlags,
-  last_block_completed: LineId | null
+  last_block_completed: LineId | null,
+  req: Request,
 ): Promise<Response> {
   const done = nextResult.line_id === null;
 
@@ -977,7 +995,7 @@ async function finalizarNextBlock(
     aguardando_variante: false,
     dimension_transition: nextResult.dimension_transition,
     questionnaire_state_id: state_id,
-  } as NextBlockOutput, 200);
+  } as NextBlockOutput, 200, req);
 }
 
 // ─────────────────────────────────────────
@@ -1138,30 +1156,34 @@ async function callScoringBlock(
 // MAIN HANDLER — roteamento por path
 // ─────────────────────────────────────────
 Deno.serve(async (req: Request): Promise<Response> => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
-  if (req.method !== "POST") return json({ error: "INVALID_INPUT", message: "Method not allowed" }, 400);
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(req.headers.get("origin")) });
+  if (req.method !== "POST") return json({ error: "INVALID_INPUT", message: "Method not allowed" }, 400, req);
 
+  const contentLength = parseInt(req.headers.get("content-length") ?? "0");
+  if (contentLength > 50_000) return json({ error: "payload_too_large" }, 413, req);
+
+  try {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
-    return json({ error: "UNAUTHORIZED", message: "Missing authorization" }, 401);
+    return json({ error: "UNAUTHORIZED", message: "Missing authorization" }, 401, req);
   }
 
   const url = new URL(req.url);
   const path = url.pathname.split("/").pop();
 
   if (path !== "plan" && path !== "next-block") {
-    return json({ error: "NOT_FOUND", message: "Use /plan or /next-block" }, 404);
+    return json({ error: "NOT_FOUND", message: "Use /plan or /next-block" }, 404, req);
   }
 
   let body: Record<string, unknown>;
   try {
     body = await req.json();
   } catch {
-    return json({ error: "INVALID_INPUT", message: "Body must be valid JSON" }, 400);
+    return json({ error: "INVALID_INPUT", message: "Body must be valid JSON" }, 400, req);
   }
 
   if (typeof body.ipe_cycle_id !== "string") {
-    return json({ error: "INVALID_INPUT", message: "ipe_cycle_id required" }, 400);
+    return json({ error: "INVALID_INPUT", message: "ipe_cycle_id required" }, 400, req);
   }
 
   const supabase = createClient(
@@ -1173,11 +1195,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const { data: { user }, error: authError } = await supabase.auth.getUser(
     authHeader.replace("Bearer ", "")
   );
-  if (authError || !user) return json({ error: "UNAUTHORIZED", message: "Invalid token" }, 401);
+  if (authError || !user) return json({ error: "UNAUTHORIZED", message: "Invalid token" }, 401, req);
 
   if (path === "plan") {
     // deno-lint-ignore no-explicit-any
-    return await handlePlan(supabase as any, user.id, body.ipe_cycle_id as string);
+    return await handlePlan(supabase as any, user.id, body.ipe_cycle_id as string, req);
   }
 
   // next-block
@@ -1186,6 +1208,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
     supabase as any,
     user.id,
     body.ipe_cycle_id as string,
-    body.block_response as Record<string, unknown> | undefined
+    body.block_response as Record<string, unknown> | undefined,
+    req,
   );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`ipe-questionnaire-engine: internal_error: ${message}`);
+    return json({ error: "internal_error" }, 500, req);
+  }
 });

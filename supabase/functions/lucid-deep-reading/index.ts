@@ -19,17 +19,33 @@ const DEPLOY_FINGERPRINT = "w20.6.5-deep-reading-v5.0-warmup-only-mode";
 const NODES_TO_SELECT = 4; // 3-5 conforme decisão DOC
 const NODES_TO_SELECT_WARMUP = 3; // modo warmup-only é mais leve, 3 nodes basta
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, content-type, apikey",
-};
+const ALLOWED_ORIGINS = new Set([
+  "https://rdwth.com",
+  "https://www.rdwth.com",
+  "http://localhost:8080",
+  "http://localhost:5173",
+]);
 
-const json = (data: unknown, status = 200) =>
-  new Response(JSON.stringify(data), {
+function corsHeaders(origin: string | null): Record<string, string> {
+  const allowed = origin && ALLOWED_ORIGINS.has(origin) ? origin : "https://rdwth.com";
+  return {
+    "Access-Control-Allow-Origin": allowed,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Vary": "Origin",
+  };
+}
+
+// Backward-compat default (used by helpers that don't have req in scope).
+const CORS_HEADERS = corsHeaders(null);
+
+const json = (data: unknown, status = 200, req?: Request) => {
+  const origin = req?.headers.get("origin") ?? null;
+  return new Response(JSON.stringify(data), {
     status,
-    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(origin), "Content-Type": "application/json" },
   });
+};
 
 const PILL_LABEL: Record<string, string> = {
   PI:   "Pill I — Eu ↔ Pertencimento",
@@ -325,6 +341,7 @@ function buildCorpusFromQuestionnaire(rows: QuestionnaireResponseRow[]): string 
 async function handleWarmupOnly(
   admin: ReturnType<typeof createClient>,
   user_id: string,
+  req: Request,
 ): Promise<Response> {
   console.log(`[lucid-deep-reading WARMUP-ONLY] user=${user_id}`);
 
@@ -338,10 +355,11 @@ async function handleWarmupOnly(
 
   if (wErr) {
     console.error("[warmup-only] fetch warmups err:", wErr);
-    return json({ error: "Failed to fetch warmups", detail: wErr.message }, 500);
+    console.error(`lucid-deep-reading: warmup_fetch_failed user=${user_id} err=${wErr.message}`);
+    return json({ error: "internal_error" }, 500, req);
   }
   if (!warmups || warmups.length === 0) {
-    return json({ ok: true, skipped: "no warmups yet", debug_fingerprint: DEPLOY_FINGERPRINT });
+    return json({ ok: true, skipped: "no warmups yet", debug_fingerprint: DEPLOY_FINGERPRINT }, 200, req);
   }
 
   // 2. Já existe warmup_deep_reading recente? Idempotência leve — não regenera se feito há <5min
@@ -356,7 +374,7 @@ async function handleWarmupOnly(
     const ageMs = Date.now() - new Date(recent[0].created_at as string).getTime();
     if (ageMs < 5 * 60 * 1000) {
       console.log(`[warmup-only] recent reading exists (age ${ageMs}ms), skipping regenerate`);
-      return json({ ok: true, skipped: "recent reading exists", echo_id: recent[0].id, debug_fingerprint: DEPLOY_FINGERPRINT });
+      return json({ ok: true, skipped: "recent reading exists", echo_id: recent[0].id, debug_fingerprint: DEPLOY_FINGERPRINT }, 200, req);
     }
   }
 
@@ -373,7 +391,7 @@ async function handleWarmupOnly(
   }
   const warmupCorpus = blocks.join("\n\n---\n\n");
   if (!warmupCorpus.trim()) {
-    return json({ ok: true, skipped: "warmups empty", debug_fingerprint: DEPLOY_FINGERPRINT });
+    return json({ ok: true, skipped: "warmups empty", debug_fingerprint: DEPLOY_FINGERPRINT }, 200, req);
   }
 
   // 4. RAG nodes (modo warmup-only usa 3)
@@ -407,7 +425,7 @@ async function handleWarmupOnly(
 
   // 5. Chama Anthropic
   const anthropic_key = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!anthropic_key) return json({ error: "Missing ANTHROPIC_API_KEY" }, 500);
+  if (!anthropic_key) return json({ error: "Missing ANTHROPIC_API_KEY" }, 500, req);
   const anthropic = new Anthropic({ apiKey: anthropic_key });
 
   const node_section = nodeTexts.length > 0
@@ -430,11 +448,11 @@ async function handleWarmupOnly(
     const c = response.content[0];
     if (c && "text" in c) fullText = c.text.trim();
   } catch (err: any) {
-    console.error("[warmup-only] Anthropic error:", err.message);
-    return json({ error: "LLM error", detail: err.message, debug_fingerprint: DEPLOY_FINGERPRINT }, 500);
+    console.error(`lucid-deep-reading: anthropic_error user=${user_id} err=${err.message}`);
+    return json({ error: "internal_error" }, 500, req);
   }
   if (!fullText) {
-    return json({ error: "Empty LLM response", debug_fingerprint: DEPLOY_FINGERPRINT }, 500);
+    return json({ error: "Empty LLM response", debug_fingerprint: DEPLOY_FINGERPRINT }, 500, req);
   }
 
   // 6. Separa eco da pergunta final (última linha começando com "Vai")
@@ -478,7 +496,8 @@ async function handleWarmupOnly(
 
   if (insErr) {
     console.error("[warmup-only] insert err:", insErr);
-    return json({ error: "Persist failed", detail: insErr.message, debug_fingerprint: DEPLOY_FINGERPRINT }, 500);
+    console.error(`lucid-deep-reading: persist_failed user=${user_id} err=${insErr.message}`);
+    return json({ error: "internal_error" }, 500, req);
   }
 
   return json({
@@ -490,22 +509,25 @@ async function handleWarmupOnly(
     latency_ms,
     nodes_count: nodeIds.length,
     debug_fingerprint: DEPLOY_FINGERPRINT,
-  });
+  }, 200, req);
 }
 
 Deno.serve(async (req) => {
   console.log(`[lucid-deep-reading ${DEPLOY_FINGERPRINT}] invoked, method:`, req.method);
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
-  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req.headers.get("origin")) });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405, req);
+
+  const contentLength = parseInt(req.headers.get("content-length") ?? "0");
+  if (contentLength > 50_000) return json({ error: "payload_too_large" }, 413, req);
 
   const auth_header = req.headers.get("Authorization");
-  if (!auth_header) return json({ error: "Missing authorization" }, 401);
+  if (!auth_header) return json({ error: "Missing authorization" }, 401, req);
 
   const token = auth_header.replace("Bearer ", "");
   const supabase_url = Deno.env.get("SUPABASE_URL");
   const supabase_anon = Deno.env.get("SUPABASE_ANON_KEY");
   const service_role_key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!supabase_url || !supabase_anon || !service_role_key) return json({ error: "Missing config" }, 500);
+  if (!supabase_url || !supabase_anon || !service_role_key) return json({ error: "Missing config" }, 500, req);
 
   const supabase = createClient(supabase_url, supabase_anon, {
     global: { headers: { Authorization: `Bearer ${token}` } },
@@ -515,7 +537,7 @@ Deno.serve(async (req) => {
   const admin = createClient(supabase_url, service_role_key);
 
   const { data: auth_data, error: auth_err } = await supabase.auth.getUser(token);
-  if (auth_err || !auth_data.user) return json({ error: "Unauthorized" }, 401);
+  if (auth_err || !auth_data.user) return json({ error: "Unauthorized" }, 401, req);
   const user_id = auth_data.user.id;
 
   const body = await req.json().catch(() => ({}));
@@ -523,7 +545,7 @@ Deno.serve(async (req) => {
 
   // TA-S6.1b — Modo WARMUP-ONLY: sem cycle_id, gera leitura inicial baseada só no warmup
   if (!ipe_cycle_id) {
-    return await handleWarmupOnly(admin, user_id);
+    return await handleWarmupOnly(admin, user_id, req);
   }
 
   // Confirma que o cycle pertence ao user
@@ -533,7 +555,7 @@ Deno.serve(async (req) => {
     .eq("id", ipe_cycle_id)
     .single();
   if (cycleErr || !cycle || cycle.user_id !== user_id) {
-    return json({ error: "Cycle not found or unauthorized" }, 404);
+    return json({ error: "Cycle not found or unauthorized" }, 404, req);
   }
 
   // Busca pill_responses do cycle
@@ -639,7 +661,7 @@ Deno.serve(async (req) => {
       ok: true,
       skipped: "no data yet",
       debug_fingerprint: DEPLOY_FINGERPRINT,
-    });
+    }, 200, req);
   }
 
   // Monta corpus combinado, separando seções pra Sonnet entender origem
@@ -661,7 +683,7 @@ Deno.serve(async (req) => {
     : "";
 
   const anthropic_key = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!anthropic_key) return json({ error: "Missing ANTHROPIC_API_KEY" }, 500);
+  if (!anthropic_key) return json({ error: "Missing ANTHROPIC_API_KEY" }, 500, req);
   const anthropic = new Anthropic({ apiKey: anthropic_key });
 
   let deep_reading = "";
@@ -679,12 +701,12 @@ Deno.serve(async (req) => {
     const c = response.content[0];
     if (c && "text" in c) deep_reading = c.text.trim();
   } catch (err: any) {
-    console.error("[lucid-deep-reading] Anthropic error:", err.message);
-    return json({ error: "LLM error", detail: err.message, debug_fingerprint: DEPLOY_FINGERPRINT }, 500);
+    console.error(`lucid-deep-reading: anthropic_error user=${user_id} err=${err.message}`);
+    return json({ error: "internal_error" }, 500, req);
   }
 
   if (!deep_reading) {
-    return json({ error: "Empty LLM response", debug_fingerprint: DEPLOY_FINGERPRINT }, 500);
+    return json({ error: "Empty LLM response", debug_fingerprint: DEPLOY_FINGERPRINT }, 500, req);
   }
 
   // Persiste em ipe_cycles.deep_reading_text com timestamp
@@ -697,8 +719,8 @@ Deno.serve(async (req) => {
     })
     .eq("id", ipe_cycle_id);
   if (updErr) {
-    console.error("[lucid-deep-reading] persist error:", updErr);
-    return json({ error: "Persist failed", detail: updErr.message, debug_fingerprint: DEPLOY_FINGERPRINT }, 500);
+    console.error(`lucid-deep-reading: persist_error user=${user_id} err=${updErr.message}`);
+    return json({ error: "internal_error" }, 500, req);
   }
 
   return json({
@@ -709,5 +731,5 @@ Deno.serve(async (req) => {
     debug_pills_chars: pillsCorpus.length,
     debug_questionnaire_chars: qCorpus.length,
     debug_total_corpus_chars: corpus.length,
-  });
+  }, 200, req);
 });
