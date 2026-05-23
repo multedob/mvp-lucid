@@ -467,6 +467,12 @@ Deno.serve(async (req) => {
     }, 200, req);
   }
 
+  const rateCheck = checkAnthropicRateLimit(user_id);
+  if (!rateCheck.ok) {
+    console.warn(`ipe-eco: rate_limited user=${user_id} reason=${rateCheck.reason}`);
+    return json({ error: "rate_limited", reason: rateCheck.reason }, 429, req);
+  }
+
   const anthropic_key = Deno.env.get("ANTHROPIC_API_KEY");
   if (!anthropic_key) return json({ error: "missing ANTHROPIC_API_KEY" }, 500, req);
   const anthropic = new Anthropic({ apiKey: anthropic_key });
@@ -485,8 +491,17 @@ Deno.serve(async (req) => {
   // Wave 12 — log pra confirmar que extractStringsRecursive achatou texto real
   console.log("[ipe-eco] corpus_for_detector length:", corpus_for_detector.length, "preview:", corpus_for_detector.slice(0, 200));
 
+  const _tDetector = Date.now();
   const detector = await detectPatternLLM(corpus_for_detector, pill_id, anthropic);
   console.log("[ipe-eco] detector result:", detector ? `hint=${detector.operator_hint} confidence=${detector.confidence}` : "NULL (fallback)");
+  console.log(JSON.stringify({
+    kind: "anthropic_call",
+    fn: "ipe-eco",
+    user_id,
+    model: "claude-haiku-4-5",
+    duration_ms: Date.now() - _tDetector,
+    timestamp: new Date().toISOString(),
+  }));
 
   if (!detector) {
     // detector falhou → fallback genérico
@@ -533,6 +548,7 @@ Deno.serve(async (req) => {
 
   while (retry_count <= 2 && !eco) {
     try {
+      const _tRenderer = Date.now();
       const response = await anthropic.messages.create({
         model: "claude-sonnet-4-20250514",
         max_tokens: 500,
@@ -543,6 +559,14 @@ Deno.serve(async (req) => {
           content: `${corpus_for_renderer}\n\nRenderize agora o eco-convite. JSON puro.`,
         }],
       });
+      console.log(JSON.stringify({
+        kind: "anthropic_call",
+        fn: "ipe-eco",
+        user_id,
+        model: "claude-sonnet-4",
+        duration_ms: Date.now() - _tRenderer,
+        timestamp: new Date().toISOString(),
+      }));
       const c = response.content[0];
       if (c && "text" in c) {
         raw_output = c.text.trim();
@@ -554,9 +578,14 @@ Deno.serve(async (req) => {
     } catch (err: any) {
       console.error("[renderer] error:", err.message);
     }
-    if (!eco) retry_count++;
-    if (!eco && retry_count <= 2) await new Promise(r => setTimeout(r, 800));
+    if (!eco) {
+      // Exponential backoff: 500ms, 1000ms, 2000ms
+      const backoffMs = 500 * Math.pow(2, retry_count);
+      retry_count++;
+      if (retry_count <= 2) await new Promise(r => setTimeout(r, backoffMs));
+    }
   }
+
 
   if (!eco) {
     // fallback final
