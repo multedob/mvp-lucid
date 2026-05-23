@@ -1159,6 +1159,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(req.headers.get("origin")) });
   if (req.method !== "POST") return json({ error: "INVALID_INPUT", message: "Method not allowed" }, 400, req);
 
+  const contentLength = parseInt(req.headers.get("content-length") ?? "0");
+  if (contentLength > 50_000) return json({ error: "payload_too_large" }, 413, req);
+
+  try {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return json({ error: "UNAUTHORIZED", message: "Missing authorization" }, 401, req);
