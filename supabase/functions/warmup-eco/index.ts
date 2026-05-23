@@ -348,6 +348,12 @@ Deno.serve(async (req) => {
   const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
   if (userError || !user) return json({ error: "Invalid authorization" }, 401, req);
 
+  const rateCheck = checkAnthropicRateLimit(user.id);
+  if (!rateCheck.ok) {
+    console.warn(`warmup-eco: rate_limited user=${user.id} reason=${rateCheck.reason}`);
+    return json({ error: "rate_limited", reason: rateCheck.reason }, 429, req);
+  }
+
   // Cliente admin (bypassa RLS) pra escritas
   const supabase = createClient(supabase_url, service_role);
 
@@ -481,6 +487,15 @@ Deno.serve(async (req) => {
           // Fallback: fire-and-forget sem waitUntil
           triggerWarmupDeepReading().catch(() => {});
         }
+
+        console.log(JSON.stringify({
+          kind: "anthropic_call",
+          fn: "warmup-eco",
+          user_id: user.id,
+          model: MODEL_ID,
+          duration_ms: latency_ms,
+          timestamp: new Date().toISOString(),
+        }));
 
         controller.enqueue(encodeSSE({
           type: "done",
