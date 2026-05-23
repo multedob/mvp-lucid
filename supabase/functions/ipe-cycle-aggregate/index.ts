@@ -81,6 +81,10 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req.headers.get("origin")) });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405, req);
 
+  const contentLength = parseInt(req.headers.get("content-length") ?? "0");
+  if (contentLength > 50_000) return json({ error: "payload_too_large" }, 413, req);
+
+  try {
   const auth_header = req.headers.get("Authorization");
   if (!auth_header) return json({ error: "Missing authorization" }, 401, req);
   const token = auth_header.replace("Bearer ", "");
@@ -208,4 +212,9 @@ Deno.serve(async (req) => {
     il_aggregated,
     debug_fingerprint: DEPLOY_FINGERPRINT,
   }, 200, req);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`ipe-cycle-aggregate: internal_error: ${message}`);
+    return json({ error: "internal_error" }, 500, req);
+  }
 });

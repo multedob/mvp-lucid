@@ -361,6 +361,10 @@ Deno.serve(async (req) => {
   console.log("[ipe-eco WAVE12-FIX-924829c] invoked, method:", req.method);
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req.headers.get("origin")) });
 
+  const contentLength = parseInt(req.headers.get("content-length") ?? "0");
+  if (contentLength > 50_000) return json({ error: "payload_too_large" }, 413, req);
+
+  try {
   const auth_header = req.headers.get("Authorization");
   if (!auth_header) return json({ error: "Missing authorization" }, 401, req);
 
@@ -560,4 +564,9 @@ Deno.serve(async (req) => {
     prompt_version_used: prompt_version_label,
     debug_fingerprint: DEPLOY_FINGERPRINT,
   }, 200, req);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`ipe-eco: internal_error: ${message}`);
+    return json({ error: "internal_error" }, 500, req);
+  }
 });
