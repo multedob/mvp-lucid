@@ -47,6 +47,37 @@ const json = (data: unknown, status = 200, req?: Request) => {
   });
 };
 
+// ─── Cost guard Anthropic (F4-05) ───────────────────────────────
+const RATE_LIMIT_HOUR = 10;
+const RATE_LIMIT_DAY = 30;
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
+
+interface RateLimitEntry {
+  hourCount: number;
+  hourResetAt: number;
+  dayCount: number;
+  dayResetAt: number;
+}
+
+const rateLimitMap = new Map<string, RateLimitEntry>();
+
+function checkAnthropicRateLimit(userId: string): { ok: boolean; reason?: string } {
+  const now = Date.now();
+  let entry = rateLimitMap.get(userId);
+  if (!entry) {
+    entry = { hourCount: 0, hourResetAt: now + HOUR_MS, dayCount: 0, dayResetAt: now + DAY_MS };
+    rateLimitMap.set(userId, entry);
+  }
+  if (entry.hourResetAt < now) { entry.hourCount = 0; entry.hourResetAt = now + HOUR_MS; }
+  if (entry.dayResetAt < now) { entry.dayCount = 0; entry.dayResetAt = now + DAY_MS; }
+  if (entry.hourCount >= RATE_LIMIT_HOUR) return { ok: false, reason: "hourly_limit" };
+  if (entry.dayCount >= RATE_LIMIT_DAY) return { ok: false, reason: "daily_limit" };
+  entry.hourCount++;
+  entry.dayCount++;
+  return { ok: true };
+}
+
 const PILL_LABEL: Record<string, string> = {
   PI:   "Pill I — Eu ↔ Pertencimento",
   PII:  "Pill II — Eu ↔ Papel",
