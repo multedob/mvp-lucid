@@ -47,6 +47,37 @@ const json = (data: unknown, status = 200, req?: Request) => {
   });
 };
 
+// ─── Cost guard Anthropic (F4-05) ───────────────────────────────
+const RATE_LIMIT_HOUR = 10;
+const RATE_LIMIT_DAY = 30;
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
+
+interface RateLimitEntry {
+  hourCount: number;
+  hourResetAt: number;
+  dayCount: number;
+  dayResetAt: number;
+}
+
+const rateLimitMap = new Map<string, RateLimitEntry>();
+
+function checkAnthropicRateLimit(userId: string): { ok: boolean; reason?: string } {
+  const now = Date.now();
+  let entry = rateLimitMap.get(userId);
+  if (!entry) {
+    entry = { hourCount: 0, hourResetAt: now + HOUR_MS, dayCount: 0, dayResetAt: now + DAY_MS };
+    rateLimitMap.set(userId, entry);
+  }
+  if (entry.hourResetAt < now) { entry.hourCount = 0; entry.hourResetAt = now + HOUR_MS; }
+  if (entry.dayResetAt < now) { entry.dayCount = 0; entry.dayResetAt = now + DAY_MS; }
+  if (entry.hourCount >= RATE_LIMIT_HOUR) return { ok: false, reason: "hourly_limit" };
+  if (entry.dayCount >= RATE_LIMIT_DAY) return { ok: false, reason: "daily_limit" };
+  entry.hourCount++;
+  entry.dayCount++;
+  return { ok: true };
+}
+
 const PILL_LABEL: Record<string, string> = {
   PI:   "Pill I — Eu ↔ Pertencimento",
   PII:  "Pill II — Eu ↔ Papel",
@@ -445,6 +476,14 @@ async function handleWarmupOnly(
         content: `Aqui estão as respostas que a pessoa deu no warm-up:\n\n${warmupCorpus}${node_section}\n\nGere a leitura inicial agora, seguindo todas as regras.`,
       }],
     });
+    console.log(JSON.stringify({
+      kind: "anthropic_call",
+      fn: "lucid-deep-reading",
+      user_id,
+      model: "claude-sonnet-4-5",
+      duration_ms: Date.now() - startedAt,
+      timestamp: new Date().toISOString(),
+    }));
     const c = response.content[0];
     if (c && "text" in c) fullText = c.text.trim();
   } catch (err: any) {
@@ -517,6 +556,12 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req.headers.get("origin")) });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405, req);
 
+  const anthropicEnabled = (Deno.env.get("ANTHROPIC_ENABLED") ?? "true").toLowerCase() !== "false";
+  if (!anthropicEnabled) {
+    console.warn("lucid-deep-reading: anthropic disabled via env var");
+    return json({ error: "service_unavailable" }, 503, req);
+  }
+
   const contentLength = parseInt(req.headers.get("content-length") ?? "0");
   if (contentLength > 50_000) return json({ error: "payload_too_large" }, 413, req);
 
@@ -539,6 +584,13 @@ Deno.serve(async (req) => {
   const { data: auth_data, error: auth_err } = await supabase.auth.getUser(token);
   if (auth_err || !auth_data.user) return json({ error: "Unauthorized" }, 401, req);
   const user_id = auth_data.user.id;
+
+  const rateCheck = checkAnthropicRateLimit(user_id);
+  if (!rateCheck.ok) {
+    console.warn(`lucid-deep-reading: rate_limited user=${user_id} reason=${rateCheck.reason}`);
+    return json({ error: "rate_limited", reason: rateCheck.reason }, 429, req);
+  }
+
 
   const body = await req.json().catch(() => ({}));
   const { ipe_cycle_id } = body;
@@ -687,6 +739,7 @@ Deno.serve(async (req) => {
   const anthropic = new Anthropic({ apiKey: anthropic_key });
 
   let deep_reading = "";
+  const _tDeep = Date.now();
   try {
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-5-20250929",
@@ -698,6 +751,14 @@ Deno.serve(async (req) => {
         content: `Aqui estão as respostas desta pessoa neste ciclo:\n\n${corpus}${node_section}\n\nEscreva agora a leitura consolidada em prosa fluida, seguindo todas as regras do system prompt.`,
       }],
     });
+    console.log(JSON.stringify({
+      kind: "anthropic_call",
+      fn: "lucid-deep-reading",
+      user_id,
+      model: "claude-sonnet-4-5",
+      duration_ms: Date.now() - _tDeep,
+      timestamp: new Date().toISOString(),
+    }));
     const c = response.content[0];
     if (c && "text" in c) deep_reading = c.text.trim();
   } catch (err: any) {

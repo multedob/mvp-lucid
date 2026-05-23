@@ -59,6 +59,37 @@ function json(body: unknown, status = 200, req?: Request): Response {
   });
 }
 
+// ─── Cost guard Anthropic (F4-05) ───────────────────────────────
+const RATE_LIMIT_HOUR = 15;
+const RATE_LIMIT_DAY = 80;
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
+
+interface RateLimitEntry {
+  hourCount: number;
+  hourResetAt: number;
+  dayCount: number;
+  dayResetAt: number;
+}
+
+const rateLimitMap = new Map<string, RateLimitEntry>();
+
+function checkAnthropicRateLimit(userId: string): { ok: boolean; reason?: string } {
+  const now = Date.now();
+  let entry = rateLimitMap.get(userId);
+  if (!entry) {
+    entry = { hourCount: 0, hourResetAt: now + HOUR_MS, dayCount: 0, dayResetAt: now + DAY_MS };
+    rateLimitMap.set(userId, entry);
+  }
+  if (entry.hourResetAt < now) { entry.hourCount = 0; entry.hourResetAt = now + HOUR_MS; }
+  if (entry.dayResetAt < now) { entry.dayCount = 0; entry.dayResetAt = now + DAY_MS; }
+  if (entry.hourCount >= RATE_LIMIT_HOUR) return { ok: false, reason: "hourly_limit" };
+  if (entry.dayCount >= RATE_LIMIT_DAY) return { ok: false, reason: "daily_limit" };
+  entry.hourCount++;
+  entry.dayCount++;
+  return { ok: true };
+}
+
 // ─────────────────────────────────────────
 // SSE HELPERS (A24 — streaming)
 // ─────────────────────────────────────────
@@ -279,6 +310,8 @@ function streamLanguageResponse(
   user_text: string,
   pill_context: string | null,
   user_name: string | null,
+  user_id: string,
+  req: Request,
 ): Response {
   const { system, user_content } = buildLanguagePrompt(
     hago_state,
@@ -297,6 +330,7 @@ function streamLanguageResponse(
       controller.enqueue(encodeSSE({ type: "metadata", cycle_id, current_version }));
 
       let fullText = "";
+      const _tStream = Date.now();
       try {
         const anthropicStream = await anthropic.messages.stream({
           model: LLM_MODEL_ID,
@@ -315,6 +349,14 @@ function streamLanguageResponse(
         }
 
         await supabase.from("cycles").update({ llm_response: fullText }).eq("id", cycle_id);
+        console.log(JSON.stringify({
+          kind: "anthropic_call",
+          fn: "lucid-engine",
+          user_id,
+          model: LLM_MODEL_ID,
+          duration_ms: Date.now() - _tStream,
+          timestamp: new Date().toISOString(),
+        }));
         controller.enqueue(encodeSSE({ type: "done", text_length: fullText.length }));
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err);
@@ -424,6 +466,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return json({ error: "INVALID_INPUT", message: "Method not allowed" }, 400, req);
   }
 
+  const anthropicEnabled = (Deno.env.get("ANTHROPIC_ENABLED") ?? "true").toLowerCase() !== "false";
+  if (!anthropicEnabled) {
+    console.warn("lucid-engine: anthropic disabled via env var");
+    return json({ error: "service_unavailable" }, 503, req);
+  }
+
   const contentLength = parseInt(req.headers.get("content-length") ?? "0");
   if (contentLength > 50_000) return json({ error: "payload_too_large" }, 413, req);
 
@@ -507,6 +555,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
   const user_id = user.id;
 
+  const rateCheck = checkAnthropicRateLimit(user_id);
+  if (!rateCheck.ok) {
+    console.warn(`lucid-engine: rate_limited user=${user_id} reason=${rateCheck.reason}`);
+    return json({ error: "rate_limited", reason: rateCheck.reason }, 429, req);
+  }
+
+
   try {
     const bound_version = await resolveStructuralModelVersion(supabase);
     if (bound_version !== SUPPORTED_MODEL) {
@@ -527,7 +582,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
     ]);
 
     const llm_config_hash = await computeLlmConfigHash(LLM_PROVIDER, LLM_MODEL_ID, LLM_TEMPERATURE);
+    const _tClassify = Date.now();
     const input_classification = await classifyInput(user_text, anthropic);
+    console.log(JSON.stringify({
+      kind: "anthropic_call",
+      fn: "lucid-engine",
+      user_id,
+      model: LLM_MODEL_ID,
+      duration_ms: Date.now() - _tClassify,
+      timestamp: new Date().toISOString(),
+    }));
 
     const { data: ragCorpus, error: ragErr } = await supabase.from("rag_corpus").select("*");
     if (ragErr || !ragCorpus) {
@@ -612,11 +676,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
         user_text,
         pill_context,
         user_name,
+        user_id,
+        req,
       );
     }
 
     // ─── Fluxo antigo (Questionnaire) — JSON response
     let llm_response = "";
+    const _tLang = Date.now();
     try {
       llm_response = await executeLlmLanguage(
         anthropic,
@@ -632,6 +699,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
         pill_context,
         user_name,
       );
+      console.log(JSON.stringify({
+        kind: "anthropic_call",
+        fn: "lucid-engine",
+        user_id,
+        model: LLM_MODEL_ID,
+        duration_ms: Date.now() - _tLang,
+        timestamp: new Date().toISOString(),
+      }));
     } catch (langErr) {
       console.error("LANGUAGE_EXECUTION_ERROR:", langErr);
       llm_response = "[linguistic layer unavailable]";
