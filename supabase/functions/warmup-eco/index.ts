@@ -270,26 +270,26 @@ function extractFollowUp(fullText: string): { eco: string; follow: string } {
 Deno.serve(async (req) => {
   console.log(`[warmup-eco ${DEPLOY_FINGERPRINT}] invoked, method:`, req.method);
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
-  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405, req);
 
   const auth_header = req.headers.get("Authorization");
-  if (!auth_header) return json({ error: "Missing authorization" }, 401);
+  if (!auth_header) return json({ error: "Missing authorization" }, 401, req);
 
   const supabase_url = Deno.env.get("SUPABASE_URL");
   const service_role = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const anon_key = Deno.env.get("SUPABASE_ANON_KEY");
   const anthropic_key = Deno.env.get("ANTHROPIC_API_KEY");
   if (!supabase_url || !service_role || !anon_key) {
-    return json({ error: "Missing Supabase env vars" }, 500);
+    return json({ error: "Missing Supabase env vars" }, 500, req);
   }
-  if (!anthropic_key) return json({ error: "Missing ANTHROPIC_API_KEY" }, 500);
+  if (!anthropic_key) return json({ error: "Missing ANTHROPIC_API_KEY" }, 500, req);
 
   // Cliente com JWT do user pra resolver auth.uid()
   const supabaseUser = createClient(supabase_url, anon_key, {
     global: { headers: { Authorization: auth_header } },
   });
   const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
-  if (userError || !user) return json({ error: "Invalid authorization" }, 401);
+  if (userError || !user) return json({ error: "Invalid authorization" }, 401, req);
 
   // Cliente admin (bypassa RLS) pra escritas
   const supabase = createClient(supabase_url, service_role);
@@ -299,7 +299,7 @@ Deno.serve(async (req) => {
   try {
     body = await req.json();
   } catch {
-    return json({ error: "Invalid JSON body" }, 400);
+    return json({ error: "Invalid JSON body" }, 400, req);
   }
   const questions: string[] = Array.isArray(body.questions)
     ? (body.questions as unknown[]).map(String)
@@ -308,10 +308,10 @@ Deno.serve(async (req) => {
     ? (body.responses as unknown[]).map(String)
     : [];
   if (questions.length !== 2 || responses.length !== 2) {
-    return json({ error: "Expected exactly 2 questions and 2 responses" }, 400);
+    return json({ error: "Expected exactly 2 questions and 2 responses" }, 400, req);
   }
   if (responses.some(r => r.trim().length === 0)) {
-    return json({ error: "Empty response" }, 400);
+    return json({ error: "Empty response" }, 400, req);
   }
 
   // Nome opcional (display_name > given_name > null)

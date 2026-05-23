@@ -354,10 +354,10 @@ async function handleWarmupOnly(
 
   if (wErr) {
     console.error("[warmup-only] fetch warmups err:", wErr);
-    return json({ error: "Failed to fetch warmups", detail: wErr.message }, 500);
+    return json({ error: "Failed to fetch warmups", detail: wErr.message }, 500, req);
   }
   if (!warmups || warmups.length === 0) {
-    return json({ ok: true, skipped: "no warmups yet", debug_fingerprint: DEPLOY_FINGERPRINT });
+    return json({ ok: true, skipped: "no warmups yet", debug_fingerprint: DEPLOY_FINGERPRINT }, 200, req);
   }
 
   // 2. Já existe warmup_deep_reading recente? Idempotência leve — não regenera se feito há <5min
@@ -372,7 +372,7 @@ async function handleWarmupOnly(
     const ageMs = Date.now() - new Date(recent[0].created_at as string).getTime();
     if (ageMs < 5 * 60 * 1000) {
       console.log(`[warmup-only] recent reading exists (age ${ageMs}ms), skipping regenerate`);
-      return json({ ok: true, skipped: "recent reading exists", echo_id: recent[0].id, debug_fingerprint: DEPLOY_FINGERPRINT });
+      return json({ ok: true, skipped: "recent reading exists", echo_id: recent[0].id, debug_fingerprint: DEPLOY_FINGERPRINT }, 200, req);
     }
   }
 
@@ -389,7 +389,7 @@ async function handleWarmupOnly(
   }
   const warmupCorpus = blocks.join("\n\n---\n\n");
   if (!warmupCorpus.trim()) {
-    return json({ ok: true, skipped: "warmups empty", debug_fingerprint: DEPLOY_FINGERPRINT });
+    return json({ ok: true, skipped: "warmups empty", debug_fingerprint: DEPLOY_FINGERPRINT }, 200, req);
   }
 
   // 4. RAG nodes (modo warmup-only usa 3)
@@ -423,7 +423,7 @@ async function handleWarmupOnly(
 
   // 5. Chama Anthropic
   const anthropic_key = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!anthropic_key) return json({ error: "Missing ANTHROPIC_API_KEY" }, 500);
+  if (!anthropic_key) return json({ error: "Missing ANTHROPIC_API_KEY" }, 500, req);
   const anthropic = new Anthropic({ apiKey: anthropic_key });
 
   const node_section = nodeTexts.length > 0
@@ -447,10 +447,10 @@ async function handleWarmupOnly(
     if (c && "text" in c) fullText = c.text.trim();
   } catch (err: any) {
     console.error("[warmup-only] Anthropic error:", err.message);
-    return json({ error: "LLM error", detail: err.message, debug_fingerprint: DEPLOY_FINGERPRINT }, 500);
+    return json({ error: "LLM error", detail: err.message, debug_fingerprint: DEPLOY_FINGERPRINT }, 500, req);
   }
   if (!fullText) {
-    return json({ error: "Empty LLM response", debug_fingerprint: DEPLOY_FINGERPRINT }, 500);
+    return json({ error: "Empty LLM response", debug_fingerprint: DEPLOY_FINGERPRINT }, 500, req);
   }
 
   // 6. Separa eco da pergunta final (última linha começando com "Vai")
@@ -494,7 +494,7 @@ async function handleWarmupOnly(
 
   if (insErr) {
     console.error("[warmup-only] insert err:", insErr);
-    return json({ error: "Persist failed", detail: insErr.message, debug_fingerprint: DEPLOY_FINGERPRINT }, 500);
+    return json({ error: "Persist failed", detail: insErr.message, debug_fingerprint: DEPLOY_FINGERPRINT }, 500, req);
   }
 
   return json({
@@ -506,22 +506,22 @@ async function handleWarmupOnly(
     latency_ms,
     nodes_count: nodeIds.length,
     debug_fingerprint: DEPLOY_FINGERPRINT,
-  });
+  }, 200, req);
 }
 
 Deno.serve(async (req) => {
   console.log(`[lucid-deep-reading ${DEPLOY_FINGERPRINT}] invoked, method:`, req.method);
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
-  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405, req);
 
   const auth_header = req.headers.get("Authorization");
-  if (!auth_header) return json({ error: "Missing authorization" }, 401);
+  if (!auth_header) return json({ error: "Missing authorization" }, 401, req);
 
   const token = auth_header.replace("Bearer ", "");
   const supabase_url = Deno.env.get("SUPABASE_URL");
   const supabase_anon = Deno.env.get("SUPABASE_ANON_KEY");
   const service_role_key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!supabase_url || !supabase_anon || !service_role_key) return json({ error: "Missing config" }, 500);
+  if (!supabase_url || !supabase_anon || !service_role_key) return json({ error: "Missing config" }, 500, req);
 
   const supabase = createClient(supabase_url, supabase_anon, {
     global: { headers: { Authorization: `Bearer ${token}` } },
@@ -531,7 +531,7 @@ Deno.serve(async (req) => {
   const admin = createClient(supabase_url, service_role_key);
 
   const { data: auth_data, error: auth_err } = await supabase.auth.getUser(token);
-  if (auth_err || !auth_data.user) return json({ error: "Unauthorized" }, 401);
+  if (auth_err || !auth_data.user) return json({ error: "Unauthorized" }, 401, req);
   const user_id = auth_data.user.id;
 
   const body = await req.json().catch(() => ({}));
@@ -549,7 +549,7 @@ Deno.serve(async (req) => {
     .eq("id", ipe_cycle_id)
     .single();
   if (cycleErr || !cycle || cycle.user_id !== user_id) {
-    return json({ error: "Cycle not found or unauthorized" }, 404);
+    return json({ error: "Cycle not found or unauthorized" }, 404, req);
   }
 
   // Busca pill_responses do cycle
@@ -655,7 +655,7 @@ Deno.serve(async (req) => {
       ok: true,
       skipped: "no data yet",
       debug_fingerprint: DEPLOY_FINGERPRINT,
-    });
+    }, 200, req);
   }
 
   // Monta corpus combinado, separando seções pra Sonnet entender origem
@@ -677,7 +677,7 @@ Deno.serve(async (req) => {
     : "";
 
   const anthropic_key = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!anthropic_key) return json({ error: "Missing ANTHROPIC_API_KEY" }, 500);
+  if (!anthropic_key) return json({ error: "Missing ANTHROPIC_API_KEY" }, 500, req);
   const anthropic = new Anthropic({ apiKey: anthropic_key });
 
   let deep_reading = "";
@@ -696,11 +696,11 @@ Deno.serve(async (req) => {
     if (c && "text" in c) deep_reading = c.text.trim();
   } catch (err: any) {
     console.error("[lucid-deep-reading] Anthropic error:", err.message);
-    return json({ error: "LLM error", detail: err.message, debug_fingerprint: DEPLOY_FINGERPRINT }, 500);
+    return json({ error: "LLM error", detail: err.message, debug_fingerprint: DEPLOY_FINGERPRINT }, 500, req);
   }
 
   if (!deep_reading) {
-    return json({ error: "Empty LLM response", debug_fingerprint: DEPLOY_FINGERPRINT }, 500);
+    return json({ error: "Empty LLM response", debug_fingerprint: DEPLOY_FINGERPRINT }, 500, req);
   }
 
   // Persiste em ipe_cycles.deep_reading_text com timestamp
@@ -714,7 +714,7 @@ Deno.serve(async (req) => {
     .eq("id", ipe_cycle_id);
   if (updErr) {
     console.error("[lucid-deep-reading] persist error:", updErr);
-    return json({ error: "Persist failed", detail: updErr.message, debug_fingerprint: DEPLOY_FINGERPRINT }, 500);
+    return json({ error: "Persist failed", detail: updErr.message, debug_fingerprint: DEPLOY_FINGERPRINT }, 500, req);
   }
 
   return json({
@@ -725,5 +725,5 @@ Deno.serve(async (req) => {
     debug_pills_chars: pillsCorpus.length,
     debug_questionnaire_chars: qCorpus.length,
     debug_total_corpus_chars: corpus.length,
-  });
+  }, 200, req);
 });

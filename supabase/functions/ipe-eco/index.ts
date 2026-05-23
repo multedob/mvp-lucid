@@ -362,35 +362,35 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
 
   const auth_header = req.headers.get("Authorization");
-  if (!auth_header) return json({ error: "Missing authorization" }, 401);
+  if (!auth_header) return json({ error: "Missing authorization" }, 401, req);
 
   const token = auth_header.replace("Bearer ", "");
   const supabase_url = Deno.env.get("SUPABASE_URL");
   const supabase_key = Deno.env.get("SUPABASE_ANON_KEY");
-  if (!supabase_url || !supabase_key) return json({ error: "Missing config" }, 500);
+  if (!supabase_url || !supabase_key) return json({ error: "Missing config" }, 500, req);
 
   const supabase = createClient(supabase_url, supabase_key, {
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
 
   const { data: auth_data, error: auth_error } = await supabase.auth.getUser(token);
-  if (auth_error || !auth_data.user) return json({ error: "Unauthorized" }, 401);
+  if (auth_error || !auth_data.user) return json({ error: "Unauthorized" }, 401, req);
   const user_id = auth_data.user.id;
 
   const body = await req.json().catch(() => ({}));
   const { ipe_cycle_id, pill_id } = body;
   const force_regenerate = body?.force_regenerate === true;
-  if (!ipe_cycle_id || !pill_id) return json({ error: "Missing ipe_cycle_id or pill_id" }, 400);
+  if (!ipe_cycle_id || !pill_id) return json({ error: "Missing ipe_cycle_id or pill_id" }, 400, req);
 
   const { data: cycle_data, error: cycle_error } = await supabase
     .from("ipe_cycles").select("id, user_id").eq("id", ipe_cycle_id).single();
   if (cycle_error || !cycle_data || cycle_data.user_id !== user_id) {
-    return json({ error: "Cycle not found or unauthorized" }, 404);
+    return json({ error: "Cycle not found or unauthorized" }, 404, req);
   }
 
   const { data: pill_response_data, error: pill_error } = await supabase
     .from("pill_responses").select("*").eq("ipe_cycle_id", ipe_cycle_id).eq("pill_id", pill_id).single();
-  if (pill_error || !pill_response_data) return json({ error: "Pill response not found" }, 404);
+  if (pill_error || !pill_response_data) return json({ error: "Pill response not found" }, 404, req);
 
   const pill_response: PillResponse = pill_response_data;
   const component = `eco_${pill_id}`;
@@ -423,11 +423,11 @@ Deno.serve(async (req) => {
       cta_text: cached_cta,
       cached: true,
       debug_fingerprint: DEPLOY_FINGERPRINT,
-    });
+    }, 200, req);
   }
 
   const anthropic_key = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!anthropic_key) return json({ error: "missing ANTHROPIC_API_KEY" }, 500);
+  if (!anthropic_key) return json({ error: "missing ANTHROPIC_API_KEY" }, 500, req);
   const anthropic = new Anthropic({ apiKey: anthropic_key });
 
   const t0 = Date.now();
@@ -462,7 +462,7 @@ Deno.serve(async (req) => {
       cached: false,
       deterministic: false,
       debug_fingerprint: DEPLOY_FINGERPRINT,
-    });
+    }, 200, req);
   }
 
   // ─── ETAPA 2: NODE selector ─────────────────────────────────
@@ -483,7 +483,7 @@ Deno.serve(async (req) => {
     prompt_text = prompt_row.prompt_text;
     prompt_version_label = prompt_row.version ?? prompt_version_label;
   } else {
-    return json({ error: `prompt eco_${pill_id} not found in DB` }, 500);
+    return json({ error: `prompt eco_${pill_id} not found in DB` }, 500, req);
   }
 
   let eco: EcoStructured | null = null;
@@ -535,7 +535,7 @@ Deno.serve(async (req) => {
       cached: false,
       deterministic: false,
       debug_fingerprint: DEPLOY_FINGERPRINT,
-    });
+    }, 200, req);
   }
 
   // ─── ETAPA 4: CTA contextual ────────────────────────────────
@@ -559,5 +559,5 @@ Deno.serve(async (req) => {
     deterministic: false,
     prompt_version_used: prompt_version_label,
     debug_fingerprint: DEPLOY_FINGERPRINT,
-  });
+  }, 200, req);
 });
