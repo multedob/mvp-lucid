@@ -415,7 +415,15 @@ export default function ThirdParty() {
     setPhase("finalizing");
     try {
       const res = await callEdge("third-party-finalize", { token, reveal_identity: revealIdentity });
+
+      // F4-Gap3 — manter third_party_finalized (backwards compat) + adicionar evento
+      // inequívoco pra Q4 (Viralização) das research questions do alpha.
       track("third_party_finalized", { reveal_identity: revealIdentity });
+      track("third_party_questionnaire_submitted", {
+        reveal_identity: revealIdentity,
+        invite_token: token,
+      });
+
       setMiniInsight(res.insight_text || "obrigado pelo tempo.");
       setPhase("done");
     } catch (err: any) {
