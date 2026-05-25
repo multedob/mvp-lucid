@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
     // 5. Buscar users que completaram warmup
     const { data: onboardedUsers, error: obErr } = await admin
       .from("user_onboarding_state")
-      .select("user_id, display_name")
+      .select("user_id")
       .not("warmup_completed_at", "is", null);
 
     if (obErr) {
@@ -114,12 +114,16 @@ Deno.serve(async (req) => {
     const eligibleUsers: Array<{ id: string; email: string; display_name: string }> = [];
     for (const u of onboardedUsers) {
       const uid = (u as any).user_id as string;
-      const displayName = (u as any).display_name as string ?? "você";
       const { data: authData, error: authErr } = await admin.auth.admin.getUserById(uid);
       if (authErr || !authData?.user) continue;
       const lastSignIn = authData.user.last_sign_in_at;
       if (!lastSignIn || lastSignIn > fiveDaysAgo) continue;
       if (!authData.user.email) continue;
+      // display_name vem do auth.users.user_metadata (mesmo padrão do RootRedirect em App.tsx)
+      const displayName =
+        (authData.user.user_metadata?.display_name as string) ??
+        authData.user.email.split("@")[0] ??
+        "você";
       eligibleUsers.push({ id: uid, email: authData.user.email, display_name: displayName });
     }
 
