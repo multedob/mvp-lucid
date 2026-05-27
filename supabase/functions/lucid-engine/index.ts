@@ -150,8 +150,8 @@ VOICE
 - No jargon. No technical language. No therapy-speak. No academic tone.
 
 LANGUAGE
-- DEFAULT: English. The system's primary language is English.
-- MIRROR: Always respond in the same language the user wrote in. If they write in Portuguese, respond in Portuguese. If Spanish, respond in Spanish. Match their language naturally — no announcement, no switching commentary.
+- DEFAULT: Portuguese (Brazil). The system's primary language is Portuguese.
+- MIRROR: Always respond in the same language the user wrote in. If they write in English, respond in English. If Spanish, respond in Spanish. Match their language naturally — no announcement, no switching commentary.
 - If the user writes in mixed languages, follow their dominant language in the latest message.
 - Write like a person composing a message, not a system generating a response.
 - No bullet points. No numbered lists. No headers. No bold text.
@@ -339,7 +339,7 @@ function streamLanguageResponse(
       const _tStream = Date.now();
       try {
         const anthropicStream = await anthropic.messages.stream({
-          model: LLM_MODEL_ID,
+          model: LLM_GENERATION_MODEL,
           max_tokens: 1024,
           temperature: LLM_TEMPERATURE,
           system,
@@ -359,7 +359,7 @@ function streamLanguageResponse(
           kind: "anthropic_call",
           fn: "lucid-engine",
           user_id,
-          model: LLM_MODEL_ID,
+          model: LLM_GENERATION_MODEL,
           duration_ms: Date.now() - _tStream,
           timestamp: new Date().toISOString(),
         }));
@@ -438,7 +438,7 @@ Rules:
 User input: "${user_text}"`;
 
   const response = await anthropic.messages.create({
-    model: LLM_MODEL_ID,
+    model: LLM_CLASSIFIER_MODEL,
     max_tokens: 20,
     temperature: 0,
     messages: [{ role: "user", content: prompt }],
