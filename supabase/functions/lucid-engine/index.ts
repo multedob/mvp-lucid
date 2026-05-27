@@ -28,7 +28,13 @@ import { computeCycleIntegrityHash, computeLlmConfigHash } from "./hash.ts";
 const API_VERSION = "1.0";
 const SUPPORTED_MODEL = "3.0";
 const LLM_PROVIDER = "anthropic";
-const LLM_MODEL_ID = "claude-haiku-4-5-20251001";
+// Reed-Carta-1 #2 — separar modelo por função.
+// Classifier: Haiku (latência baixa, classificação determinística temperature=0).
+// Generation: Sonnet (necessário pra honrar micropragmática do prompt).
+const LLM_CLASSIFIER_MODEL = "claude-haiku-4-5-20251001";
+const LLM_GENERATION_MODEL = "claude-sonnet-4-5-20250929";
+// Mantido para persistência/hash/logging legacy — aponta para o modelo de geração.
+const LLM_MODEL_ID = LLM_GENERATION_MODEL;
 const LLM_TEMPERATURE = 0.7;
 
 const ALLOWED_ORIGINS = new Set([
@@ -144,8 +150,8 @@ VOICE
 - No jargon. No technical language. No therapy-speak. No academic tone.
 
 LANGUAGE
-- DEFAULT: English. The system's primary language is English.
-- MIRROR: Always respond in the same language the user wrote in. If they write in Portuguese, respond in Portuguese. If Spanish, respond in Spanish. Match their language naturally — no announcement, no switching commentary.
+- DEFAULT: Portuguese (Brazil). The system's primary language is Portuguese.
+- MIRROR: Always respond in the same language the user wrote in. If they write in English, respond in English. If Spanish, respond in Spanish. Match their language naturally — no announcement, no switching commentary.
 - If the user writes in mixed languages, follow their dominant language in the latest message.
 - Write like a person composing a message, not a system generating a response.
 - No bullet points. No numbered lists. No headers. No bold text.
@@ -285,7 +291,7 @@ async function executeLlmLanguage(
   );
 
   const response = await anthropic.messages.create({
-    model: LLM_MODEL_ID,
+    model: LLM_GENERATION_MODEL,
     max_tokens: 1024,
     temperature: LLM_TEMPERATURE,
     system,
@@ -333,7 +339,7 @@ function streamLanguageResponse(
       const _tStream = Date.now();
       try {
         const anthropicStream = await anthropic.messages.stream({
-          model: LLM_MODEL_ID,
+          model: LLM_GENERATION_MODEL,
           max_tokens: 1024,
           temperature: LLM_TEMPERATURE,
           system,
@@ -353,7 +359,7 @@ function streamLanguageResponse(
           kind: "anthropic_call",
           fn: "lucid-engine",
           user_id,
-          model: LLM_MODEL_ID,
+          model: LLM_GENERATION_MODEL,
           duration_ms: Date.now() - _tStream,
           timestamp: new Date().toISOString(),
         }));
@@ -393,11 +399,53 @@ function streamLanguageResponse(
 async function classifyInput(user_text: string, anthropic: Anthropic): Promise<InputClassification> {
   const text = user_text.toLowerCase();
 
-  if (/\b(suicid|me matar|me machucar|me ferir|violência|matar|morrer|acabar com|me jogar)\b/.test(text)) {
+  // Reed-Carta-1 #4 — regex C7 expandida.
+  // Cobre fraseado comum PT-BR + suicide/self-harm em PT-BR/EN/ES.
+  const C7_REGEX = /\b(suicid|me matar|me machucar|me ferir|viol[êe]ncia|matar|morrer|acabar com|me jogar|n[ãa]o aguento mais|quero sumir|quero desaparecer|n[ãa]o vejo sa[íi]da|t[ôo] no fundo|vontade de desaparecer|n[ãa]o quero mais viver|preferia n[ãa]o existir|kill myself|hurt myself|end it all|suicide|self.harm|want to die|matarme|hacerme da[ñn]o|quitarme la vida)\b/i;
+
+  if (C7_REGEX.test(text)) {
     return "C7_RISCO_HUMANO";
   }
+
+  // Safety-net LLM: se passou pelo regex sem ser flagged, mas o texto tem
+  // sinais emocionais fortes, consulta classificador dedicado pra risco.
+  // Previne falso negativo em fraseado fora dos padrões hard-coded.
+  const EMOTIONAL_INTENSITY_HINTS = /\b(triste|deprim|sozinho|desesperado|cansado de tudo|n[ãa]o consigo|n[ãa]o aguento|sad|depressed|hopeless|alone|exhausted|cant|cannot)\b/i;
+  if (EMOTIONAL_INTENSITY_HINTS.test(text)) {
+    const riskPrompt = `You are a safety classifier. Determine if this message contains signs of risk to self (suicidal ideation, self-harm, severe hopelessness, or crisis).
+
+Output exactly one of:
+- RISK (if there's any indication of self-harm, suicidal thoughts, or acute crisis)
+- SAFE (if it's emotional distress without self-harm signals)
+
+Examples:
+- "estou muito triste hoje" → SAFE
+- "não aguento mais essa vida" → RISK
+- "to cansado de tudo, queria sumir" → RISK
+- "tô passando por um momento difícil" → SAFE
+
+Message: "${user_text}"
+
+Output:`;
+
+    const riskResponse = await anthropic.messages.create({
+      model: LLM_CLASSIFIER_MODEL,
+      max_tokens: 10,
+      temperature: 0,
+      messages: [{ role: "user", content: riskPrompt }],
+    });
+
+    const riskRaw = (riskResponse.content[0] as { type: string; text: string }).text.trim().toUpperCase();
+    if (riskRaw === "RISK") {
+      return "C7_RISCO_HUMANO";
+    }
+  }
+
+  // Reed-Carta-1 #8 — regex C5 mais conservadora.
+  // Removido: "como melhorar", "como (ser|ficar|me tornar)" — exploratórios legítimos.
+  // Mantém apenas pedidos explícitos de prescrição/instrução.
   if (
-    /\b(me diz(a|e) o que fazer|o que (eu )?devo|como (eu )?devo|como (eu )?(fa[cç]o|posso|consigo) para|preciso saber como|me ensina|me explica como|qual o passo|o que fazer|como (ser|ficar|me tornar)|como melhorar)\b/.test(
+    /\b(me diz(a|e) o que fazer|me fala o que fazer|o que (eu )?devo fazer|como (eu )?devo (agir|fazer|proceder)|me ensina como|me explica passo a passo|qual o passo|me d[áa] (uma )?dica|me d[áa] um conselho|preciso de instru[çc][ãa]o)\b/.test(
       text,
     )
   ) {
@@ -432,7 +480,7 @@ Rules:
 User input: "${user_text}"`;
 
   const response = await anthropic.messages.create({
-    model: LLM_MODEL_ID,
+    model: LLM_CLASSIFIER_MODEL,
     max_tokens: 20,
     temperature: 0,
     messages: [{ role: "user", content: prompt }],
