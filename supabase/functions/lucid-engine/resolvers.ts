@@ -200,12 +200,13 @@ export async function resolveHistoricalMemory(
 
 // ─────────────────────────────────────────
 // PREVIOUS HAGO STATE RESOLUTION
-// Não especificado em STRUCTURAL_CORE_CONTRACT_v1.8
-// Ambiguidade A9: Edge injeta o hago_state do ciclo anterior
-// Fonte: cycles.hago_state — campo não existente no schema v3.3
-// Decisão MVP: não persiste hago_state → usar H0 como default
-// Declaração: se o schema for atualizado para persistir hago_state,
-//             remover esta função e fazer SELECT direto
+// hago_state persiste em cycles.hago_state desde a migração
+// 20260222191059 e é gravado por persistCycle a cada ciclo.
+// Esta função lê o hago_state do ciclo mais recente do usuário;
+// retorna H0 quando não há ciclo anterior (default seguro para
+// primeiro turno) ou quando o campo está nulo por algum motivo.
+// Reed-Carta-1 #7 — comentário atualizado (antes dizia que o
+// campo não existia no schema v3.3).
 // ─────────────────────────────────────────
 
 export async function resolvePreviousHagoState(
