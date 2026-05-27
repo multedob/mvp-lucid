@@ -30,13 +30,13 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as strin
 
 // AFC ONB-6 — Par A do Banco de Perguntas Warm-up v0.2
 const QUESTIONS: [string, string] = [
-  "Qual decisão recente você ainda está tentando entender?",
-  "O que alguém te disse recentemente que ficou voltando?",
+  "Qual é o último 'sim' que você deu e está em dúvida agora?",
+  "Qual cena da sua vida você não tira da cabeça?",
 ];
 
 const INTRO_TEXT = "para começar, responda as perguntas. quanto mais completas melhor.";
 
-type Phase = "q1" | "q2" | "streaming" | "done";
+type Phase = "q1" | "q2" | "streaming" | "done" | "skipped";
 
 // Cascata — timing de cada elemento em q1/q2 (after intro typewriter terminar)
 // INTRO_TEXT tem ~70 chars × 38ms = ~2660ms. Pergunta entra após.
@@ -107,9 +107,9 @@ export default function Warmup() {
   // Telemetria — eco completamente revelado (phase done)
   const revealedRef = useRef(false);
   useEffect(() => {
-    if (phase === "done" && !revealedRef.current) {
+    if ((phase === "done" || phase === "skipped") && !revealedRef.current) {
       revealedRef.current = true;
-      track("minieco_revealed", { eco_length: eco.length });
+      track("minieco_revealed", { eco_length: eco.length, skipped: phase === "skipped" });
     }
   }, [phase, eco.length]);
 
@@ -141,7 +141,7 @@ export default function Warmup() {
       };
     }
 
-    if (phase === "done") {
+    if (phase === "done" || phase === "skipped") {
       if (cascadeArmedDoneRef.current) return;
       cascadeArmedDoneRef.current = true;
       const t = window.setTimeout(() => setShowDoneButton(true), CASCADE_DONE_BUTTON_MS);
@@ -171,6 +171,16 @@ export default function Warmup() {
     setError(null);
     setPhase("streaming");
     track("warmup_submitted");
+
+    // Eco curto pré-baked se combined < 10 chars — evita chamada Anthropic com material insuficiente.
+    const combined = (answers[0].trim() + answers[1].trim()).length;
+    if (combined < 10) {
+      const shortEco = "recebi. é pouco pra eu te devolver algo justo agora. quando vier mais, escreve.";
+      setEco(shortEco);
+      setPhase("done");
+      track("warmup_eco_skipped_short", { combined_chars: combined });
+      return;
+    }
 
     const startTime = Date.now();
     let firstTokenAt: number | null = null;
