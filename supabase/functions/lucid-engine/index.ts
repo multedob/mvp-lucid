@@ -264,8 +264,57 @@ ${user_name ? `\nUSER NAME\nThe person you are talking to is called "${user_name
   return { system, user_content };
 }
 
+// Reed-Carta-2 #1 — busca últimas N trocas (user + assistant) pra dar common ground ao LLM.
+// Sem histórico, M2 (espelhamento) e M7 (clarificação) não têm sobre o que se apoiar.
+// Retorna array em ordem cronológica (mais antigo primeiro), pronto pra spread em messages[].
+const CONVERSATION_HISTORY_TURNS = 6;       // 6 trocas user/assistant = 12 messages
+const CONVERSATION_TEXT_MAX_CHARS = 2000;   // truncate por turn pra evitar token bloat
+
+async function resolveConversationHistory(
+  supabase: ReturnType<typeof createClient>,
+  user_id: string,
+): Promise<Array<{ role: "user" | "assistant"; content: string }>> {
+  try {
+    const { data, error } = await supabase
+      .from("cycles")
+      .select("user_text, llm_response, created_at")
+      .eq("user_id", user_id)
+      .not("user_text", "is", null)
+      .not("llm_response", "is", null)
+      .neq("llm_response", "[linguistic layer unavailable]")
+      .order("created_at", { ascending: false })
+      .limit(CONVERSATION_HISTORY_TURNS);
+
+    if (error || !data) {
+      console.warn("RESOLVE_HISTORY_WARN:", error?.message ?? "no data");
+      return [];
+    }
+
+    const ordered = [...data].reverse();
+
+    const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
+    for (const row of ordered) {
+      const userText = String((row as any).user_text ?? "").slice(0, CONVERSATION_TEXT_MAX_CHARS);
+      const llmResponse = String((row as any).llm_response ?? "").slice(0, CONVERSATION_TEXT_MAX_CHARS);
+      if (userText.trim()) {
+        messages.push({ role: "user", content: userText });
+      }
+      if (llmResponse.trim()) {
+        messages.push({ role: "assistant", content: llmResponse });
+      }
+    }
+
+    return messages;
+  } catch (err) {
+    console.warn("RESOLVE_HISTORY_ERROR:", err instanceof Error ? err.message : String(err));
+    return [];
+  }
+}
+
 async function executeLlmLanguage(
   anthropic: Anthropic,
+  supabase: ReturnType<typeof createClient>,
+  user_id: string,
   structural_model: string,
   snapshot: Record<string, unknown>,
   node_selection: Array<Record<string, unknown>>,
@@ -290,12 +339,18 @@ async function executeLlmLanguage(
     user_name,
   );
 
+  // Reed-Carta-2 #1 — injeta histórico de conversa pra construir common ground.
+  const history = await resolveConversationHistory(supabase, user_id);
+
   const response = await anthropic.messages.create({
     model: LLM_GENERATION_MODEL,
     max_tokens: 1024,
     temperature: LLM_TEMPERATURE,
     system,
-    messages: [{ role: "user", content: user_content }],
+    messages: [
+      ...history,
+      { role: "user", content: user_content },
+    ],
   });
 
   return (response.content[0] as { type: string; text: string }).text;
@@ -338,12 +393,18 @@ function streamLanguageResponse(
       let fullText = "";
       const _tStream = Date.now();
       try {
+        // Reed-Carta-2 #1 — injeta histórico no stream também.
+        const history = await resolveConversationHistory(supabase, user_id);
+
         const anthropicStream = await anthropic.messages.stream({
           model: LLM_GENERATION_MODEL,
           max_tokens: 1024,
           temperature: LLM_TEMPERATURE,
           system,
-          messages: [{ role: "user", content: user_content }],
+          messages: [
+            ...history,
+            { role: "user", content: user_content },
+          ],
         });
 
         for await (const event of anthropicStream) {
@@ -735,6 +796,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     try {
       llm_response = await executeLlmLanguage(
         anthropic,
+        supabase,
+        user_id,
         bound_version,
         core_output.structural_snapshot as unknown as Record<string, unknown>,
         core_output.node_selection as unknown as Array<Record<string, unknown>>,
