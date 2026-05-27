@@ -28,7 +28,13 @@ import { computeCycleIntegrityHash, computeLlmConfigHash } from "./hash.ts";
 const API_VERSION = "1.0";
 const SUPPORTED_MODEL = "3.0";
 const LLM_PROVIDER = "anthropic";
-const LLM_MODEL_ID = "claude-haiku-4-5-20251001";
+// Reed-Carta-1 #2 — separar modelo por função.
+// Classifier: Haiku (latência baixa, classificação determinística temperature=0).
+// Generation: Sonnet (necessário pra honrar micropragmática do prompt).
+const LLM_CLASSIFIER_MODEL = "claude-haiku-4-5-20251001";
+const LLM_GENERATION_MODEL = "claude-sonnet-4-5-20250929";
+// Mantido para persistência/hash/logging legacy — aponta para o modelo de geração.
+const LLM_MODEL_ID = LLM_GENERATION_MODEL;
 const LLM_TEMPERATURE = 0.7;
 
 const ALLOWED_ORIGINS = new Set([
