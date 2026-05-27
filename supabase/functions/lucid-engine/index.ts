@@ -393,12 +393,18 @@ function streamLanguageResponse(
       let fullText = "";
       const _tStream = Date.now();
       try {
+        // Reed-Carta-2 #1 — injeta histórico no stream também.
+        const history = await resolveConversationHistory(supabase, user_id);
+
         const anthropicStream = await anthropic.messages.stream({
           model: LLM_GENERATION_MODEL,
           max_tokens: 1024,
           temperature: LLM_TEMPERATURE,
           system,
-          messages: [{ role: "user", content: user_content }],
+          messages: [
+            ...history,
+            { role: "user", content: user_content },
+          ],
         });
 
         for await (const event of anthropicStream) {
