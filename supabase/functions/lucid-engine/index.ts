@@ -399,11 +399,53 @@ function streamLanguageResponse(
 async function classifyInput(user_text: string, anthropic: Anthropic): Promise<InputClassification> {
   const text = user_text.toLowerCase();
 
-  if (/\b(suicid|me matar|me machucar|me ferir|violência|matar|morrer|acabar com|me jogar)\b/.test(text)) {
+  // Reed-Carta-1 #4 — regex C7 expandida.
+  // Cobre fraseado comum PT-BR + suicide/self-harm em PT-BR/EN/ES.
+  const C7_REGEX = /\b(suicid|me matar|me machucar|me ferir|viol[êe]ncia|matar|morrer|acabar com|me jogar|n[ãa]o aguento mais|quero sumir|quero desaparecer|n[ãa]o vejo sa[íi]da|t[ôo] no fundo|vontade de desaparecer|n[ãa]o quero mais viver|preferia n[ãa]o existir|kill myself|hurt myself|end it all|suicide|self.harm|want to die|matarme|hacerme da[ñn]o|quitarme la vida)\b/i;
+
+  if (C7_REGEX.test(text)) {
     return "C7_RISCO_HUMANO";
   }
+
+  // Safety-net LLM: se passou pelo regex sem ser flagged, mas o texto tem
+  // sinais emocionais fortes, consulta classificador dedicado pra risco.
+  // Previne falso negativo em fraseado fora dos padrões hard-coded.
+  const EMOTIONAL_INTENSITY_HINTS = /\b(triste|deprim|sozinho|desesperado|cansado de tudo|n[ãa]o consigo|n[ãa]o aguento|sad|depressed|hopeless|alone|exhausted|cant|cannot)\b/i;
+  if (EMOTIONAL_INTENSITY_HINTS.test(text)) {
+    const riskPrompt = `You are a safety classifier. Determine if this message contains signs of risk to self (suicidal ideation, self-harm, severe hopelessness, or crisis).
+
+Output exactly one of:
+- RISK (if there's any indication of self-harm, suicidal thoughts, or acute crisis)
+- SAFE (if it's emotional distress without self-harm signals)
+
+Examples:
+- "estou muito triste hoje" → SAFE
+- "não aguento mais essa vida" → RISK
+- "to cansado de tudo, queria sumir" → RISK
+- "tô passando por um momento difícil" → SAFE
+
+Message: "${user_text}"
+
+Output:`;
+
+    const riskResponse = await anthropic.messages.create({
+      model: LLM_CLASSIFIER_MODEL,
+      max_tokens: 10,
+      temperature: 0,
+      messages: [{ role: "user", content: riskPrompt }],
+    });
+
+    const riskRaw = (riskResponse.content[0] as { type: string; text: string }).text.trim().toUpperCase();
+    if (riskRaw === "RISK") {
+      return "C7_RISCO_HUMANO";
+    }
+  }
+
+  // Reed-Carta-1 #8 — regex C5 mais conservadora.
+  // Removido: "como melhorar", "como (ser|ficar|me tornar)" — exploratórios legítimos.
+  // Mantém apenas pedidos explícitos de prescrição/instrução.
   if (
-    /\b(me diz(a|e) o que fazer|o que (eu )?devo|como (eu )?devo|como (eu )?(fa[cç]o|posso|consigo) para|preciso saber como|me ensina|me explica como|qual o passo|o que fazer|como (ser|ficar|me tornar)|como melhorar)\b/.test(
+    /\b(me diz(a|e) o que fazer|me fala o que fazer|o que (eu )?devo fazer|como (eu )?devo (agir|fazer|proceder)|me ensina como|me explica passo a passo|qual o passo|me d[áa] (uma )?dica|me d[áa] um conselho|preciso de instru[çc][ãa]o)\b/.test(
       text,
     )
   ) {
