@@ -796,6 +796,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     try {
       llm_response = await executeLlmLanguage(
         anthropic,
+        supabase,
+        user_id,
         bound_version,
         core_output.structural_snapshot as unknown as Record<string, unknown>,
         core_output.node_selection as unknown as Array<Record<string, unknown>>,
