@@ -261,6 +261,12 @@ export default function Warmup() {
 
   async function handleSkip() {
     track("warmup_skipped", { phase });
+    // Eco curto antes de ir embora — acolhe sem pressão.
+    setEco("tudo bem. a pergunta espera. quando vier algo, ela ainda está aqui.");
+    setPhase("skipped");
+  }
+
+  async function handleSkippedContinue() {
     await markOnboardingStep("warmup_completed");
     navigate("/home");
   }
@@ -425,7 +431,7 @@ export default function Warmup() {
           </>
         )}
 
-        {(phase === "streaming" || phase === "done") && (
+        {(phase === "streaming" || phase === "done" || phase === "skipped") && (
           <>
             {/* Placeholder voz sistema enquanto eco ainda não chegou — reduz percepção de espera */}
             {phase === "streaming" && eco === "" && (
