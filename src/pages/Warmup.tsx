@@ -149,8 +149,8 @@ export default function Warmup() {
     }
   }, [phase]);
 
-  const currentIdx = phase === "q1" ? 0 : phase === "q2" ? 1 : -1;
-  const currentAnswer = currentIdx >= 0 ? answers[currentIdx] : "";
+  const currentIdx: number = phase === "q1" ? 0 : phase === "q2" ? 1 : -1;
+  const currentAnswer = currentIdx >= 0 ? answers[currentIdx as 0 | 1] : "";
   const canContinueQuestion = currentAnswer.trim().length > 0;
 
   function handleQuestionContinue() {
