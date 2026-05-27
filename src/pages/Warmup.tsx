@@ -482,10 +482,10 @@ export default function Warmup() {
             )}
 
             {/* Botão continuar (done) — fade-in após eco terminar */}
-            {phase === "done" && (
+            {(phase === "done" || phase === "skipped") && (
               <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 24 }}>
                 <div
-                  onClick={showDoneButton ? handleContinueDone : undefined}
+                  onClick={showDoneButton ? (phase === "done" ? handleContinueDone : handleSkippedContinue) : undefined}
                   style={{
                     display: "flex",
                     alignItems: "center",
