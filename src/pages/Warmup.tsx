@@ -36,7 +36,7 @@ const QUESTIONS: [string, string] = [
 
 const INTRO_TEXT = "para começar, responda as perguntas. quanto mais completas melhor.";
 
-type Phase = "q1" | "q2" | "streaming" | "done" | "skipped";
+type Phase = "q1" | "q2" | "streaming" | "done";
 
 // Cascata — timing de cada elemento em q1/q2 (after intro typewriter terminar)
 // INTRO_TEXT tem ~70 chars × 38ms = ~2660ms. Pergunta entra após.
@@ -93,6 +93,7 @@ export default function Warmup() {
   const [showButton, setShowButton] = useState(false);
   const [showDoneButton, setShowDoneButton] = useState(false);
   const [audioPulseFirst, setAudioPulseFirst] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Pega userId — necessário pro AudioRecorder (storage path)
   useEffect(() => {
@@ -107,9 +108,9 @@ export default function Warmup() {
   // Telemetria — eco completamente revelado (phase done)
   const revealedRef = useRef(false);
   useEffect(() => {
-    if ((phase === "done" || phase === "skipped") && !revealedRef.current) {
+    if (phase === "done" && !revealedRef.current) {
       revealedRef.current = true;
-      track("minieco_revealed", { eco_length: eco.length, skipped: phase === "skipped" });
+      track("minieco_revealed", { eco_length: eco.length });
     }
   }, [phase, eco.length]);
 
@@ -141,12 +142,20 @@ export default function Warmup() {
       };
     }
 
-    if (phase === "done" || phase === "skipped") {
+    if (phase === "done") {
       if (cascadeArmedDoneRef.current) return;
       cascadeArmedDoneRef.current = true;
       const t = window.setTimeout(() => setShowDoneButton(true), CASCADE_DONE_BUTTON_MS);
       return () => window.clearTimeout(t);
     }
+  }, [phase]);
+
+  // Auto-resize textarea conforme conteúdo cresce. Reset → mede scrollHeight → seta height.
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = "auto";
+    ta.style.height = `${ta.scrollHeight}px`;
   }, [phase]);
 
   const currentIdx: number = phase === "q1" ? 0 : phase === "q2" ? 1 : -1;
