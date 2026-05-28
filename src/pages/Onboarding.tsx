@@ -29,7 +29,7 @@ import SystemTerminalLine from "@/components/SystemTerminalLine";
 const CASCADE_QUESTION_MS = 1900;
 const CASCADE_INPUT_MS = 2400;
 const CASCADE_BUTTON_MS = 2800;
-const CASCADE_SKIP_MS = 3000;
+
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -40,7 +40,7 @@ export default function Onboarding() {
   const [showQuestion, setShowQuestion] = useState(false);
   const [showInput, setShowInput] = useState(false);
   const [showButton, setShowButton] = useState(false);
-  const [showSkip, setShowSkip] = useState(false);
+  
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -75,12 +75,10 @@ export default function Onboarding() {
     const t1 = window.setTimeout(() => setShowQuestion(true), CASCADE_QUESTION_MS);
     const t2 = window.setTimeout(() => setShowInput(true), CASCADE_INPUT_MS);
     const t3 = window.setTimeout(() => setShowButton(true), CASCADE_BUTTON_MS);
-    const t4 = window.setTimeout(() => setShowSkip(true), CASCADE_SKIP_MS);
     return () => {
       window.clearTimeout(t1);
       window.clearTimeout(t2);
       window.clearTimeout(t3);
-      window.clearTimeout(t4);
     };
   }, []);
 
@@ -185,31 +183,6 @@ export default function Onboarding() {
           </span>
         </div>
 
-        {/* 5. Decidir depois — fade-in após botão */}
-        <div
-          onClick={showSkip ? async () => {
-            track("name_deferred");
-            localStorage.setItem("rdwth_user_name_deferred", "1");
-            await markOnboardingStep("name_set");
-            navigate("/");
-          } : undefined}
-          style={{
-            display: "flex", alignItems: "center", gap: 10,
-            cursor: showSkip ? "pointer" : "default",
-            marginTop: 24,
-            opacity: showSkip ? 1 : 0,
-            transition: "opacity 600ms ease-in",
-            pointerEvents: showSkip ? "auto" : "none",
-          }}
-        >
-          <div style={{ width: 1, height: 12, background: "var(--r-ghost)", flexShrink: 0 }} />
-          <span style={{
-            fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11,
-            color: "var(--r-muted)", letterSpacing: "0.06em",
-          }}>
-            decidir depois →
-          </span>
-        </div>
       </div>
 
       <div className="r-line" />
