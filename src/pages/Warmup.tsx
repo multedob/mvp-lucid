@@ -334,6 +334,7 @@ export default function Warmup() {
               >
                 <div className="r-input-wrap">
                   <textarea
+                    ref={textareaRef}
                     className="r-textarea"
                     value={currentAnswer}
                     onChange={(e) => {
@@ -351,6 +352,11 @@ export default function Warmup() {
                     rows={1}
                     autoFocus={showInput}
                     disabled={!showInput}
+                    style={{
+                      resize: "none",
+                      overflow: "hidden",
+                      minHeight: "1.5em",
+                    }}
                   />
                   {userId && (
                     <AudioRecorder
