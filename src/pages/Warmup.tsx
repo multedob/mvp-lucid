@@ -30,8 +30,14 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as strin
 
 // AFC ONB-6 — Par A do Banco de Perguntas Warm-up v0.2
 const QUESTIONS: [string, string] = [
-  "Qual é o último 'sim' que você deu e está em dúvida agora?",
-  "Qual cena da sua vida você não tira da cabeça?",
+  "Qual a situação mais marcante que você viveu nos últimos tempos?",
+  "Como você está hoje em relação à essa situação?",
+];
+
+// Placeholders inspiradores pra induzir resposta rica, um por phase
+const PLACEHOLDERS: [string, string] = [
+  "cena, conversa, decisão, perda — o que vier",
+  "o que mudou? o que ficou? o que pesa?",
 ];
 
 const INTRO_TEXT = "para começar, responda as perguntas. quanto mais completas melhor.";
@@ -348,7 +354,7 @@ export default function Warmup() {
                         handleQuestionContinue();
                       }
                     }}
-                    placeholder="se preferir, pressione e grave um áudio"
+                    placeholder={currentIdx >= 0 ? PLACEHOLDERS[currentIdx] : ""}
                     rows={1}
                     autoFocus={showInput}
                     disabled={!showInput}
@@ -387,6 +393,21 @@ export default function Warmup() {
                     aria-label="enviar"
                     style={{ cursor: canContinueQuestion ? "pointer" : "default" }}
                   />
+                </div>
+                {/* Sub-hint discreto — induz resposta rica sem pressionar */}
+                <div
+                  style={{
+                    fontFamily: "var(--r-font-sys)",
+                    fontWeight: 300,
+                    fontSize: 10,
+                    color: "var(--r-muted)",
+                    letterSpacing: "0.04em",
+                    opacity: showInput ? 0.6 : 0,
+                    transition: "opacity 600ms ease-in",
+                    marginTop: 8,
+                  }}
+                >
+                  uma frase é bom, duas, três é bem melhor.
                 </div>
               </div>
             </div>
