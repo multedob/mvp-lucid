@@ -125,7 +125,7 @@ function parseEcoJsonV2c2(raw: string): EcoStructured | null {
 
   if (!Array.isArray(parsed?.eco_lines) || parsed.eco_lines.length === 0) return null;
   if (!parsed.eco_lines.every((l: any) => typeof l === "string")) return null;
-  if (parsed.eco_lines.length > 6) return null;
+  if (parsed.eco_lines.length > 8) return null;
   if (!VALID_HINTS.includes(parsed.operator_hint)) return null;
 
   // Wave 12 — pós-processamento anti-repetição (LLM não respeita prompt sozinho)
@@ -550,9 +550,9 @@ Deno.serve(async (req) => {
     try {
       const _tRenderer = Date.now();
       const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 500,
-        temperature: 0.55,
+        model: "claude-sonnet-4-5-20250929",
+        max_tokens: 800,
+        temperature: 0.7,
         system: prompt_text,
         messages: [{
           role: "user",
@@ -563,7 +563,7 @@ Deno.serve(async (req) => {
         kind: "anthropic_call",
         fn: "ipe-eco",
         user_id,
-        model: "claude-sonnet-4",
+        model: "claude-sonnet-4-5-20250929",
         duration_ms: Date.now() - _tRenderer,
         timestamp: new Date().toISOString(),
       }));

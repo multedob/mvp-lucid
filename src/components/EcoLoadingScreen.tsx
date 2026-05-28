@@ -9,6 +9,7 @@
 import { useEffect, useRef, useState } from "react";
 import AppHeader from "./AppHeader";
 import NavBottom from "./NavBottom";
+import SystemTerminalLine from "./SystemTerminalLine";
 
 interface FontDef { f: string; w: number }
 
@@ -28,20 +29,14 @@ const STEP_MS = 28;
 const LETTER_RHYTHM_MIN = 700;
 const LETTER_RHYTHM_MAX = 1400;
 
-// Frases que rotacionam (estáticas, sem morph) — Reed em modo escuta
-const STATIC_PHRASES = [
-  "reed está lendo o que você disse.",
-  "reed está com você.",
-  "isso leva alguns segundos.",
-  "respira.",
-];
 
 // Palavras-chave que morpham (substituem-se entre si a cada ~3s)
 const MORPH_WORDS = ["ouvindo", "lendo", "escutando", "respondendo"];
 const WORD_ROTATE_MS = 2800;
 
 interface EcoLoadingScreenProps {
-  /** Mensagem extra opcional (default: rotaciona STATIC_PHRASES) */
+  // staticOverride deprecated com a voz de sistema no topo (Carta B).
+  // Mantido como prop opcional pra backward compat (ignorado por enquanto).
   staticOverride?: string;
 }
 
@@ -52,7 +47,6 @@ export function EcoLoadingScreen({ staticOverride }: EcoLoadingScreenProps) {
   const stoppedRef = useRef(false);
 
   const [wordIdx, setWordIdx] = useState(0);
-  const [phraseIdx, setPhraseIdx] = useState(0);
 
   const currentWord = MORPH_WORDS[wordIdx];
 
@@ -64,14 +58,6 @@ export function EcoLoadingScreen({ staticOverride }: EcoLoadingScreenProps) {
     return () => clearInterval(t);
   }, []);
 
-  // Rotação da frase secundária (mais lenta)
-  useEffect(() => {
-    if (staticOverride) return;
-    const t = setInterval(() => {
-      setPhraseIdx(i => (i + 1) % STATIC_PHRASES.length);
-    }, WORD_ROTATE_MS * 1.7);
-    return () => clearInterval(t);
-  }, [staticOverride]);
 
   // Animação morph nas letras da palavra ATUAL
   useEffect(() => {
@@ -154,6 +140,11 @@ export function EcoLoadingScreen({ staticOverride }: EcoLoadingScreenProps) {
     >
       {/* Header canônico — `rdwth | pills | YYYY.MM.DD` */}
       <AppHeader section="pills" />
+
+      {/* Voz sistema (padrão Warmup) — typewriter no topo */}
+      <div style={{ padding: "12px 24px 0" }}>
+        <SystemTerminalLine text="reed lê suas respostas." />
+      </div>
 
       {/* Main centralizado (pulse + palavra morph + frase) */}
       <div
@@ -280,23 +271,6 @@ export function EcoLoadingScreen({ staticOverride }: EcoLoadingScreenProps) {
         ))}
       </div>
 
-      {/* Frase secundária (rotaciona se sem override) */}
-      <div
-        style={{
-          fontFamily: "'IBM Plex Mono', monospace",
-          fontSize: 13,
-          color: "var(--r-ghost, var(--r-dim))",
-          letterSpacing: "0.04em",
-          fontWeight: 300,
-          textAlign: "center",
-          maxWidth: 360,
-          padding: "0 24px",
-          opacity: 0.7,
-          transition: "opacity 600ms ease",
-        }}
-      >
-        {staticOverride ?? STATIC_PHRASES[phraseIdx]}
-      </div>
       </div>
 
       {/* NavBottom com "pills" iluminado */}
