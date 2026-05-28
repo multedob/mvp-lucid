@@ -23,7 +23,7 @@ interface CatalogEntry {
 
 const CATALOG: Record<Marco, CatalogEntry> = {
   onboarding: {
-    frase: "comece por aqui.",
+    frase: "comece por onde pisca.",
     targets: ["nav-reed", "nav-pills", "nav-questionnaire"],
     perTargetMs: 2200,
   },
