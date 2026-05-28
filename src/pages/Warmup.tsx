@@ -156,7 +156,7 @@ export default function Warmup() {
     if (!ta) return;
     ta.style.height = "auto";
     ta.style.height = `${ta.scrollHeight}px`;
-  }, [phase]);
+  }, [answers, phase]);
 
   const currentIdx: number = phase === "q1" ? 0 : phase === "q2" ? 1 : -1;
   const currentAnswer = currentIdx >= 0 ? answers[currentIdx as 0 | 1] : "";
@@ -268,17 +268,6 @@ export default function Warmup() {
     }
   }
 
-  async function handleSkip() {
-    track("warmup_skipped", { phase });
-    // Eco curto antes de ir embora — acolhe sem pressão.
-    setEco("tudo bem. a pergunta espera. quando vier algo, ela ainda está aqui.");
-    setPhase("skipped");
-  }
-
-  async function handleSkippedContinue() {
-    await markOnboardingStep("warmup_completed");
-    navigate("/home");
-  }
 
   function handleContinueDone() {
     track("warmup_to_home");
@@ -440,7 +429,7 @@ export default function Warmup() {
           </>
         )}
 
-        {(phase === "streaming" || phase === "done" || phase === "skipped") && (
+        {(phase === "streaming" || phase === "done") && (
           <>
             {/* Placeholder voz sistema enquanto eco ainda não chegou — reduz percepção de espera */}
             {phase === "streaming" && eco === "" && (
@@ -491,10 +480,10 @@ export default function Warmup() {
             )}
 
             {/* Botão continuar (done) — fade-in após eco terminar */}
-            {(phase === "done" || phase === "skipped") && (
+            {phase === "done" && (
               <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 24 }}>
                 <div
-                  onClick={showDoneButton ? (phase === "done" ? handleContinueDone : handleSkippedContinue) : undefined}
+                  onClick={showDoneButton ? handleContinueDone : undefined}
                   style={{
                     display: "flex",
                     alignItems: "center",
