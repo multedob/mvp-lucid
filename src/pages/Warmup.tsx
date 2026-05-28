@@ -354,7 +354,7 @@ export default function Warmup() {
                         handleQuestionContinue();
                       }
                     }}
-                    placeholder="se preferir, pressione e grave um áudio"
+                    placeholder={currentIdx >= 0 ? PLACEHOLDERS[currentIdx] : ""}
                     rows={1}
                     autoFocus={showInput}
                     disabled={!showInput}
