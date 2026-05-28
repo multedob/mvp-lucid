@@ -394,6 +394,21 @@ export default function Warmup() {
                     style={{ cursor: canContinueQuestion ? "pointer" : "default" }}
                   />
                 </div>
+                {/* Sub-hint discreto — induz resposta rica sem pressionar */}
+                <div
+                  style={{
+                    fontFamily: "var(--r-font-sys)",
+                    fontWeight: 300,
+                    fontSize: 10,
+                    color: "var(--r-muted)",
+                    letterSpacing: "0.04em",
+                    opacity: showInput ? 0.6 : 0,
+                    transition: "opacity 600ms ease-in",
+                    marginTop: 8,
+                  }}
+                >
+                  uma frase é bom, duas, três é bem melhor.
+                </div>
               </div>
             </div>
 
