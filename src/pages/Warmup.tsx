@@ -30,8 +30,14 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as strin
 
 // AFC ONB-6 — Par A do Banco de Perguntas Warm-up v0.2
 const QUESTIONS: [string, string] = [
-  "Qual é o último 'sim' que você deu e está em dúvida agora?",
-  "Qual cena da sua vida você não tira da cabeça?",
+  "Qual a situação mais marcante que você viveu nos últimos tempos?",
+  "Como você está hoje em relação à essa situação?",
+];
+
+// Placeholders inspiradores pra induzir resposta rica, um por phase
+const PLACEHOLDERS: [string, string] = [
+  "cena, conversa, decisão, perda — o que vier",
+  "o que mudou? o que ficou? o que pesa?",
 ];
 
 const INTRO_TEXT = "para começar, responda as perguntas. quanto mais completas melhor.";
