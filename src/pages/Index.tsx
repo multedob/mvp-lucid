@@ -5,7 +5,7 @@ const Index = () => {
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="text-center">
         <h1 className="mb-4 text-4xl font-bold">rdwth</h1>
-        <p className="text-xl text-muted-foreground">comece por aqui.</p>
+        <p className="text-xl text-muted-foreground">comece por onde pisca.</p>
       </div>
     </div>
   );
