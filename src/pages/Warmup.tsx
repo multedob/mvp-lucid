@@ -512,29 +512,6 @@ export default function Warmup() {
           </>
         )}
       </div>
-
-      {/* "decidir depois" — discreto, canto inferior direito (só nas perguntas) */}
-      {(phase === "q1" || phase === "q2") && (
-        <div
-          onClick={handleSkip}
-          style={{
-            position: "fixed",
-            right: 16,
-            bottom: 16,
-            fontFamily: "var(--r-font-sys)",
-            fontWeight: 300,
-            fontSize: 10,
-            color: "var(--r-muted)",
-            letterSpacing: "0.04em",
-            opacity: 0.6,
-            cursor: "pointer",
-            userSelect: "none",
-            zIndex: 10,
-          }}
-        >
-          decidir depois
-        </div>
-      )}
     </div>
   );
 }
