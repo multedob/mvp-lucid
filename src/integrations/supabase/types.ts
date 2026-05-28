@@ -471,6 +471,42 @@ export type Database = {
         }
         Relationships: []
       }
+      feedback_mvp: {
+        Row: {
+          context_url: string | null
+          created_at: string
+          feedback_text: string
+          id: string
+          notes: string | null
+          resolved: boolean
+          user_agent: string | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          context_url?: string | null
+          created_at?: string
+          feedback_text: string
+          id?: string
+          notes?: string | null
+          resolved?: boolean
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          context_url?: string | null
+          created_at?: string
+          feedback_text?: string
+          id?: string
+          notes?: string | null
+          resolved?: boolean
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       ipe_cycles: {
         Row: {
           completed_at: string | null

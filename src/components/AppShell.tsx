@@ -17,6 +17,7 @@ import { ShellContext, type ShellState } from "@/hooks/useShell";
 import { FlowProvider } from "@/hooks/useFlow";
 import FlowVoice from "./FlowVoice";
 import ErrorBoundary from "./ErrorBoundary";
+import { FeedbackButton } from "./FeedbackButton";
 
 interface AppShellProps {
   children?: ReactNode;
@@ -46,6 +47,7 @@ export default function AppShell({ children }: AppShellProps) {
             </ErrorBoundary>
           </div>
           <NavBottom active={active} />
+          <FeedbackButton />
         </div>
       </FlowProvider>
     </ShellContext.Provider>
