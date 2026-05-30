@@ -713,6 +713,19 @@ export default function Questionnaire() {
             />
           ) : undefined}
         />
+        {submitting && (
+          <div style={{
+            marginTop: 10,
+            fontFamily: 'var(--r-font-sys)',
+            fontWeight: 300,
+            fontSize: 11,
+            letterSpacing: '0.04em',
+            color: 'var(--r-voice-sys)',
+            opacity: 0.7,
+          }}>
+            {'> carregando próxima pergunta…'}
+          </div>
+        )}
       </div>
 
       {/* Footer — mesmo padrão das pills */}
