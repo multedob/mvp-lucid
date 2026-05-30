@@ -49,6 +49,8 @@ interface State {
   m3_1_situacaoOposta: string;
   m3_2_opcao: "A" | "B" | "C" | "D" | null;
   m3_2_abreMao: string;
+  m3_2_followupA: string;
+  m3_2_followupB: string;
   m3_2_followupC: string;
   m3_2_followupD: string;
   m3_3_narrativa: string;
@@ -275,7 +277,7 @@ const InvisibleTextarea = forwardRef<HTMLDivElement, {
           if (onSend && e.key === "Enter" && (e.metaKey || e.ctrlKey)) onSend();
         }}
         placeholder={placeholder} rows={1}
-        maxRows={5}
+        maxRows={10}
         disabled={disabled}
         readOnly={disabled}
       />
@@ -333,7 +335,7 @@ export default function PillFlow() {
     m1TimerStart: Date.now(),
     m2Input: "", m3_1_posicao: null, m3_1_duasPalavras: "",
     m3_1_situacaoOposta: "", m3_2_opcao: null, m3_2_abreMao: "",
-    m3_2_followupC: "", m3_2_followupD: "", m3_3_narrativa: "",
+    m3_2_followupA: "", m3_2_followupB: "", m3_2_followupC: "", m3_2_followupD: "", m3_3_narrativa: "",
     m3_3_condicao: "", m3_3_transversal: "", m4Input: "",
     ecoText: "", ecoLines: [], ecoMirror: "", ecoQuestion: "",
     ecoMicrotitle: "", ecoOperatorHint: "cost", ecoCtaText: "conversar com reed",
@@ -458,6 +460,8 @@ export default function PillFlow() {
           // M3.2
           m3_2_opcao: (pickStr(m3_2_obj["opcao"], m3["3_2_opcao"]) || "B") as "A"|"B"|"C"|"D",
           m3_2_abreMao: pickStr(m3_2_obj["abre_mao"], m3["3_2_abre_mao"]),
+          m3_2_followupA: pickStr(m3_2_obj["followup_A"], m3["3_2_followup_A"]),
+          m3_2_followupB: pickStr(m3_2_obj["followup_B"], m3["3_2_followup_B"]),
           m3_2_followupC: pickStr(m3_2_obj["followup_C"], m3["3_2_followup_C"]),
           m3_2_followupD: pickStr(m3_2_obj["followup_D"], m3["3_2_followup_D"]),
           // M3.3
@@ -600,7 +604,7 @@ export default function PillFlow() {
         ipe_cycle_id: state.ipeCycleId, pill_id: state.pillId, moment: "M3",
         payload: {
           M3_1_regua: { posicao: String(state.m3_1_posicao ?? 3), duas_palavras: state.m3_1_duasPalavras || "—", situacao_oposta: state.m3_1_situacaoOposta || "—" },
-          M3_2_escolha: { opcao: state.m3_2_opcao ?? "A", abre_mao: state.m3_2_abreMao || "—", followup_C: state.m3_2_followupC || null, followup_D: state.m3_2_followupD || null },
+          M3_2_escolha: { opcao: state.m3_2_opcao ?? "A", abre_mao: state.m3_2_abreMao || "—", followup_A: state.m3_2_followupA || null, followup_B: state.m3_2_followupB || null, followup_C: state.m3_2_followupC || null, followup_D: state.m3_2_followupD || null },
           M3_3_inventario: (() => {
             const base: Record<string, unknown> = {
               narrativa: state.m3_3_narrativa,
@@ -852,6 +856,12 @@ export default function PillFlow() {
           {selectedOption && selectedOption.followupType === "question" && (
             <div style={{ marginBottom: 20 }}>
               <div className="r-question" style={{ marginBottom: 12, fontSize: 14 }}>{selectedOption.followup}</div>
+              {state.m3_2_opcao === "A" && (
+                <InvisibleTextarea value={state.m3_2_followupA} onChange={v => setState(s => ({ ...s, m3_2_followupA: v }))} disabled={state.reviewMode} />
+              )}
+              {state.m3_2_opcao === "B" && (
+                <InvisibleTextarea value={state.m3_2_followupB} onChange={v => setState(s => ({ ...s, m3_2_followupB: v }))} disabled={state.reviewMode} />
+              )}
               {state.m3_2_opcao === "C" && (
                 <InvisibleTextarea value={state.m3_2_followupC} onChange={v => setState(s => ({ ...s, m3_2_followupC: v }))} disabled={state.reviewMode} />
               )}
@@ -872,7 +882,17 @@ export default function PillFlow() {
         </div>
         <Footer onBack={() => setState(s => ({ ...s, moment: "M3_1" }))}
           onContinue={() => advance("M3_3")}
-          disabled={state.reviewMode ? false : (!state.m3_2_opcao || !state.m3_2_abreMao.trim())} />
+          disabled={state.reviewMode ? false : (() => {
+            if (!state.m3_2_opcao || !state.m3_2_abreMao.trim()) return true;
+            if (selectedOption?.followupType === "question") {
+              const followupVal = state.m3_2_opcao === "A" ? state.m3_2_followupA
+                : state.m3_2_opcao === "B" ? state.m3_2_followupB
+                : state.m3_2_opcao === "C" ? state.m3_2_followupC
+                : state.m3_2_followupD;
+              if (!followupVal.trim()) return true;
+            }
+            return false;
+          })()} />
       </div>
     );
   }
