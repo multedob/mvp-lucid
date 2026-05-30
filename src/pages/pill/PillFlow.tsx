@@ -460,6 +460,8 @@ export default function PillFlow() {
           // M3.2
           m3_2_opcao: (pickStr(m3_2_obj["opcao"], m3["3_2_opcao"]) || "B") as "A"|"B"|"C"|"D",
           m3_2_abreMao: pickStr(m3_2_obj["abre_mao"], m3["3_2_abre_mao"]),
+          m3_2_followupA: pickStr(m3_2_obj["followup_A"], m3["3_2_followup_A"]),
+          m3_2_followupB: pickStr(m3_2_obj["followup_B"], m3["3_2_followup_B"]),
           m3_2_followupC: pickStr(m3_2_obj["followup_C"], m3["3_2_followup_C"]),
           m3_2_followupD: pickStr(m3_2_obj["followup_D"], m3["3_2_followup_D"]),
           // M3.3
