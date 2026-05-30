@@ -604,7 +604,7 @@ export default function PillFlow() {
         ipe_cycle_id: state.ipeCycleId, pill_id: state.pillId, moment: "M3",
         payload: {
           M3_1_regua: { posicao: String(state.m3_1_posicao ?? 3), duas_palavras: state.m3_1_duasPalavras || "—", situacao_oposta: state.m3_1_situacaoOposta || "—" },
-          M3_2_escolha: { opcao: state.m3_2_opcao ?? "A", abre_mao: state.m3_2_abreMao || "—", followup_C: state.m3_2_followupC || null, followup_D: state.m3_2_followupD || null },
+          M3_2_escolha: { opcao: state.m3_2_opcao ?? "A", abre_mao: state.m3_2_abreMao || "—", followup_A: state.m3_2_followupA || null, followup_B: state.m3_2_followupB || null, followup_C: state.m3_2_followupC || null, followup_D: state.m3_2_followupD || null },
           M3_3_inventario: (() => {
             const base: Record<string, unknown> = {
               narrativa: state.m3_3_narrativa,
