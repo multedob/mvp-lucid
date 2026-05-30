@@ -111,11 +111,18 @@ const InvisibleTextarea = forwardRef<HTMLDivElement, QTextareaProps & { placehol
 }, fwdRef) => {
   const ref = useRef<HTMLTextAreaElement>(null)
 
+  // Auto-grow até max-height (~10 linhas) e então scroll interno automático.
+  // Mantém cursor sempre visível (scrollTop = scrollHeight) enquanto user digita.
   useEffect(() => {
-    if (ref.current) {
-      ref.current.style.height = 'auto'
-      ref.current.style.height = ref.current.scrollHeight + 'px'
-    }
+    const el = ref.current
+    if (!el) return
+    const lineHeight = parseFloat(window.getComputedStyle(el).lineHeight) || 22
+    const maxHeight = lineHeight * 10
+    el.style.height = 'auto'
+    el.style.maxHeight = `${maxHeight}px`
+    el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`
+    el.style.overflowY = el.scrollHeight > maxHeight ? 'auto' : 'hidden'
+    el.scrollTop = el.scrollHeight
   }, [value])
 
   useEffect(() => {
