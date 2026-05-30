@@ -335,7 +335,7 @@ export default function PillFlow() {
     m1TimerStart: Date.now(),
     m2Input: "", m3_1_posicao: null, m3_1_duasPalavras: "",
     m3_1_situacaoOposta: "", m3_2_opcao: null, m3_2_abreMao: "",
-    m3_2_followupC: "", m3_2_followupD: "", m3_3_narrativa: "",
+    m3_2_followupA: "", m3_2_followupB: "", m3_2_followupC: "", m3_2_followupD: "", m3_3_narrativa: "",
     m3_3_condicao: "", m3_3_transversal: "", m4Input: "",
     ecoText: "", ecoLines: [], ecoMirror: "", ecoQuestion: "",
     ecoMicrotitle: "", ecoOperatorHint: "cost", ecoCtaText: "conversar com reed",
