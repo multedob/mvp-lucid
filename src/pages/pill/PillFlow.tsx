@@ -856,6 +856,12 @@ export default function PillFlow() {
           {selectedOption && selectedOption.followupType === "question" && (
             <div style={{ marginBottom: 20 }}>
               <div className="r-question" style={{ marginBottom: 12, fontSize: 14 }}>{selectedOption.followup}</div>
+              {state.m3_2_opcao === "A" && (
+                <InvisibleTextarea value={state.m3_2_followupA} onChange={v => setState(s => ({ ...s, m3_2_followupA: v }))} disabled={state.reviewMode} />
+              )}
+              {state.m3_2_opcao === "B" && (
+                <InvisibleTextarea value={state.m3_2_followupB} onChange={v => setState(s => ({ ...s, m3_2_followupB: v }))} disabled={state.reviewMode} />
+              )}
               {state.m3_2_opcao === "C" && (
                 <InvisibleTextarea value={state.m3_2_followupC} onChange={v => setState(s => ({ ...s, m3_2_followupC: v }))} disabled={state.reviewMode} />
               )}
@@ -876,7 +882,17 @@ export default function PillFlow() {
         </div>
         <Footer onBack={() => setState(s => ({ ...s, moment: "M3_1" }))}
           onContinue={() => advance("M3_3")}
-          disabled={state.reviewMode ? false : (!state.m3_2_opcao || !state.m3_2_abreMao.trim())} />
+          disabled={state.reviewMode ? false : (() => {
+            if (!state.m3_2_opcao || !state.m3_2_abreMao.trim()) return true;
+            if (selectedOption?.followupType === "question") {
+              const followupVal = state.m3_2_opcao === "A" ? state.m3_2_followupA
+                : state.m3_2_opcao === "B" ? state.m3_2_followupB
+                : state.m3_2_opcao === "C" ? state.m3_2_followupC
+                : state.m3_2_followupD;
+              if (!followupVal.trim()) return true;
+            }
+            return false;
+          })()} />
       </div>
     );
   }
