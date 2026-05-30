@@ -602,8 +602,18 @@ export default function Questionnaire() {
   if (phase === 'transition') return (
     <>
       {loadingOverlay}
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 16 }}>
         <div style={{ width: 32, height: 0.5, background: 'var(--r-line)' }} />
+        <div style={{
+          fontFamily: 'var(--r-font-sys)',
+          fontWeight: 300,
+          fontSize: 11,
+          letterSpacing: '0.04em',
+          color: 'var(--r-voice-sys)',
+          opacity: 0.7,
+        }}>
+          {'> carregando próxima pergunta…'}
+        </div>
       </div>
     </>
   )
