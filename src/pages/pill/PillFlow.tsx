@@ -49,6 +49,8 @@ interface State {
   m3_1_situacaoOposta: string;
   m3_2_opcao: "A" | "B" | "C" | "D" | null;
   m3_2_abreMao: string;
+  m3_2_followupA: string;
+  m3_2_followupB: string;
   m3_2_followupC: string;
   m3_2_followupD: string;
   m3_3_narrativa: string;
