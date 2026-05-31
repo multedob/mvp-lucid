@@ -214,8 +214,11 @@ Deno.serve(async (req) => {
     if (contentLength > 10_000) return json({ error: "Payload too large" }, 413, req);
 
     const body = await req.json().catch(() => ({}));
-    const { token } = body;
-    if (!token || typeof token !== "string" || !TOKEN_REGEX.test(token)) {
+    const { token, slug } = body;
+    const SLUG_REGEX = /^[a-zA-Z0-9]{8}$/;
+    const hasValidToken = typeof token === "string" && TOKEN_REGEX.test(token);
+    const hasValidSlug = typeof slug === "string" && SLUG_REGEX.test(slug);
+    if (!hasValidToken && !hasValidSlug) {
       return json({ error: "Invalid link" }, 400, req);
     }
 
@@ -225,10 +228,12 @@ Deno.serve(async (req) => {
 
     const admin = createClient(supabase_url, service_role);
 
+    const lookupCol = hasValidSlug ? "slug" : "token";
+    const lookupVal = hasValidSlug ? slug : token;
     const { data: invite, error: invErr } = await admin
       .from("third_party_invites")
-      .select("id, ipe_cycle_id, user_id, status, responder_email, responder_name, created_at, question_set, user_pronoun")
-      .eq("token", token)
+      .select("id, ipe_cycle_id, user_id, status, responder_email, responder_name, created_at, question_set, user_pronoun, token, slug")
+      .eq(lookupCol, lookupVal)
       .single();
     if (invErr || !invite) return json({ error: "Link unavailable" }, 404, req);
 
