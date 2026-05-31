@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, type TextareaHTMLAttributes } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, type TextareaHTMLAttributes } from "react";
 
 type AutoResizeTextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement> & {
   maxRows?: number;
@@ -7,6 +7,7 @@ type AutoResizeTextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement> & {
 export const AutoResizeTextarea = forwardRef<HTMLTextAreaElement, AutoResizeTextareaProps>(({
   maxRows = 5,
   onChange,
+  onInput,
   style,
   rows = 1,
   value,
@@ -16,28 +17,47 @@ export const AutoResizeTextarea = forwardRef<HTMLTextAreaElement, AutoResizeText
 
   useImperativeHandle(fwdRef, () => ref.current as HTMLTextAreaElement);
 
-  function resize() {
+  const resize = useCallback(() => {
     const el = ref.current;
     if (!el) return;
     const lineHeight = parseFloat(window.getComputedStyle(el).lineHeight) || 22;
     const maxHeight = lineHeight * maxRows;
     el.style.height = "auto";
     el.style.maxHeight = `${maxHeight}px`;
-    el.style.height = `${Math.min(el.scrollHeight, maxHeight)}px`;
-    el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
-    el.scrollTop = el.scrollHeight;
-  }
+    const nextHeight = Math.min(el.scrollHeight, maxHeight);
+    el.style.height = `${nextHeight}px`;
+    const overflowing = el.scrollHeight > maxHeight;
+    el.style.overflowY = overflowing ? "auto" : "hidden";
+    // Keep caret visible: when overflowing, always pin scroll to bottom
+    // so the line being typed stays in view on every keystroke.
+    if (overflowing) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [maxRows]);
 
-  useEffect(() => { resize(); }, [value, maxRows]);
+  // useLayoutEffect: roda sincronamente após DOM update, antes do paint —
+  // evita flash em que o cursor sai de vista por 1 frame entre digitar e scrollar.
+  useLayoutEffect(() => { resize(); }, [value, resize]);
+
+  // Recalcula em resize de viewport (mudança de line-height por media query, etc).
+  useEffect(() => {
+    const handler = () => resize();
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, [resize]);
 
   return (
     <textarea
       ref={ref}
       value={value}
       rows={rows}
-      onChange={e => {
-        onChange?.(e);
-        requestAnimationFrame(resize);
+      onChange={e => { onChange?.(e); }}
+      onInput={e => {
+        onInput?.(e);
+        // Ajusta no mesmo frame do input — cobre casos onde o componente
+        // é não-controlado (sem value mudando via prop) e o useLayoutEffect
+        // acima não dispararia.
+        resize();
       }}
       style={{ ...style, resize: "none" }}
       {...props}
