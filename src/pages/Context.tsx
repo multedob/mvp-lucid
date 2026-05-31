@@ -692,6 +692,10 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
                         </span>
                       </button>
                     </div>
+                    <div style={{ height: 1, background: "var(--r-ghost)", margin: "4px 0" }} />
+                    <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--r-muted)", lineHeight: 1.5 }}>
+                      Esse link é único para uma pessoa. Para convidar mais gente, gera outro.
+                    </div>
                     <div className="r-sub" style={{ fontStyle: "italic" }}>
                       envie esse link pra quem você quer que responda.
                     </div>
