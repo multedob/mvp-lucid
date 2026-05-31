@@ -21,6 +21,7 @@ import { fetchQuestionnaireProgress } from '@/lib/questionnaireProgress'
 import { QuestionnaireLoadingScreen } from '@/components/QuestionnaireLoadingScreen'
 import EmptyStateMessage from '@/components/EmptyStateMessage'
 import SystemTerminalCounter from '@/components/SystemTerminalCounter'
+import { CycleClosedScreen } from '@/components/CycleClosedScreen'
 import { track } from '@/lib/analytics'
 
 // ─────────────────────────────────────────
@@ -43,6 +44,7 @@ type Phase =
   | 'subfallback'
   | 'transition'
   | 'done'
+  | 'closed'
 
 // ─────────────────────────────────────────
 // Subcomponents — mesmo padrão do PillFlow
@@ -533,9 +535,9 @@ export default function Questionnaire() {
         })
       }
 
-      navigate('/reed')
+      setPhase('closed')
     } catch (e) {
-      navigate('/reed')
+      setPhase('closed')
     }
   }
 
@@ -618,12 +620,13 @@ export default function Questionnaire() {
     </>
   )
 
-  if (phase === 'done') return (
+  if (phase === 'done' || phase === 'closed') return (
     <>
       {loadingOverlay}
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        <span className="r-header-label">pronto</span>
-      </div>
+      <CycleClosedScreen
+        ready={phase === 'closed'}
+        onContinue={() => navigate('/reed')}
+      />
     </>
   )
 
