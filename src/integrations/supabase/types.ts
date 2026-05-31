@@ -1193,6 +1193,7 @@ export type Database = {
           responder_name: string | null
           reveal_identity: boolean | null
           revoked_at: string | null
+          slug: string
           status: string
           submitted_at: string | null
           token: string
@@ -1208,6 +1209,7 @@ export type Database = {
           responder_name?: string | null
           reveal_identity?: boolean | null
           revoked_at?: string | null
+          slug: string
           status?: string
           submitted_at?: string | null
           token: string
@@ -1223,6 +1225,7 @@ export type Database = {
           responder_name?: string | null
           reveal_identity?: boolean | null
           revoked_at?: string | null
+          slug?: string
           status?: string
           submitted_at?: string | null
           token?: string

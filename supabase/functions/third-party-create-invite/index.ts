@@ -117,18 +117,39 @@ Deno.serve(async (req) => {
     const question_set = ((count ?? 0) % 2 === 0) ? "alpha" : "beta";
 
     const newToken = crypto.randomUUID();
-    const { data: insertedRows, error: insErr } = await admin
-      .from("third_party_invites")
-      .insert([{
-        ipe_cycle_id,
-        user_id,
-        token: newToken,
-        status: "pending",
-        user_pronoun: pronoun,
-        question_set,
-      }])
-      .select("id, token, created_at, question_set")
-      .single();
+
+    // Slug curto (8 chars alfanuméricos) — retry em colisão.
+    const SLUG_ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    const genSlug = () => {
+      const bytes = new Uint8Array(8);
+      crypto.getRandomValues(bytes);
+      let s = "";
+      for (let i = 0; i < 8; i++) s += SLUG_ALPHABET[bytes[i] % SLUG_ALPHABET.length];
+      return s;
+    };
+
+    let insertedRows: any = null;
+    let insErr: any = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const slug = genSlug();
+      const { data, error } = await admin
+        .from("third_party_invites")
+        .insert([{
+          ipe_cycle_id,
+          user_id,
+          token: newToken,
+          slug,
+          status: "pending",
+          user_pronoun: pronoun,
+          question_set,
+        }])
+        .select("id, token, slug, created_at, question_set")
+        .single();
+      if (!error) { insertedRows = data; insErr = null; break; }
+      insErr = error;
+      // 23505 = unique_violation (provavelmente slug colidiu) → retry
+      if ((error as any).code !== "23505") break;
+    }
     if (insErr || !insertedRows) {
       return json({ error: "Insert failed", detail: insErr?.message }, 500, req);
     }
@@ -136,7 +157,8 @@ Deno.serve(async (req) => {
     return json({
       invite_id: insertedRows.id,
       token: insertedRows.token,
-      url: `${APP_BASE_URL}/third-party/${insertedRows.token}`,
+      slug: insertedRows.slug,
+      url: `${APP_BASE_URL}/c/${insertedRows.slug}`,
       created_at: insertedRows.created_at,
       question_set: insertedRows.question_set,
       user_pronoun: pronoun,

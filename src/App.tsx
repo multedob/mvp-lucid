@@ -215,6 +215,8 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             {/* W20.2 — Third-party questionnaire (público, sem auth do app) */}
             <Route path="/third-party/:token" element={<ErrorBoundary boundaryName="thirdparty"><ThirdParty /></ErrorBoundary>} />
+            {/* Slug curto: rdwth.com/c/{8-chars} — link amigável pra convidar terceiros. */}
+            <Route path="/c/:slug" element={<ErrorBoundary boundaryName="thirdparty"><ThirdParty /></ErrorBoundary>} />
             <Route path="/test" element={<Navigate to="/home" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

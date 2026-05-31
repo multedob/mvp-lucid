@@ -199,7 +199,9 @@ function ResponseInput({
 }
 
 export default function ThirdParty() {
-  const { token } = useParams<{ token: string }>();
+  // Aceita /third-party/:token (legado) ou /c/:slug (novo, curto).
+  const { token: urlToken, slug: urlSlug } = useParams<{ token?: string; slug?: string }>();
+  const [token, setToken] = useState<string | null>(urlToken ?? null);
   const navigate = useNavigate();
 
   const [phase, setPhase] = useState<Phase>("loading");
@@ -291,13 +293,19 @@ export default function ThirdParty() {
 
   // ─── Validate link on mount ────────────────────────────────
   useEffect(() => {
-    if (validatedRef.current || !token) return;
+    if (validatedRef.current) return;
+    if (!urlToken && !urlSlug) return;
     validatedRef.current = true;
 
     (async () => {
       try {
-        const res: ValidateResponse = await callEdge("third-party-validate-link", { token });
+        const payload: Record<string, string> = {};
+        if (urlToken) payload.token = urlToken;
+        if (urlSlug) payload.slug = urlSlug;
+        const res: ValidateResponse = await callEdge("third-party-validate-link", payload);
         setData(res);
+        // Resolve canonical token a partir do response (slug → token).
+        if ((res as any).token) setToken((res as any).token);
         track("third_party_link_visited", { has_existing_responses: res.existing_responses.length > 0 });
         // Pré-popula state se houver respostas anteriores
         if (res.responder?.email) setEmail(res.responder.email);
@@ -328,7 +336,7 @@ export default function ThirdParty() {
         else { setErrorMsg(msg); setPhase("error"); }
       }
     })();
-  }, [token]);
+  }, [urlToken, urlSlug]);
 
   // ─── Helpers ────────────────────────────────────────────────
   const coreQuestions = useMemo(
@@ -659,7 +667,7 @@ export default function ThirdParty() {
                   cycleId={token ?? "third-party"}
                   pillId={qid}
                   moment="third-party"
-                  thirdPartyToken={token}
+                  thirdPartyToken={token ?? undefined}
                   language="pt-BR"
                   breathingPulseOnce={audioPulseFirst && currentQIdx === 0}
                   onLiveTranscript={text => setEpisodes((prev) => ({ ...prev, [qid]: text }))}
@@ -702,7 +710,7 @@ export default function ThirdParty() {
                   cycleId={token ?? "third-party"}
                   pillId={`${qid}_open`}
                   moment="third-party"
-                  thirdPartyToken={token}
+                  thirdPartyToken={token ?? undefined}
                   language="pt-BR"
                   onLiveTranscript={text => setOpens((prev) => ({ ...prev, [qid]: text }))}
                   onFinalTranscript={text => setOpens((prev) => ({ ...prev, [qid]: text }))}

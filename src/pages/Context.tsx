@@ -342,6 +342,7 @@ interface ThirdPartyInvite {
   id: string;
   ipe_cycle_id: string;
   token: string;
+  slug: string | null;
   status: "pending" | "submitted" | "revoked" | "expired";
   responder_email: string | null;
   responder_name: string | null;
@@ -553,9 +554,13 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
     }
   };
 
-  const copyUrl = async (token: string) => {
-    const url = `https://rdwth.com/third-party/${token}`;
-    try { await navigator.clipboard.writeText(url); } catch {}
+  const inviteUrl = (inv: { slug: string | null; token: string }) =>
+    inv.slug
+      ? `https://rdwth.com/c/${inv.slug}`
+      : `https://rdwth.com/third-party/${inv.token}`;
+
+  const copyUrl = async (inv: { slug: string | null; token: string }) => {
+    try { await navigator.clipboard.writeText(inviteUrl(inv)); } catch {}
   };
 
   const statusLabel = (s: string) =>
@@ -687,6 +692,10 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
                         </span>
                       </button>
                     </div>
+                    <div style={{ height: 1, background: "var(--r-ghost)", margin: "4px 0" }} />
+                    <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--r-muted)", lineHeight: 1.5 }}>
+                      Esse link é único para uma pessoa. Para convidar mais gente, gera outro.
+                    </div>
                     <div className="r-sub" style={{ fontStyle: "italic" }}>
                       envie esse link pra quem você quer que responda.
                     </div>
@@ -760,7 +769,7 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
                               <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                                 {inv.status === "pending" && (
                                   <>
-                                    <span onClick={() => copyUrl(inv.token)} style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--r-muted)", cursor: "pointer" }} title="copiar link">copiar link</span>
+                                    <span onClick={() => copyUrl(inv)} style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--r-muted)", cursor: "pointer" }} title="copiar link">copiar link</span>
                                     <span onClick={() => revokeInvite(inv.id)} style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--terracota, #b85a3e)", cursor: "pointer" }}>revogar</span>
                                   </>
                                 )}
