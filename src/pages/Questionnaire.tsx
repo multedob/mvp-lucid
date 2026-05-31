@@ -43,6 +43,7 @@ type Phase =
   | 'subfallback'
   | 'transition'
   | 'done'
+  | 'closed'
 
 // ─────────────────────────────────────────
 // Subcomponents — mesmo padrão do PillFlow
@@ -533,9 +534,9 @@ export default function Questionnaire() {
         })
       }
 
-      navigate('/reed')
+      setPhase('closed')
     } catch (e) {
-      navigate('/reed')
+      setPhase('closed')
     }
   }
 
