@@ -16,6 +16,7 @@ import Consent from "./pages/Consent";
 import Onboarding from "./pages/Onboarding";
 import Warmup from "./pages/Warmup";
 import NotFound from "./pages/NotFound";
+import Alpha from "./pages/Alpha";
 import AppShell from "./components/AppShell";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { FeedbackButton } from "./components/FeedbackButton";
@@ -213,6 +214,7 @@ const App = () => (
             <Route path="/terms" element={<Terms />} />
             <Route path="/terms-of-use" element={<Terms />} />
             <Route path="/sobre" element={<Sobre />} />
+            <Route path="/alpha" element={<Alpha />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             {/* W20.2 — Third-party questionnaire (público, sem auth do app) */}
             <Route path="/third-party/:token" element={<ErrorBoundary boundaryName="thirdparty"><ThirdParty /></ErrorBoundary>} />
