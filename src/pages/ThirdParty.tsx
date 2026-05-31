@@ -199,7 +199,9 @@ function ResponseInput({
 }
 
 export default function ThirdParty() {
-  const { token } = useParams<{ token: string }>();
+  // Aceita /third-party/:token (legado) ou /c/:slug (novo, curto).
+  const { token: urlToken, slug: urlSlug } = useParams<{ token?: string; slug?: string }>();
+  const [token, setToken] = useState<string | null>(urlToken ?? null);
   const navigate = useNavigate();
 
   const [phase, setPhase] = useState<Phase>("loading");
