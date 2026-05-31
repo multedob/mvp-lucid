@@ -770,7 +770,7 @@ export default function PillFlow() {
           </>
         )}
       </div>
-      <Footer onBack={() => navigate("/home")} onContinue={submitM1}
+      <Footer onBack={() => { if (window.history.length > 1) navigate(-1); else navigate("/home"); }} onContinue={submitM1}
         continueLabel={state.loading ? "..." : "começar"}
         disabled={state.loading || !state.ipeCycleId}
         pulseAction={pulseStartAction} />
