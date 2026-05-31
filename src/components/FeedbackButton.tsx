@@ -13,7 +13,7 @@ export function FeedbackButton() {
         onClick={() => setOpen(true)}
         aria-label="enviar feedback"
         style={{
-          position: "fixed",
+          position: "absolute",
           right: 16,
           bottom: 72, // acima da NavBottom
           width: 44,
