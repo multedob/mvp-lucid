@@ -59,20 +59,25 @@ export default function Alpha() {
 
   return (
     <div
-      className="r-screen"
+      className="r-screen alpha-screen"
       style={{
-        justifyContent: "center",
         alignItems: "center",
-        padding: "24px 24px",
+        padding: "9vh 24px 24px",
         minHeight: "100dvh",
       }}
     >
-      <div style={{ width: "100%", maxWidth: 380 }}>
+      <style>{`
+        .alpha-screen p { text-align: justify; }
+        @media (max-width: 480px) {
+          .alpha-screen p { text-align: left; }
+        }
+      `}</style>
+      <div style={{ width: "100%", maxWidth: 420 }}>
         {BLOCKS.map((block, bi) => {
           const delay = stepIndex++ * 140;
           return (
             <StageIn key={bi} delay={delay}>
-              <div style={{ marginBottom: bi < BLOCKS.length - 1 ? 14 : 0 }}>
+              <div style={{ marginBottom: bi < BLOCKS.length - 1 ? "1.6em" : 0 }}>
                 {block.map((line, li) => (
                   <p
                     key={li}
@@ -80,7 +85,7 @@ export default function Alpha() {
                       fontFamily: "var(--r-font-sys)",
                       fontWeight: 300,
                       fontSize: 13,
-                      lineHeight: 1.45,
+                      lineHeight: 1.5,
                       color: "var(--r-voice-sys)",
                       letterSpacing: "0.03em",
                       margin: 0,
@@ -103,7 +108,8 @@ export default function Alpha() {
               fontSize: 11,
               color: "var(--r-muted)",
               letterSpacing: "0.08em",
-              margin: "18px 0 0",
+              margin: "0.6em 0 0",
+              textAlign: "left",
             }}
           >
             — rdwth
@@ -112,7 +118,7 @@ export default function Alpha() {
 
         {/* CTA */}
         <StageIn delay={stepIndex++ * 140 + 120}>
-          <div style={{ marginTop: 22 }}>
+          <div style={{ marginTop: 24 }}>
             <button
               type="button"
               onClick={() => navigate("/entrada")}
@@ -147,3 +153,4 @@ export default function Alpha() {
     </div>
   );
 }
+
