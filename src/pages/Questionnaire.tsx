@@ -21,6 +21,7 @@ import { fetchQuestionnaireProgress } from '@/lib/questionnaireProgress'
 import { QuestionnaireLoadingScreen } from '@/components/QuestionnaireLoadingScreen'
 import EmptyStateMessage from '@/components/EmptyStateMessage'
 import SystemTerminalCounter from '@/components/SystemTerminalCounter'
+import { CycleClosedScreen } from '@/components/CycleClosedScreen'
 import { track } from '@/lib/analytics'
 
 // ─────────────────────────────────────────
