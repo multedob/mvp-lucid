@@ -16,6 +16,7 @@ import Consent from "./pages/Consent";
 import Onboarding from "./pages/Onboarding";
 import Warmup from "./pages/Warmup";
 import NotFound from "./pages/NotFound";
+import Alpha from "./pages/Alpha";
 import AppShell from "./components/AppShell";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { FeedbackButton } from "./components/FeedbackButton";
