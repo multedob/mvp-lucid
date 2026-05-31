@@ -765,7 +765,7 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
                               <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                                 {inv.status === "pending" && (
                                   <>
-                                    <span onClick={() => copyUrl(inv.token)} style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--r-muted)", cursor: "pointer" }} title="copiar link">copiar link</span>
+                                    <span onClick={() => copyUrl(inv)} style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--r-muted)", cursor: "pointer" }} title="copiar link">copiar link</span>
                                     <span onClick={() => revokeInvite(inv.id)} style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--terracota, #b85a3e)", cursor: "pointer" }}>revogar</span>
                                   </>
                                 )}
