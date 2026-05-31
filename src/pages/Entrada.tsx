@@ -71,7 +71,7 @@ export default function Entrada() {
   }, []);
 
   useEffect(() => {
-    const t = setTimeout(() => navigate("/auth", { replace: true }), 2500);
+    const t = setTimeout(() => navigate("/auth", { replace: true }), 3500);
     return () => clearTimeout(t);
   }, [navigate]);
 
