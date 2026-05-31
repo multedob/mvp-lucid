@@ -554,9 +554,13 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
     }
   };
 
-  const copyUrl = async (token: string) => {
-    const url = `https://rdwth.com/third-party/${token}`;
-    try { await navigator.clipboard.writeText(url); } catch {}
+  const inviteUrl = (inv: { slug: string | null; token: string }) =>
+    inv.slug
+      ? `https://rdwth.com/c/${inv.slug}`
+      : `https://rdwth.com/third-party/${inv.token}`;
+
+  const copyUrl = async (inv: { slug: string | null; token: string }) => {
+    try { await navigator.clipboard.writeText(inviteUrl(inv)); } catch {}
   };
 
   const statusLabel = (s: string) =>
