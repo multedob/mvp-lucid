@@ -293,13 +293,19 @@ export default function ThirdParty() {
 
   // ─── Validate link on mount ────────────────────────────────
   useEffect(() => {
-    if (validatedRef.current || !token) return;
+    if (validatedRef.current) return;
+    if (!urlToken && !urlSlug) return;
     validatedRef.current = true;
 
     (async () => {
       try {
-        const res: ValidateResponse = await callEdge("third-party-validate-link", { token });
+        const payload: Record<string, string> = {};
+        if (urlToken) payload.token = urlToken;
+        if (urlSlug) payload.slug = urlSlug;
+        const res: ValidateResponse = await callEdge("third-party-validate-link", payload);
         setData(res);
+        // Resolve canonical token a partir do response (slug → token).
+        if ((res as any).token) setToken((res as any).token);
         track("third_party_link_visited", { has_existing_responses: res.existing_responses.length > 0 });
         // Pré-popula state se houver respostas anteriores
         if (res.responder?.email) setEmail(res.responder.email);
@@ -330,7 +336,7 @@ export default function ThirdParty() {
         else { setErrorMsg(msg); setPhase("error"); }
       }
     })();
-  }, [token]);
+  }, [urlToken, urlSlug]);
 
   // ─── Helpers ────────────────────────────────────────────────
   const coreQuestions = useMemo(
