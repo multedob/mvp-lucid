@@ -11,36 +11,32 @@ const BLOCKS = [
   [
     "oi.",
     "",
-    "você chegou aqui porque o bruno e a olivia te chamaram pessoalmente. obrigado por abrir.",
+    "você está aqui porque o bruno e a olivia te chamaram. obrigado por abrir.",
   ],
   [
     "o rdwth é um espelho estrutural.",
     "",
-    "você fala — conta uma cena, escreve uma resposta, escolhe um lado de um eixo. ele te devolve aquilo de um jeito que talvez você não tinha visto sozinho.",
+    "você fala. ele devolve.",
   ],
   [
     "não te diz o que fazer.",
-    "não te ensina.",
-    "não te aplica método nenhum.",
+    "não te ensina nada.",
+    "não tem método.",
     "",
-    "só lê o que você trouxe e te mostra o que tá ali, sem tirar a tensão.",
+    "só te mostra o que tá ali.",
   ],
   [
-    "essa é a primeira leva de uso real. 10 a 20 pessoas escolhidas uma por uma.",
+    "essa é a primeira leva. dez, vinte pessoas. uma por uma.",
     "",
     "você é uma delas.",
   ],
   [
-    "o que a gente pede:",
+    "quando algo travar, te incomodar, parecer estranho — abre o ?! no canto e fala. pode mandar print junto.",
     "",
-    "— usa com calma quando puder.",
-    "",
-    "— quando algo não fizer sentido, travar, ou te incomodar, abre o ?! no canto da tela e fala. pode mandar print junto.",
-    "",
-    "— não precisa ter resposta certa. precisa ser honesto sobre o que sentiu.",
+    "não precisa ter resposta certa. precisa ser honesto.",
   ],
   [
-    "ele não é coach. não é terapia. não é horóscopo. é outra coisa.",
+    "não é coach. não é terapia. não é horóscopo.",
   ],
 ];
 
@@ -165,7 +161,7 @@ export default function Alpha() {
         <div style={{ height: 48 }} />
         <button
           type="button"
-          onClick={() => navigate("/auth")}
+          onClick={() => navigate("/entrada")}
           style={{
             fontFamily: "var(--r-font-sys)",
             fontWeight: 300,
