@@ -16,6 +16,7 @@ const SYSTEM_LINES = [
   "respira.",
   "isso leva alguns segundos.",
   "reed lê suas respostas.",
+  "depois, você pode conversar com ele.",
 ] as const;
 
 const CHAR_DELAY_MS = 38;

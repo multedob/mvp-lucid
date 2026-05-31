@@ -479,6 +479,7 @@ export type Database = {
           id: string
           notes: string | null
           resolved: boolean
+          screenshot_url: string | null
           user_agent: string | null
           user_email: string | null
           user_id: string | null
@@ -490,6 +491,7 @@ export type Database = {
           id?: string
           notes?: string | null
           resolved?: boolean
+          screenshot_url?: string | null
           user_agent?: string | null
           user_email?: string | null
           user_id?: string | null
@@ -501,6 +503,7 @@ export type Database = {
           id?: string
           notes?: string | null
           resolved?: boolean
+          screenshot_url?: string | null
           user_agent?: string | null
           user_email?: string | null
           user_id?: string | null

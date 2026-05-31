@@ -19,6 +19,7 @@ import SystemPulse from "@/components/SystemPulse";
 import SystemPulseRotation from "@/components/SystemPulseRotation";
 import TeamMessage from "@/components/TeamMessage";
 import useHomeGuide from "@/hooks/useHomeGuide";
+import useHomeNotices from "@/hooks/useHomeNotices";
 
 function getGreeting(name: string | null): string | null {
   const hour = new Date().getHours();
@@ -39,8 +40,9 @@ export default function Home() {
   // Mantém header sem section + nav active=home enquanto na Home
   useShell({ section: undefined, active: "home" });
 
-  // Modo guiado marco-driven
+  // Modo guiado marco-driven (pulse + frase curta) + notices empilháveis
   const { guide } = useHomeGuide();
+  const { notices } = useHomeNotices();
 
   // Cascade depende do TeamMessage (que é async — fetch edge function).
   // Estados:
@@ -109,6 +111,35 @@ export default function Home() {
         {guide && showGuide && (
           <div style={{ padding: "12px 24px 20px" }}>
             <SystemTerminalLine text={guide.frase} delayMs={0} />
+          </div>
+        )}
+
+        {/* Fix 2A/2B — notices empilháveis: questionário pendente, terceiros pendentes */}
+        {showGuide && notices.length > 0 && (
+          <div style={{ padding: "0 24px 20px", display: "flex", flexDirection: "column", gap: 18 }}>
+            {notices.map((n, i) => (
+              <div key={n.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <SystemTerminalLine text={n.frase} delayMs={i * 600} showCursor={false} />
+                <button
+                  type="button"
+                  onClick={() => navigate(n.ctaPath)}
+                  style={{
+                    alignSelf: "flex-start",
+                    background: "transparent",
+                    border: "none",
+                    padding: "4px 0",
+                    cursor: "pointer",
+                    fontFamily: "var(--r-font-sys)",
+                    fontWeight: 400,
+                    fontSize: 11,
+                    letterSpacing: "0.06em",
+                    color: "var(--r-telha)",
+                  }}
+                >
+                  {n.ctaLabel} →
+                </button>
+              </div>
+            ))}
           </div>
         )}
       </div>

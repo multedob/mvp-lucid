@@ -924,11 +924,20 @@ export default function PillFlow() {
   );
 
   // ─── M4: Self-observation ─────────────────────────────────────
-  if (moment === "M4") return (
+  if (moment === "M4") {
+    // Fix 1 — durante geração do eco, esconde TODA a pílula (pergunta, input,
+    // botões). Só EcoLoadingScreen + Header ocupam a tela.
+    if (state.generatingEco) {
+      return (
+        <div className="r-screen">
+          <Header moment="M4" />
+          <EcoLoadingScreen />
+        </div>
+      );
+    }
+    return (
     <div className="r-screen">
       <Header moment="M4" />
-      {/* Wave 12.b — overlay full-screen com morph + pulse + frase rotativa enquanto ipe-eco gera */}
-      {state.generatingEco && <EcoLoadingScreen />}
       <div className="r-scroll" style={{ padding: "28px 24px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
         <div className="r-question">{m4Content.question}</div>
         <div className="r-sub">{m4Content.instruction}</div>
@@ -971,7 +980,8 @@ export default function PillFlow() {
       </div>
       <Footer onBack={() => setState(s => ({ ...s, moment: "M3_3" }))} />
     </div>
-  );
+    );
+  }
 
   // ─── M5: Echo (v2.c.2 — eco em prosa contínua + CTA contextual) ──────
   // Fallback chain: ecoLines (v2.c.2) → ecoText.split (cached path) → array vazio
