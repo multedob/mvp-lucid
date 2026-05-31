@@ -71,7 +71,7 @@ export default function Entrada() {
   }, []);
 
   useEffect(() => {
-    const t = setTimeout(() => navigate("/auth", { replace: true }), 2500);
+    const t = setTimeout(() => navigate("/auth", { replace: true }), 3500);
     return () => clearTimeout(t);
   }, [navigate]);
 
@@ -182,10 +182,13 @@ export default function Entrada() {
         <div style={{
           display: "flex",
           alignItems: "flex-end",
+          justifyContent: "flex-start",
           gap: 0,
           lineHeight: 1,
           marginBottom: 10,
+          marginLeft: "-0.05em",
           fontSize: "clamp(52px, 9.5vw, 112px)",
+          fontSizeAdjust: 0.5,
         }}>
           {(["r","d","w","t","h"] as LetterKey[]).map(letter => (
             <span
