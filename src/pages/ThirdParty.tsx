@@ -667,7 +667,7 @@ export default function ThirdParty() {
                   cycleId={token ?? "third-party"}
                   pillId={qid}
                   moment="third-party"
-                  thirdPartyToken={token}
+                  thirdPartyToken={token ?? undefined}
                   language="pt-BR"
                   breathingPulseOnce={audioPulseFirst && currentQIdx === 0}
                   onLiveTranscript={text => setEpisodes((prev) => ({ ...prev, [qid]: text }))}
@@ -710,7 +710,7 @@ export default function ThirdParty() {
                   cycleId={token ?? "third-party"}
                   pillId={`${qid}_open`}
                   moment="third-party"
-                  thirdPartyToken={token}
+                  thirdPartyToken={token ?? undefined}
                   language="pt-BR"
                   onLiveTranscript={text => setOpens((prev) => ({ ...prev, [qid]: text }))}
                   onFinalTranscript={text => setOpens((prev) => ({ ...prev, [qid]: text }))}
