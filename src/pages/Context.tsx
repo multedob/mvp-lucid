@@ -342,6 +342,7 @@ interface ThirdPartyInvite {
   id: string;
   ipe_cycle_id: string;
   token: string;
+  slug: string | null;
   status: "pending" | "submitted" | "revoked" | "expired";
   responder_email: string | null;
   responder_name: string | null;
