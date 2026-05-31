@@ -265,6 +265,8 @@ Deno.serve(async (req) => {
     return json({
       valid: true,
       invite_id: invite.id,
+      token: invite.token,
+      slug: invite.slug,
       user_name,
       user_pronoun: invite.user_pronoun ?? "ela",
       question_set: invite.question_set ?? "alpha",
