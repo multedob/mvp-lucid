@@ -619,12 +619,13 @@ export default function Questionnaire() {
     </>
   )
 
-  if (phase === 'done') return (
+  if (phase === 'done' || phase === 'closed') return (
     <>
       {loadingOverlay}
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        <span className="r-header-label">pronto</span>
-      </div>
+      <CycleClosedScreen
+        ready={phase === 'closed'}
+        onContinue={() => navigate('/reed')}
+      />
     </>
   )
 
