@@ -18,6 +18,7 @@ import Warmup from "./pages/Warmup";
 import NotFound from "./pages/NotFound";
 import AppShell from "./components/AppShell";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { FeedbackButton } from "./components/FeedbackButton";
 
 // ── Lazy: pesado ou visitado depois do entry path ──
 // F6 — Bundle optimization. Reduz bundle inicial separando rotas internas
@@ -192,7 +193,7 @@ const App = () => (
             <Route path="/consent" element={<Consent />} />
             <Route path="/letter" element={<OnboardingLetter />} />
             <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/warmup" element={<ProtectedRoute><ErrorBoundary boundaryName="warmup"><Warmup /></ErrorBoundary></ProtectedRoute>} />
+            <Route path="/warmup" element={<ProtectedRoute><ErrorBoundary boundaryName="warmup"><><Warmup /><FeedbackButton /></></ErrorBoundary></ProtectedRoute>} />
             {/* AppShell — header + footer persistentes pra rotas autenticadas que
                 compartilham canvas. Transições entre essas rotas usam flowTo() —
                 ver hooks/useFlow.tsx. */}
@@ -205,8 +206,8 @@ const App = () => (
               <Route path="/reed" element={<Reed />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
-            <Route path="/pill/:pillId" element={<ProtectedRoute><ErrorBoundary boundaryName="pillflow"><PillFlow /></ErrorBoundary></ProtectedRoute>} />
-            <Route path="/como-funciona" element={<ProtectedRoute><ContextSystem /></ProtectedRoute>} />
+            <Route path="/pill/:pillId" element={<ProtectedRoute><ErrorBoundary boundaryName="pillflow"><><PillFlow /><FeedbackButton /></></ErrorBoundary></ProtectedRoute>} />
+            <Route path="/como-funciona" element={<ProtectedRoute><><ContextSystem /><FeedbackButton /></></ProtectedRoute>} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/privacy-policy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
