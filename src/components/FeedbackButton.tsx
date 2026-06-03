@@ -15,7 +15,7 @@ export function FeedbackButton() {
         style={{
           position: "absolute",
           right: 16,
-          bottom: 72, // acima da NavBottom
+          bottom: 120, // acima de .r-footer (52px) + NavBottom (56px) + r-line (~1px)
           width: 44,
           height: 44,
           borderRadius: "50%",
