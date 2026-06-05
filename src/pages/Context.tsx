@@ -252,6 +252,7 @@ function SystemSections({ sections }: {
         );
       })}
     </div>
+    </>
   );
 }
 
