@@ -17,7 +17,7 @@ export function FeedbackButton() {
         title="enviar feedback"
         style={{
           position: "absolute",
-          top: "4.5rem",
+          top: "3rem",
           right: 24,
           // touch target generoso, visual minúsculo (mesmo truque do settings dot)
           padding: 8,
