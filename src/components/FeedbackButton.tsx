@@ -12,10 +12,11 @@ export function FeedbackButton() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="enviar feedback"
+        className="rdwth-feedback-btn"
         style={{
           position: "absolute",
           right: 16,
-          bottom: 120, // acima de .r-footer (52px) + NavBottom (56px) + r-line (~1px)
+          bottom: "9rem", // bem acima de sliders, CTAs e footer
           width: 44,
           height: 44,
           borderRadius: "50%",
@@ -28,15 +29,18 @@ export function FeedbackButton() {
           letterSpacing: "0.02em",
           cursor: "pointer",
           boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-          opacity: 0.85,
+          opacity: 0.3,
           zIndex: 50,
           transition: "opacity 200ms ease",
         }}
-        onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.85")}
       >
         ?!
       </button>
+      <style>{`
+        .rdwth-feedback-btn:hover,
+        .rdwth-feedback-btn:active,
+        .rdwth-feedback-btn:focus-visible { opacity: 1 !important; }
+      `}</style>
       <FeedbackModal open={open} onClose={() => setOpen(false)} />
     </>
   );
