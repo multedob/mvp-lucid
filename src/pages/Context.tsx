@@ -45,6 +45,7 @@ import SystemTerminalCounter from "@/components/SystemTerminalCounter";
 import { fetchQuestionnaireProgress } from "@/lib/questionnaireProgress";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { track } from "@/lib/analytics";
+import { FeedbackButton } from "@/components/FeedbackButton";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
@@ -172,7 +173,11 @@ function SystemSections({ sections }: {
   };
 
   return (
-    <div className="r-scroll" style={{ padding: "24px 24px 24px", display: "flex", flexDirection: "column", gap: 12 }}>
+    <>
+      <div style={{ display: "flex", justifyContent: "flex-end", padding: "12px 24px 0", flexShrink: 0 }}>
+        <FeedbackButton />
+      </div>
+      <div className="r-scroll" style={{ padding: "8px 24px 24px", display: "flex", flexDirection: "column", gap: 12 }}>
       {sections.map((sec, i) => {
         const isOpen = openIdx.has(i);
         return (
@@ -247,6 +252,7 @@ function SystemSections({ sections }: {
         );
       })}
     </div>
+    </>
   );
 }
 
@@ -999,20 +1005,25 @@ export default function Context() {
       {/* Voice slot — espaço reservado (~110px). Sem flow: counter + disclaimer.
           Com flow: vazio (FlowVoice ocupa via overlay). Após flow: vazio. */}
       <div style={{ minHeight: 110, flexShrink: 0, padding: "12px 24px 0" }}>
-        {!fromFlow && cycle && (
-          <>
-            {cycle.questionnaireRemaining > 0 && (
-              <SystemTerminalCounter
-                prefix="perguntas restantes: "
-                value={cycle.questionnaireRemaining}
-              />
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {!fromFlow && cycle && (
+              <>
+                {cycle.questionnaireRemaining > 0 && (
+                  <SystemTerminalCounter
+                    prefix="perguntas restantes: "
+                    value={cycle.questionnaireRemaining}
+                  />
+                )}
+                <SystemTerminalLine
+                  text={disclaimerText}
+                  delayMs={cycle.questionnaireRemaining > 0 ? 700 : 0}
+                />
+              </>
             )}
-            <SystemTerminalLine
-              text={disclaimerText}
-              delayMs={cycle.questionnaireRemaining > 0 ? 700 : 0}
-            />
-          </>
-        )}
+          </div>
+          <FeedbackButton />
+        </div>
       </div>
 
       {/* Conteúdo principal — cascade após voz sistema (~2700ms) */}

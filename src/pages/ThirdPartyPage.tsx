@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useShell } from "@/hooks/useShell";
 import { useUserName } from "@/hooks/useUserName";
 import { ContextThirdParty } from "./Context";
+import { FeedbackButton } from "@/components/FeedbackButton";
 
 export default function ThirdPartyPage() {
   useShell({ section: "terceiros", active: "thirdparty" });
@@ -45,19 +46,29 @@ export default function ThirdPartyPage() {
 
   if (!ipeCycleId) {
     return (
-      <div style={{ padding: "32px 24px", display: "flex", justifyContent: "center" }}>
-        <div className="r-sub" style={{ textAlign: "center" }}>
-          nenhum ciclo ativo. complete um questionário pra começar.
+      <>
+        <div style={{ display: "flex", justifyContent: "flex-end", padding: "12px 24px 0" }}>
+          <FeedbackButton />
         </div>
-      </div>
+        <div style={{ padding: "32px 24px", display: "flex", justifyContent: "center" }}>
+          <div className="r-sub" style={{ textAlign: "center" }}>
+            nenhum ciclo ativo. complete um questionário pra começar.
+          </div>
+        </div>
+      </>
     );
   }
 
   return (
-    <ContextThirdParty
-      ipeCycleId={ipeCycleId}
-      onBack={() => navigate(-1)}
-      userName={userName}
-    />
+    <>
+      <div style={{ display: "flex", justifyContent: "flex-end", padding: "12px 24px 0" }}>
+        <FeedbackButton />
+      </div>
+      <ContextThirdParty
+        ipeCycleId={ipeCycleId}
+        onBack={() => navigate(-1)}
+        userName={userName}
+      />
+    </>
   );
 }

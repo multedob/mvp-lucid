@@ -20,6 +20,7 @@ import SystemPulseRotation from "@/components/SystemPulseRotation";
 import TeamMessage from "@/components/TeamMessage";
 import useHomeGuide from "@/hooks/useHomeGuide";
 import useHomeNotices from "@/hooks/useHomeNotices";
+import { FeedbackButton } from "@/components/FeedbackButton";
 
 function getGreeting(name: string | null): string | null {
   const hour = new Date().getHours();
@@ -102,11 +103,23 @@ export default function Home() {
           }}
         />
 
-        {greeting && showGreeting && (
-          <div style={{ padding: "12px 24px 0" }}>
-            <SystemTerminalLine text={greeting} delayMs={0} />
+        <div
+          style={{
+            padding: "12px 24px 0",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            minHeight: 30,
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {greeting && showGreeting && (
+              <SystemTerminalLine text={greeting} delayMs={0} />
+            )}
           </div>
-        )}
+          <FeedbackButton />
+        </div>
 
         {guide && showGuide && (
           <div style={{ padding: "12px 24px 20px" }}>

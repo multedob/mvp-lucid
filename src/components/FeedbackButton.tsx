@@ -1,7 +1,11 @@
 // src/components/FeedbackButton.tsx
-// v4 — bolinha discreta (mesmo pattern visual do .r-send-dot do produto).
-// Posicionada no topo direito do canvas, alinhada com a borda direita do
-// container central (.r-screen é o pai posicionado via AppShell).
+// v7 — bolinha inline, sem posicionamento.
+// O alinhamento agora é responsabilidade do container (flex/grid) que envolve
+// a primeira linha da voz do sistema da tela. Use sempre dentro de um wrapper
+// como: <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+//   <SystemTerminalLine .../>
+//   <FeedbackButton />
+// </div>
 import { useState } from "react";
 import { FeedbackModal } from "./FeedbackModal";
 
@@ -16,20 +20,17 @@ export function FeedbackButton() {
         aria-label="enviar feedback"
         title="enviar feedback"
         style={{
-          position: "absolute",
-          top: "3rem",
-          right: 24,
           // touch target generoso, visual minúsculo (mesmo truque do settings dot)
           padding: 8,
           margin: 0,
           background: "transparent",
           border: "none",
           cursor: "pointer",
-          zIndex: 50,
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
           lineHeight: 0,
+          flexShrink: 0,
         }}
       >
         <span

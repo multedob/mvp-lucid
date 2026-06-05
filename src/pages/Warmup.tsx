@@ -14,6 +14,7 @@ import { markOnboardingStep } from "@/hooks/useOnboardingState";
 import AppHeader from "@/components/AppHeader";
 import { AudioRecorder } from "@/components/AudioRecorder";
 import { track } from "@/lib/analytics";
+import { FeedbackButton } from "@/components/FeedbackButton";
 
 // Telemetria one-time helper — evita disparo duplicado em React strict mode / re-renders.
 function useOnceTrack(eventName: string, props?: Record<string, unknown>) {
@@ -291,22 +292,33 @@ export default function Warmup() {
       <div className="r-scroll" style={{ flex: 1, padding: "24px 24px 64px" }}>
         {(phase === "q1" || phase === "q2") && (
           <>
-            {/* 1. Sistema (topo) — typewriter, sempre visível desde o mount */}
             <div
               style={{
-                fontFamily: "var(--r-font-sys)",
-                fontWeight: 300,
-                fontSize: 11,
-                lineHeight: 1.7,
-                letterSpacing: "0.04em",
-                color: "var(--r-voice-sys)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
                 marginBottom: 28,
-                textAlign: "left",
-                whiteSpace: "pre-wrap",
               }}
             >
-              <span aria-hidden="true">{"> "}</span>
-              <Typewriter text={INTRO_TEXT} />
+              <div
+                style={{
+                  fontFamily: "var(--r-font-sys)",
+                  fontWeight: 300,
+                  fontSize: 11,
+                  lineHeight: 1.7,
+                  letterSpacing: "0.04em",
+                  color: "var(--r-voice-sys)",
+                  textAlign: "left",
+                  whiteSpace: "pre-wrap",
+                  flex: 1,
+                  minWidth: 0,
+                }}
+              >
+                <span aria-hidden="true">{"> "}</span>
+                <Typewriter text={INTRO_TEXT} />
+              </div>
+              <FeedbackButton />
             </div>
 
             {/* 2. Pergunta Reed — fade-in após sistema terminar */}

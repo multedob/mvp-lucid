@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { callEdgeFunction } from "@/lib/api";
 import { track } from "@/lib/analytics";
 import { useShell } from "@/hooks/useShell";
+import { FeedbackButton } from "@/components/FeedbackButton";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -97,7 +98,10 @@ export default function Settings() {
 
   return (
     <>
-      <div style={{ flex: 1, padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 0 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", padding: "12px 24px 0", flexShrink: 0 }}>
+        <FeedbackButton />
+      </div>
+      <div style={{ flex: 1, padding: "20px 24px 24px", display: "flex", flexDirection: "column", gap: 0 }}>
 
         {[
           { label: "política de privacidade", action: () => navigate("/privacy-policy") },
