@@ -30,8 +30,8 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as strin
 
 // AFC ONB-6 — Par A do Banco de Perguntas Warm-up v0.2
 const QUESTIONS: [string, string] = [
-  "Qual a situação mais marcante que você viveu nos últimos tempos?",
-  "Como você está hoje em relação à essa situação?",
+  "Responda a primeira coisa que vier à mente: qual a situação mais marcante que você viveu nos últimos tempos?",
+  "Como você está hoje em relação a essa situação?",
 ];
 
 // Placeholders inspiradores pra induzir resposta rica, um por phase
