@@ -16,6 +16,7 @@ import { useFlow } from "@/hooks/useFlow";
 import EmptyStateMessage from "@/components/EmptyStateMessage";
 import { FLOW_CONTENT_DELAY_MS } from "@/components/FlowVoice";
 import { track } from "@/lib/analytics";
+import { FeedbackButton } from "@/components/FeedbackButton";
 
 type PillId = "PI" | "PII" | "PIII" | "PIV" | "PV" | "PVI";
 
@@ -100,6 +101,9 @@ export default function Pills() {
           Quando flow ativo, FlowVoice (no AppShell) sobrepõe esta área via overlay absoluto.
           Quando flow termina, espaço fica em branco — conteúdo principal mantém posição. */}
       <div style={{ minHeight: 110, flexShrink: 0 }}>
+        <div style={{ display: "flex", justifyContent: "flex-end", padding: "12px 24px 0" }}>
+          <FeedbackButton />
+        </div>
         {!fromFlow && !loading && pillsDone.size === 0 && (
           <EmptyStateMessage
             text="escolha uma pill para começar."
