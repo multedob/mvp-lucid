@@ -45,6 +45,7 @@ import SystemTerminalCounter from "@/components/SystemTerminalCounter";
 import { fetchQuestionnaireProgress } from "@/lib/questionnaireProgress";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { track } from "@/lib/analytics";
+import { FeedbackButton } from "@/components/FeedbackButton";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
@@ -172,7 +173,11 @@ function SystemSections({ sections }: {
   };
 
   return (
-    <div className="r-scroll" style={{ padding: "24px 24px 24px", display: "flex", flexDirection: "column", gap: 12 }}>
+    <>
+      <div style={{ display: "flex", justifyContent: "flex-end", padding: "12px 24px 0", flexShrink: 0 }}>
+        <FeedbackButton />
+      </div>
+      <div className="r-scroll" style={{ padding: "8px 24px 24px", display: "flex", flexDirection: "column", gap: 12 }}>
       {sections.map((sec, i) => {
         const isOpen = openIdx.has(i);
         return (
