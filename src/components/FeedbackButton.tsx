@@ -16,7 +16,7 @@ export function FeedbackButton() {
         style={{
           position: "absolute",
           right: 16,
-          bottom: "9rem", // bem acima de sliders, CTAs e footer
+          bottom: "16rem", // bem acima de sliders, CTAs e footer
           width: 44,
           height: 44,
           borderRadius: "50%",
