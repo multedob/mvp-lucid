@@ -10,6 +10,7 @@ import { EcoLoadingScreen } from "@/components/EcoLoadingScreen";
 import { triggerDeepReadingRefresh } from "@/lib/deepReading";
 import { AutoResizeTextarea } from "@/components/AutoResizeTextarea";
 import { track } from "@/lib/analytics";
+import { FeedbackButton } from "@/components/FeedbackButton";
 
 // ─── Types ────────────────────────────────────────────────────────
 type PillId = "PI" | "PII" | "PIII" | "PIV" | "PV" | "PVI";
@@ -207,7 +208,14 @@ const HEADER_LABEL: Record<Moment, string> = {
 
 function Header({ moment }: { moment: Moment }) {
   const counter = HEADER_LABEL[moment];
-  return <AppHeader section={counter ? `pills · ${counter}` : "pills"} />;
+  return (
+    <>
+      <AppHeader section={counter ? `pills · ${counter}` : "pills"} />
+      <div style={{ display: "flex", justifyContent: "flex-end", padding: "8px 24px 0", flexShrink: 0 }}>
+        <FeedbackButton />
+      </div>
+    </>
+  );
 }
 
 interface FooterProps {
