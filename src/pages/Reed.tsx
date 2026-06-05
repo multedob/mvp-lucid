@@ -15,6 +15,7 @@ import { AudioRecorder } from '@/components/AudioRecorder'
 import { AutoResizeTextarea } from '@/components/AutoResizeTextarea'
 import { LoadingScreen } from '@/components/LoadingScreen'
 import { track } from '@/lib/analytics'
+import { FeedbackButton } from '@/components/FeedbackButton'
 
 interface Message { role: 'user' | 'reed'; text: string; isWelcome?: boolean }
 interface CanonicalILs { d1: number[]; d2: number[]; d3: number[]; d4: number[] }
@@ -604,7 +605,9 @@ export default function Reed() {
           padding: '0 24px 16px',
         }}
       >
-        <div style={{ minHeight: 110, flexShrink: 0 }} />
+        <div style={{ minHeight: 110, flexShrink: 0, display: 'flex', justifyContent: 'flex-end', paddingTop: 12 }}>
+          <FeedbackButton />
+        </div>
         {chatVisible && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingTop: 20 }}>
         {messages.map((msg, i) => {

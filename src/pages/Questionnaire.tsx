@@ -23,6 +23,7 @@ import EmptyStateMessage from '@/components/EmptyStateMessage'
 import SystemTerminalCounter from '@/components/SystemTerminalCounter'
 import { CycleClosedScreen } from '@/components/CycleClosedScreen'
 import { track } from '@/lib/analytics'
+import { FeedbackButton } from '@/components/FeedbackButton'
 
 // ─────────────────────────────────────────
 // Types
@@ -639,27 +640,32 @@ export default function Questionnaire() {
           Com flow: SystemVoiceSequence inline (CSS-only, não suspende durante load).
           Sem flow: counter + empty state da página. */}
       <div style={{ minHeight: 110, flexShrink: 0, padding: '12px 24px 0' }}>
-        {fromFlow && voiceSlots && (
-          <SystemVoiceSequence
-            slots={voiceSlots}
-            fadeOut={voiceFadeOut}
-            onHintReady={() => setVoiceHintReady(true)}
-            onFinish={clearFlow}
-          />
-        )}
-        {!fromFlow && (
-          <>
-            <SystemTerminalCounter
-              prefix="perguntas restantes: "
-              value={remainingQuestions ?? 16}
-            />
-            <EmptyStateMessage
-              text="responda no seu ritmo. pode pausar e voltar."
-              contextKey="questionnaire_first_visit"
-              delayMs={700}
-            />
-          </>
-        )}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {fromFlow && voiceSlots && (
+              <SystemVoiceSequence
+                slots={voiceSlots}
+                fadeOut={voiceFadeOut}
+                onHintReady={() => setVoiceHintReady(true)}
+                onFinish={clearFlow}
+              />
+            )}
+            {!fromFlow && (
+              <>
+                <SystemTerminalCounter
+                  prefix="perguntas restantes: "
+                  value={remainingQuestions ?? 16}
+                />
+                <EmptyStateMessage
+                  text="responda no seu ritmo. pode pausar e voltar."
+                  contextKey="questionnaire_first_visit"
+                  delayMs={700}
+                />
+              </>
+            )}
+          </div>
+          <FeedbackButton />
+        </div>
       </div>
 
       {/* Pergunta — cascade: aparece após voz sistema (~2700ms delay, igual warmup) */}
