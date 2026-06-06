@@ -1,16 +1,22 @@
 // ============================================================
 // CycleClosedScreen
 // Tela curta de transição entre o último envio do questionário
-// e a leitura profunda (Reed). Mesma estética do EcoLoadingScreen:
-// duas linhas voz do sistema com typewriter sequencial + botão "ler".
+// e a leitura profunda (Context). Mesma estética do EcoLoadingScreen.
+//
+// Fix UX 06/jun:
+//  - Botão "ler" removido (era visualmente solto no canto direito).
+//  - Sinal de "tem leitura pra ler" agora vem pelo pulse do botão
+//    "leitura" no NavBottom (controlado por localStorage flag).
+//  - Quando esta tela monta com ready=true, seta a flag.
+//  - Context.tsx (ao montar) limpa a flag.
 //
 // Props:
-//  - ready: quando true, mostra botão "ler" (lucid-engine terminou).
-//           Enquanto false, mantém só a primeira linha (silêncio enquanto processa).
-//  - onContinue: handler do botão "ler".
+//  - ready: quando true, lucid-engine terminou; seta flag de unread.
+//  - onContinue: mantido pra back-compat (não usado mais — pulse guia o user).
 // ============================================================
 
 import { useEffect, useRef, useState } from "react";
+import { markReadingUnread } from "@/lib/unreadReading";
 
 const LINE_1 = "ciclo fechado.";
 const LINE_2 = "leia sua leitura profunda.";
@@ -53,22 +59,18 @@ function Typewriter({ text, onDone }: { text: string; onDone?: () => void }) {
 
 interface CycleClosedScreenProps {
   ready: boolean;
-  onContinue: () => void;
+  /** @deprecated Mantido pra back-compat. Não usado mais — pulse no NavBottom guia o user. */
+  onContinue?: () => void;
 }
 
-export function CycleClosedScreen({ ready, onContinue }: CycleClosedScreenProps) {
-  // Cascata: linha 1 → linha 2 → (quando ready) botão "ler"
+export function CycleClosedScreen({ ready }: CycleClosedScreenProps) {
   const [line2Visible, setLine2Visible] = useState(false);
-  const [line2Done, setLine2Done] = useState(false);
-  const [buttonVisible, setButtonVisible] = useState(false);
 
+  // Fix UX 06/jun — quando o engine termina (ready=true), seta flag de unread.
+  // O sinal de "tem leitura nova" agora é o pulse do botão "leitura" no menu.
   useEffect(() => {
-    if (!line2Done) return;
-    if (!ready) return;
-    // Fade-in suave do botão depois que a 2ª linha terminou e o engine terminou.
-    const t = window.setTimeout(() => setButtonVisible(true), 250);
-    return () => window.clearTimeout(t);
-  }, [line2Done, ready]);
+    if (ready) markReadingUnread();
+  }, [ready]);
 
   return (
     <div
@@ -103,30 +105,12 @@ export function CycleClosedScreen({ ready, onContinue }: CycleClosedScreenProps)
         {line2Visible && (
           <div>
             <span aria-hidden="true">{"> "}</span>
-            <Typewriter text={LINE_2} onDone={() => setLine2Done(true)} />
+            <Typewriter text={LINE_2} />
           </div>
         )}
       </div>
 
       <div style={{ flex: 1 }} />
-
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          opacity: buttonVisible ? 1 : 0,
-          transition: "opacity 500ms ease-in",
-          paddingTop: 32,
-        }}
-      >
-        <span
-          className="r-footer-action"
-          onClick={buttonVisible ? onContinue : undefined}
-          style={{ cursor: buttonVisible ? "pointer" : "default" }}
-        >
-          ler
-        </span>
-      </div>
     </div>
   );
 }

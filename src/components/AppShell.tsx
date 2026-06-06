@@ -17,6 +17,8 @@ import { ShellContext, type ShellState } from "@/hooks/useShell";
 import { FlowProvider } from "@/hooks/useFlow";
 import FlowVoice from "./FlowVoice";
 import ErrorBoundary from "./ErrorBoundary";
+import SystemPulse from "./SystemPulse";
+import { useUnreadReading } from "@/lib/unreadReading";
 
 
 interface AppShellProps {
@@ -26,6 +28,9 @@ interface AppShellProps {
 export default function AppShell({ children }: AppShellProps) {
   const [section, setSection] = useState<string | undefined>(undefined);
   const [active, setActive] = useState<ActivePage>("none");
+  // Fix UX 06/jun — pulse contínuo no botão "leitura" quando há deep reading
+  // novo não-lido. Para quando user abre /context (que faz markReadingRead).
+  const unreadReading = useUnreadReading();
 
   const value = useMemo<ShellState>(
     () => ({ section, active, setSection, setActive }),
@@ -47,6 +52,9 @@ export default function AppShell({ children }: AppShellProps) {
             </ErrorBoundary>
           </div>
           <NavBottom active={active} />
+          {/* Pulse global no botão "leitura" enquanto houver leitura não-lida.
+              SystemPulse não renderiza visualmente — aplica animação via JS no elemento. */}
+          <SystemPulse targetId="nav-context" active={unreadReading} />
         </div>
       </FlowProvider>
     </ShellContext.Provider>

@@ -852,6 +852,12 @@ export default function Context() {
   useShell({ section: "leitura", active: "context" });
   const { markFlowReady } = useFlow();
 
+  // Fix UX 06/jun — ao abrir /leitura, marca o deep reading como lido.
+  // Para o pulse contínuo no botão "leitura" do menu.
+  useEffect(() => {
+    import("@/lib/unreadReading").then(m => m.markReadingRead()).catch(() => {});
+  }, []);
+
   const [cycles, setCycles] = useState<CycleData[]>([]);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [showDeep, setShowDeep] = useState(false);
