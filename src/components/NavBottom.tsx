@@ -138,10 +138,10 @@ export default function NavBottom({ active = 'none', pulseOnce = false }: NavBot
   )
 
   const centerItems = [
-    { label: 'pills',         slug: 'pills' as ActivePage,         path: '/pills' },
-    { label: 'questionário',  slug: 'questionnaire' as ActivePage, path: '/questionnaire' },
-    { label: 'terceiros',     slug: 'thirdparty' as ActivePage,    path: '/terceiros' },
-    { label: 'contexto',      slug: 'context' as ActivePage,       path: '/context' },
+    { label: '↔ tensão',     slug: 'pills' as ActivePage,         path: '/pills' },
+    { label: '↻ ciclo',      slug: 'questionnaire' as ActivePage, path: '/questionnaire' },
+    { label: '&& amigos',    slug: 'thirdparty' as ActivePage,    path: '/terceiros' },
+    { label: '☰ leituras',   slug: 'context' as ActivePage,       path: '/context' },
   ]
 
   // Layout único — 6 elementos equidistantes (space-between), mesma baseline
@@ -157,7 +157,7 @@ export default function NavBottom({ active = 'none', pulseOnce = false }: NavBot
         flexShrink: 0,
         minWidth: 0,
       }}>
-        {renderItem('reed', 'reed', '/reed')}
+        {renderItem('>_ reed', 'reed', '/reed')}
         {centerItems.map(({ label, slug, path }) => renderItem(label, slug, path))}
         {settingsDot}
       </div>
