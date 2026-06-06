@@ -157,23 +157,20 @@ export function FeedbackModal({ open, onClose }: FeedbackModalProps) {
             fontFamily: "var(--r-font-sys)",
             fontWeight: 300,
             fontSize: 11,
-            color: "var(--r-voice-sys)",
+            lineHeight: 1.7,
+            color: "var(--r-voice-founders)",
             letterSpacing: "0.04em",
+            whiteSpace: "pre-wrap",
           }}
         >
-          <span aria-hidden="true">{"> "}</span>feedback rdwth — fase mvp
-        </div>
+{`oi,
 
-        <div
-          style={{
-            fontFamily: "var(--r-font-ed)",
-            fontWeight: 800,
-            fontSize: 15,
-            lineHeight: 1.5,
-            color: "var(--r-text)",
-          }}
-        >
-          o que você quer me dizer?
+tá funcionando?
+
+diz o que fez sentido, o que travou,
+o que abriu uma pergunta. lemos tudo.
+
+— bruno & olivia`}
         </div>
 
         <textarea

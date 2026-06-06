@@ -23,6 +23,7 @@ import { markOnboardingStep } from "@/hooks/useOnboardingState";
 import AppHeader from "@/components/AppHeader";
 import { track } from "@/lib/analytics";
 import SystemTerminalLine from "@/components/SystemTerminalLine";
+import { FeedbackButton } from "@/components/FeedbackButton";
 
 // Cascata — timing de cada elemento, alinhado com Warmup.
 // Sistema typewriter: ~58 chars × 30ms ≈ 1740ms. Pergunta entra após.
@@ -124,10 +125,17 @@ export default function Onboarding() {
         justifyContent: "flex-start", padding: "12px 24px 0",
       }}>
         {/* 1. Sistema (topo) — typewriter, sempre visível desde o mount */}
-        <div style={{ marginBottom: 24 }}>
+        <div style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 12,
+          marginBottom: 24,
+        }}>
           <SystemTerminalLine
             text={"reed é a voz do rdwth.\nnas pills, no questionário, na conversa."}
           />
+          <FeedbackButton />
         </div>
 
         {/* 2. Pergunta Reed — fade-in após sistema terminar */}

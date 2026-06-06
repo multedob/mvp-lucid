@@ -591,6 +591,17 @@ export default function Reed() {
 
   return (
     <>
+      {/* FeedbackButton fixo no canto superior direito, FORA do scroll —
+          mantém posição estável enquanto user rola o chat (paridade com Pills/Questionnaire). */}
+      <div style={{
+        position: 'absolute',
+        top: 12,
+        right: 24,
+        zIndex: 10,
+      }}>
+        <FeedbackButton />
+      </div>
+
       {/* Voice slot DENTRO do scroll container — quando user rola pra cima,
           o slot sobe junto e o welcome ocupa o canvas inteiro.
           Mensagens só montam quando chatVisible=true: BlockReveal anima do zero
@@ -605,9 +616,7 @@ export default function Reed() {
           padding: '0 24px 16px',
         }}
       >
-        <div style={{ minHeight: 110, flexShrink: 0, display: 'flex', justifyContent: 'flex-end', paddingTop: 12 }}>
-          <FeedbackButton />
-        </div>
+        <div style={{ minHeight: 110, flexShrink: 0 }} />
         {chatVisible && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', paddingTop: 20 }}>
         {messages.map((msg, i) => {
