@@ -1190,12 +1190,14 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          internal_nickname: string | null
           ipe_cycle_id: string
           question_set: string | null
           responder_email: string | null
           responder_name: string | null
           reveal_identity: boolean | null
           revoked_at: string | null
+          sent_at: string | null
           slug: string
           status: string
           submitted_at: string | null
@@ -1206,12 +1208,14 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          internal_nickname?: string | null
           ipe_cycle_id: string
           question_set?: string | null
           responder_email?: string | null
           responder_name?: string | null
           reveal_identity?: boolean | null
           revoked_at?: string | null
+          sent_at?: string | null
           slug: string
           status?: string
           submitted_at?: string | null
@@ -1222,12 +1226,14 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          internal_nickname?: string | null
           ipe_cycle_id?: string
           question_set?: string | null
           responder_email?: string | null
           responder_name?: string | null
           reveal_identity?: boolean | null
           revoked_at?: string | null
+          sent_at?: string | null
           slug?: string
           status?: string
           submitted_at?: string | null
