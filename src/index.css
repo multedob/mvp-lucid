@@ -125,6 +125,19 @@ body {
   position: relative;
 }
 
+/* Fix UX 06/jun — força alinhamento à esquerda + reset max-width em todas as
+   telas do fluxo de terceiros (página pública /c/{slug}).
+   O CSS global de .r-question, .r-sub e .r-input-wrap centralizava blocos via
+   margin auto, criando inconsistência visual. Aqui é sempre left, full width. */
+.tp-third-party .r-question,
+.tp-third-party .r-sub,
+.tp-third-party .r-input-wrap {
+  text-align: left !important;
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
 .r-line {
   height: 0.5px;
   background: var(--r-telha);

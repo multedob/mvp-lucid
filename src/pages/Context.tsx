@@ -382,7 +382,10 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   const [responses, setResponses] = useState<Record<string, ThirdPartyResponse[]>>({});
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
-  const [view, setView] = useState<"main" | "history">("main");
+  // Fix UX 06/jun — view única (não há mais "history" separada).
+  // showList: toggle da seção "convites enviados". Default aberto.
+  // openCycle: ciclo expandido (default = mais recente, setado em useEffect ao carregar).
+  const [showList, setShowList] = useState(true);
   const [openCycle, setOpenCycle] = useState<number | null>(null);
   // Pronome eliminado da UI — inferido do primeiro nome do user.
   // Heurística PT-BR: termina em 'a' → ela; em 'o' → ele; outros → elu (neutro).
@@ -400,12 +403,10 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
   const [expanded, setExpanded] = useState<string | null>(null); // invite_id expandido
   const [errorMsg, setErrorMsg] = useState("");
 
-  // Quando link é gerado (e auto-copiado), mostra check brevemente — depois reseta pra ícone copy.
+  // Quando createdUrl é resetado (fechar painel), reseta linkCopied também.
+  // Fix UX 06/jun: removida lógica de auto-copy; check ✓ só aparece após click manual.
   useEffect(() => {
-    if (!createdUrl) { setLinkCopied(false); return; }
-    setLinkCopied(true);
-    const t = window.setTimeout(() => setLinkCopied(false), 2200);
-    return () => window.clearTimeout(t);
+    if (!createdUrl) setLinkCopied(false);
   }, [createdUrl]);
 
   const copyCreatedUrl = async () => {
@@ -510,8 +511,22 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
 
   useEffect(() => { loadAll(); }, [ipeCycleId]);
 
+  // Fix UX 06/jun — abre o ciclo mais recente automaticamente quando dados chegam.
+  // Sem isso, user precisava clicar pra expandir cada vez que entrava na página.
+  useEffect(() => {
+    if (loading) return;
+    if (openCycle !== null) return; // respeita escolha manual do user
+    if (invites.length === 0) return;
+    const maxCycle = invites.reduce((max, inv) => Math.max(max, inv.cycle_number ?? 1), 0);
+    if (maxCycle > 0) setOpenCycle(maxCycle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, invites.length]);
+
   const createInvite = async () => {
     setErrorMsg("");
+    // Fix UX 06/jun — sem auto-copy. Link gerado fica disponível pro user
+    // copiar manualmente. O check ✓ só aparece após click explícito em copiar.
+    setLinkCopied(false);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
@@ -528,8 +543,6 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
       if (!r.ok) { setErrorMsg(d.error ?? "erro"); return; }
       setCreatedUrl(d.url);
       track("third_party_invite_created", { pronoun: inferPronoun(userName) });
-      // Copia automaticamente
-      try { await navigator.clipboard.writeText(d.url); } catch {}
       await loadAll();
     } catch (err: any) {
       setErrorMsg(err?.message ?? "erro");
@@ -600,14 +613,17 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
     letterSpacing: "0.06em",
   };
 
-  // Agrupa invites por cycle_number (decrescente)
+  // Agrupa invites por cycle_number (decrescente).
+  // Fix UX 06/jun: filtra revogados/expirados — não aparecem na lista visível.
   const groupsByCycle = (() => {
     const map = new Map<number, typeof invites>();
-    invites.forEach((inv) => {
-      const cn = inv.cycle_number ?? 1;
-      if (!map.has(cn)) map.set(cn, []);
-      map.get(cn)!.push(inv);
-    });
+    invites
+      .filter((inv) => inv.status !== "revoked" && inv.status !== "expired")
+      .forEach((inv) => {
+        const cn = inv.cycle_number ?? 1;
+        if (!map.has(cn)) map.set(cn, []);
+        map.get(cn)!.push(inv);
+      });
     return Array.from(map.entries()).sort((a, b) => b[0] - a[0]);
   })();
 
@@ -630,9 +646,10 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
           }}
         />
 
-        {/* Conteúdo só aparece após hint typewriter terminar.
-            marginTop extra pra dar respiro entre a voz e os KPIs. */}
-        {contentVisible && view === "main" && (
+        {/* Conteúdo único — KPIs, botões, painel de criação inline e lista de ciclos.
+            Fix UX 06/jun: eliminou view "history" separada — tudo na mesma rolagem,
+            mantendo contexto (botões + lista visíveis ao mesmo tempo). */}
+        {contentVisible && (
           <div style={{ display: "flex", flexDirection: "column", gap: 20, marginTop: 12 }}>
             {/* KPIs */}
             {!loading && invites.length > 0 && (
@@ -643,7 +660,7 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
 
             {/* Botões minimalistas */}
             <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-              {activeCount < 8 && !creating && (
+              {activeCount < 8 && (
                 <div
                   style={minimalBtn}
                   onClick={() => { setCreating(true); setCreatedUrl(null); createInvite(); }}
@@ -652,81 +669,72 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
                   <span style={minimalBtnLabel}>+ novo convite</span>
                 </div>
               )}
-              {activeCount >= 8 && !creating && (
+              {activeCount >= 8 && (
                 <div className="r-sub" style={{ fontStyle: "italic", padding: "10px 0" }}>
                   limite de 8 convites por ciclo atingido.
                 </div>
               )}
 
+              {/* Painel de criação inline — fix UX 06/jun: aparece logo abaixo do
+                  "+ novo convite" (no lugar onde ele estava), pra user manter contexto
+                  visual. Antes ficava no final da página, parecia "mudou de tela". */}
+              {creating && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "12px 16px", border: "1px solid var(--r-ghost)", maxWidth: 480, width: "100%", marginTop: 8, marginBottom: 8 }}>
+                  {!createdUrl && (
+                    <>
+                      <div className="r-sub" style={{ fontStyle: "italic" }}>gerando link...</div>
+                      {errorMsg && <div style={{ color: "var(--terracota, #b85a3e)", fontSize: 12 }}>{errorMsg}</div>}
+                    </>
+                  )}
+                  {createdUrl && (
+                    <>
+                      <div className="r-sub">link gerado:</div>
+                      <div style={{ position: "relative", fontFamily: "monospace", fontSize: 11, padding: "8px 36px 8px 8px", background: "var(--r-bg)", border: "1px dashed var(--r-ghost)", wordBreak: "break-all" }}>
+                        {createdUrl}
+                        <button
+                          type="button"
+                          onClick={copyCreatedUrl}
+                          aria-label={linkCopied ? "copiado" : "copiar link"}
+                          title={linkCopied ? "copiado" : "copiar link"}
+                          style={{
+                            position: "absolute", top: 6, right: 6, width: 24, height: 24,
+                            background: "transparent", border: 0, padding: 0,
+                            cursor: "pointer", display: "inline-flex",
+                            alignItems: "center", justifyContent: "center",
+                          }}
+                        >
+                          <span style={{ position: "relative", width: 14, height: 14, display: "inline-block" }}>
+                            <Copy size={14} style={{ position: "absolute", inset: 0, opacity: linkCopied ? 0 : 1, transition: "opacity 220ms ease", color: "var(--r-muted-dk, #585860)" }} />
+                            <Check size={14} style={{ position: "absolute", inset: 0, opacity: linkCopied ? 1 : 0, transition: "opacity 220ms ease", color: "var(--r-text)" }} />
+                          </span>
+                        </button>
+                      </div>
+                      <div style={{ height: 1, background: "var(--r-ghost)", margin: "4px 0" }} />
+                      <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--r-muted)", lineHeight: 1.5 }}>
+                        Esse link é único para uma pessoa. Para convidar mais gente, gera outro.
+                      </div>
+                      <div className="r-sub" style={{ fontStyle: "italic" }}>
+                        envie esse link pra quem você quer que responda.
+                      </div>
+                      <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+                        <span onClick={() => { setCreating(false); setCreatedUrl(null); }} style={{ fontFamily: "var(--r-font-sys)", fontSize: 12, color: "var(--r-text)", cursor: "pointer" }}>fechar</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
               {invites.length > 0 && (
-                <div style={minimalBtn} onClick={() => setView("history")}>
+                <div style={minimalBtn} onClick={() => setShowList(v => !v)}>
                   <div style={minimalBtnLine} />
-                  <span style={minimalBtnLabel}>convites enviados ›</span>
+                  <span style={minimalBtnLabel}>convites enviados {showList ? "▾" : "▸"}</span>
                 </div>
               )}
             </div>
 
-            {/* Painel de criação (após click "novo convite") */}
-            {creating && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "12px 16px", border: "1px solid var(--r-ghost)", maxWidth: 480, marginLeft: "auto", marginRight: "auto", width: "100%" }}>
-                {!createdUrl && (
-                  <>
-                    <div className="r-sub" style={{ fontStyle: "italic" }}>gerando link...</div>
-                    {errorMsg && <div style={{ color: "var(--terracota, #b85a3e)", fontSize: 12 }}>{errorMsg}</div>}
-                  </>
-                )}
-                {createdUrl && (
-                  <>
-                    <div className="r-sub">link gerado e copiado pra área de transferência:</div>
-                    <div style={{ position: "relative", fontFamily: "monospace", fontSize: 11, padding: "8px 36px 8px 8px", background: "var(--r-bg)", border: "1px dashed var(--r-ghost)", wordBreak: "break-all" }}>
-                      {createdUrl}
-                      <button
-                        type="button"
-                        onClick={copyCreatedUrl}
-                        aria-label={linkCopied ? "copiado" : "copiar link"}
-                        title={linkCopied ? "copiado" : "copiar link"}
-                        style={{
-                          position: "absolute", top: 6, right: 6, width: 24, height: 24,
-                          background: "transparent", border: 0, padding: 0,
-                          cursor: "pointer", display: "inline-flex",
-                          alignItems: "center", justifyContent: "center",
-                        }}
-                      >
-                        <span style={{ position: "relative", width: 14, height: 14, display: "inline-block" }}>
-                          <Copy size={14} style={{ position: "absolute", inset: 0, opacity: linkCopied ? 0 : 1, transition: "opacity 220ms ease", color: "var(--r-muted-dk, #585860)" }} />
-                          <Check size={14} style={{ position: "absolute", inset: 0, opacity: linkCopied ? 1 : 0, transition: "opacity 220ms ease", color: "var(--r-text)" }} />
-                        </span>
-                      </button>
-                    </div>
-                    <div style={{ height: 1, background: "var(--r-ghost)", margin: "4px 0" }} />
-                    <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--r-muted)", lineHeight: 1.5 }}>
-                      Esse link é único para uma pessoa. Para convidar mais gente, gera outro.
-                    </div>
-                    <div className="r-sub" style={{ fontStyle: "italic" }}>
-                      envie esse link pra quem você quer que responda.
-                    </div>
-                    <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-                      <span onClick={() => { setCreating(false); setCreatedUrl(null); }} style={{ fontFamily: "var(--r-font-sys)", fontSize: 12, color: "var(--r-text)", cursor: "pointer" }}>fechar</span>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* History view — convites agrupados por ciclo, cada ciclo expansível.
-            NB: botão "‹ voltar" removido — usar o ‹ do footer (que volta
-            contextualmente pro main view dentro desta página). */}
-        {contentVisible && view === "history" && (
-          <>
-            {!loading && invites.length === 0 && (
-              <div className="r-sub" style={{ textAlign: "center", padding: "20px 0" }}>
-                nenhum convite enviado ainda.
-              </div>
-            )}
-
-            {groupsByCycle.map(([cycleNumber, invs]) => {
+            {/* Lista de ciclos (inline) — fix UX 06/jun: agora no mesmo flow,
+                não é mais uma "página" separada. Default mostra; toggle controla. */}
+            {showList && invites.length > 0 && groupsByCycle.map(([cycleNumber, invs]) => {
               const isOpen = openCycle === cycleNumber;
               const respondedInCycle = invs.filter((i) => i.status === "submitted").length;
               return (
@@ -809,23 +817,17 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
                 </div>
               );
             })}
-          </>
+
+          </div>
         )}
+
       </div>
 
       <div className="r-line" />
       <div style={{ height: 52, display: "flex", alignItems: "center", padding: "0 24px", gap: 16, flexShrink: 0 }}>
-        {/* ‹ contextual: se está em history view, volta pro main view (mesma rota);
-            senão, dispara onBack (que volta pra página anterior via navigate(-1)). */}
+        {/* ‹ volta pra página anterior (fix UX 06/jun: não há mais view "history"). */}
         <span
-          onClick={() => {
-            if (view === "history") {
-              setView("main");
-              setOpenCycle(null);
-            } else {
-              onBack();
-            }
-          }}
+          onClick={onBack}
           style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}
         >‹</span>
       </div>

@@ -463,7 +463,7 @@ export default function ThirdParty() {
 
   if (phase === "loading") {
     return (
-      <div className="r-screen" style={{ alignItems: "center", justifyContent: "center" }}>
+      <div className="r-screen tp-third-party" style={{ alignItems: "center", justifyContent: "center" }}>
         <div className="r-pulse" />
       </div>
     );
@@ -471,7 +471,7 @@ export default function ThirdParty() {
 
   if (phase === "error") {
     return (
-      <div className="r-screen" style={{ padding: "60px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
+      <div className="r-screen tp-third-party" style={{ padding: "60px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
         <Wordmark />
         <div className="r-question">link inválido ou expirado.</div>
         <div className="r-sub">{errorMsg}</div>
@@ -481,7 +481,7 @@ export default function ThirdParty() {
 
   if (phase === "revoked") {
     return (
-      <div className="r-screen" style={{ padding: "60px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
+      <div className="r-screen tp-third-party" style={{ padding: "60px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
         <Wordmark />
         <div className="r-question">este link foi cancelado.</div>
         <div className="r-sub">peça pra {capitalizeName(data?.user_name) ?? "quem te enviou"} gerar um novo.</div>
@@ -491,7 +491,7 @@ export default function ThirdParty() {
 
   if (phase === "submitted") {
     return (
-      <div className="r-screen" style={{ padding: "60px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
+      <div className="r-screen tp-third-party" style={{ padding: "60px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
         <Wordmark />
         <div className="r-question">você já respondeu.</div>
         <div className="r-sub">obrigado.</div>
@@ -506,7 +506,7 @@ export default function ThirdParty() {
   // ─── INTRO — porta de entrada com wordmark + read with ────
   if (phase === "intro") {
     return (
-      <div className="r-screen">
+      <div className="r-screen tp-third-party">
         <div key="scroll-intro" className="r-scroll" style={{
           flex: 1,
           display: "flex",
@@ -541,7 +541,7 @@ export default function ThirdParty() {
   // ─── ONBOARDING ───────────────────────────────────────────
   if (phase === "onboarding") {
     return (
-      <div className="r-screen">
+      <div className="r-screen tp-third-party">
         <Header onLabelClick={() => navigate("/home")} />
         <div key="scroll-onboarding" className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 24 }}>
           <div className="r-question" style={{ fontSize: 18, ...cascade(1) }}>
@@ -584,7 +584,7 @@ export default function ThirdParty() {
   // ─── EMAIL + NOME ─────────────────────────────────────────
   if (phase === "email") {
     return (
-      <div className="r-screen">
+      <div className="r-screen tp-third-party">
         <Header onLabelClick={() => navigate("/home")} />
         <div key="scroll-email" className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 20, alignItems: "stretch" }}>
           <div className="r-question" style={{ textAlign: "left", marginLeft: 0, marginRight: 0, maxWidth: "none", ...cascade(1) }}>como você se chama?</div>
@@ -620,11 +620,11 @@ export default function ThirdParty() {
     const calib = data?.questions.find((q) => q.id === "calibration") as CalibrationQuestion | undefined;
     if (!calib) return null;
     return (
-      <div className="r-screen">
+      <div className="r-screen tp-third-party">
         <Header onLabelClick={() => navigate("/home")} subtitle={`sobre ${capitalizeName(data?.user_name)}`} />
-        <div key="scroll-calibration" className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
-          <div className="r-question" style={{ textAlign: "center", ...cascade(1) }}>{calib.title.replace("[Nome]", capitalizeName(data?.user_name) ?? "")}</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 420, marginLeft: "auto", marginRight: "auto", width: "100%", alignItems: "flex-start", ...cascade(2) }}>
+        <div key="scroll-calibration" className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 20, alignItems: "stretch" }}>
+          <div className="r-question" style={{ textAlign: "left", marginLeft: 0, marginRight: 0, maxWidth: "none", ...cascade(1) }}>{calib.title.replace("[Nome]", capitalizeName(data?.user_name) ?? "")}</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginLeft: 0, marginRight: 0, maxWidth: "none", width: "100%", alignItems: "flex-start", ...cascade(2) }}>
             {calib.relationship_options.map((opt) => (
               <div key={opt} className="r-choice" style={{ cursor: "pointer", alignSelf: "stretch", justifyContent: "flex-start" }} onClick={() => setCalibRelationship(opt)}>
                 <span className={`r-choice-dot${calibRelationship === opt ? " selected" : ""}`} />
@@ -632,8 +632,8 @@ export default function ThirdParty() {
               </div>
             ))}
           </div>
-          <div className="r-question" style={{ marginTop: 20, textAlign: "center", ...cascade(3) }}>há quanto tempo conhece?</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 420, marginLeft: "auto", marginRight: "auto", width: "100%", alignItems: "flex-start", ...cascade(4) }}>
+          <div className="r-question" style={{ marginTop: 20, textAlign: "left", marginLeft: 0, marginRight: 0, maxWidth: "none", ...cascade(3) }}>há quanto tempo conhece?</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginLeft: 0, marginRight: 0, maxWidth: "none", width: "100%", alignItems: "flex-start", ...cascade(4) }}>
             {calib.duration_options.map((opt) => (
               <div key={opt} className="r-choice" style={{ cursor: "pointer", alignSelf: "stretch", justifyContent: "flex-start" }} onClick={() => setCalibDuration(opt)}>
                 <span className={`r-choice-dot${calibDuration === opt ? " selected" : ""}`} />
@@ -658,7 +658,7 @@ export default function ThirdParty() {
       .replace(/\[pronome\]/g, pronoun)
       .replace(/@/g, adjEnd);
     return (
-      <div className="r-screen">
+      <div className="r-screen tp-third-party">
         <Header onLabelClick={() => navigate("/home")} subtitle={`pergunta ${currentQIdx + 1} de ${coreQuestions.length}`} />
         <div key={`scroll-question-${currentQIdx}`} className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 32, alignItems: "stretch" }}>
           {/* Bloco 01 — Episódio */}
@@ -700,9 +700,10 @@ export default function ThirdParty() {
           <div style={{ display: "flex", flexDirection: "column", gap: 14, paddingTop: 24, borderTop: "0.5px solid var(--r-ghost)" }}>
             <div className="r-sub" style={{ textAlign: "left", ...cascade(4) }}>{replaceName(currentQ.scale_label)}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "8px 0", width: "100%", ...cascade(5) }}>
-              {/* Régua horizontal — ocupa largura toda, linha conectando os 5 pontos */}
-              <div style={{ position: "relative", width: "100%", padding: "16px 0" }}>
-                <div style={{ position: "absolute", top: "50%", left: 6, right: 6, height: "0.5px", background: "var(--r-muted)", transform: "translateY(-50%)" }} />
+              {/* Régua horizontal — ocupa largura toda, linha conectando os 5 pontos.
+                  Linha 1px solid atravessa por trás dos dots (sem bg que esconda). */}
+              <div style={{ position: "relative", width: "100%", padding: "20px 0" }}>
+                <div style={{ position: "absolute", top: "50%", left: 8, right: 8, height: "1px", background: "var(--r-muted)", transform: "translateY(-50%)", zIndex: 0, pointerEvents: "none" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", width: "100%", position: "relative", zIndex: 1, alignItems: "center" }}>
                   {[1, 2, 3, 4, 5].map((n) => (
                     <span
@@ -770,7 +771,7 @@ export default function ThirdParty() {
   // ─── REVEAL (anonimato) ───────────────────────────────────
   if (phase === "reveal") {
     return (
-      <div className="r-screen">
+      <div className="r-screen tp-third-party">
         <Header onLabelClick={() => navigate("/home")} subtitle="último passo" />
         <div key="scroll-reveal" className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
           <div className="r-question" style={cascade(1)}>
@@ -826,7 +827,7 @@ export default function ThirdParty() {
   // ─── DONE — mini-insight + CTA ────────────────────────────
   if (phase === "done") {
     return (
-      <div className="r-screen">
+      <div className="r-screen tp-third-party">
         <div className="r-scroll" style={{ padding: "40px 24px 24px", display: "flex", flexDirection: "column", gap: 28 }}>
 
           {/* Wordmark animado no topo. Altura fixa pra texto abaixo não saltitar com mudança de fonte. */}
