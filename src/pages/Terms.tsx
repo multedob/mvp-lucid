@@ -21,7 +21,7 @@ const TERMS_SECTIONS: CollapsibleSection[] = [
     items: [
       {
         label: "Ferramenta de autoconhecimento",
-        text: ["Sistema de leituras estruturais a partir das suas respostas. Composto por Pills, questionário, questionário de terceiros e companhia de IA (Reed)."],
+        text: ["Sistema de leituras estruturais a partir das suas respostas. Composto por tensões, ciclo, convite de amigos e companhia de IA (Reed)."],
       },
       {
         label: "O que NÃO é",

@@ -20,7 +20,7 @@ const PRIVACY_SECTIONS: CollapsibleSection[] = [
       },
       {
         label: "Suas respostas",
-        text: ["Respostas das Pills, do questionário, conversas com Reed e respostas de pessoas próximas via questionário de terceiros."],
+        text: ["Respostas das tensões, do ciclo, conversas com Reed e respostas de pessoas próximas via convite de amigos."],
       },
       {
         label: "Análises derivadas",
@@ -52,7 +52,7 @@ const PRIVACY_SECTIONS: CollapsibleSection[] = [
         text: [
           "Não vendemos seus dados.",
           "Não usamos seus dados pra publicidade.",
-          "Não compartilhamos com terceiros além dos listados aqui.",
+          "Não compartilhamos com terceiros externos além dos listados aqui.",
         ],
       },
     ],

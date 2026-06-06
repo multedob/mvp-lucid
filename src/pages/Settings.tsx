@@ -21,7 +21,7 @@ export default function Settings() {
     );
     if (!first) return;
     const second = window.confirm(
-      "Tem certeza absoluta? Todas as suas leituras, Pills, dados do questionário e conversas serão apagados permanentemente."
+      "Tem certeza absoluta? Todas as suas leituras, tensões, dados do ciclo e conversas serão apagados permanentemente."
     );
     if (!second) return;
 

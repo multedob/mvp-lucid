@@ -103,14 +103,16 @@ export default function Home() {
           }}
         />
 
+        {/* Voice slot 110px — paridade com /tensão /ciclo /amigos /leitura */}
         <div
           style={{
             padding: "12px 24px 0",
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-start",
             justifyContent: "space-between",
             gap: 12,
-            minHeight: 30,
+            minHeight: 110,
+            flexShrink: 0,
           }}
         >
           <div style={{ flex: 1, minWidth: 0 }}>
