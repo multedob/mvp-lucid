@@ -632,7 +632,7 @@ export default function ThirdParty() {
               </div>
             ))}
           </div>
-          <div className="r-question" style={{ marginTop: 20, textAlign: "left", marginLeft: 0, marginRight: 0, maxWidth: "none", ...cascade(3) }}>há quanto tempo conhece?</div>
+          <div className="r-question" style={{ marginTop: 20, textAlign: "left", marginLeft: 0, marginRight: 0, maxWidth: "none", ...cascade(3) }}>Há quanto tempo conhece?</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginLeft: 0, marginRight: 0, maxWidth: "none", width: "100%", alignItems: "flex-start", ...cascade(4) }}>
             {calib.duration_options.map((opt) => (
               <div key={opt} className="r-choice" style={{ cursor: "pointer", alignSelf: "stretch", justifyContent: "flex-start" }} onClick={() => setCalibDuration(opt)}>
@@ -701,9 +701,9 @@ export default function ThirdParty() {
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div className="r-sub" style={{ textAlign: "left", ...cascade(4) }}>{replaceName(currentQ.scale_label)}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "8px 0", width: "100%", ...cascade(5) }}>
-              {/* Régua horizontal — linha 0.5px ghost (paridade com border-bottom dos inputs). */}
-              <div style={{ position: "relative", width: "100%", padding: "20px 0" }}>
-                <div style={{ position: "absolute", top: "50%", left: 8, right: 8, height: "0.5px", background: "var(--r-ghost)", transform: "translateY(-50%)", zIndex: 0, pointerEvents: "none" }} />
+              {/* Régua horizontal — linha conectora 0.5px ghost (mesma do border-bottom dos inputs). */}
+              <div style={{ position: "relative", width: "100%", padding: "16px 0" }}>
+                <div style={{ position: "absolute", top: "50%", left: 6, right: 6, height: "0.5px", background: "var(--r-ghost)", transform: "translateY(-50%)", zIndex: 0, pointerEvents: "none" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", width: "100%", position: "relative", zIndex: 1, alignItems: "center" }}>
                   {[1, 2, 3, 4, 5].map((n) => (
                     <span
@@ -715,9 +715,9 @@ export default function ThirdParty() {
                   ))}
                 </div>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", width: "100%", gap: 16 }}>
-                <span className="r-sub" style={{ fontSize: 11, flex: 1, textAlign: "left" }}>{replaceName(currentQ.scale_min_label)}</span>
-                <span className="r-sub" style={{ fontSize: 11, flex: 1, textAlign: "right" }}>{replaceName(currentQ.scale_max_label)}</span>
+              <div style={{ display: "flex", justifyContent: "space-between", width: "100%", gap: 16, alignItems: "flex-start" }}>
+                <span className="r-sub" style={{ fontSize: 11, textAlign: "left", maxWidth: "45%" }}>{replaceName(currentQ.scale_min_label)}</span>
+                <span className="r-sub" style={{ fontSize: 11, textAlign: "right", maxWidth: "45%" }}>{replaceName(currentQ.scale_max_label)}</span>
               </div>
             </div>
           </div>

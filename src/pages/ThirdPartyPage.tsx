@@ -47,12 +47,12 @@ export default function ThirdPartyPage() {
   if (!ipeCycleId) {
     return (
       <>
-        <div style={{ display: "flex", justifyContent: "flex-end", padding: "12px 24px 0" }}>
-          <FeedbackButton />
-        </div>
-        <div style={{ padding: "32px 24px", display: "flex", justifyContent: "center" }}>
-          <div className="r-sub" style={{ textAlign: "center" }}>
-            nenhum ciclo ativo. complete um ciclo pra começar.
+        <div style={{ minHeight: 110, flexShrink: 0, padding: "12px 24px 0" }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+            <div style={{ flex: 1, minWidth: 0, fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11, lineHeight: 1.7, color: "var(--r-voice-sys)", letterSpacing: "0.04em" }}>
+              <span aria-hidden="true">{"> "}</span>amigos abrem depois que você começa uma tensão.
+            </div>
+            <FeedbackButton />
           </div>
         </div>
       </>
@@ -60,15 +60,10 @@ export default function ThirdPartyPage() {
   }
 
   return (
-    <>
-      <div style={{ display: "flex", justifyContent: "flex-end", padding: "12px 24px 0" }}>
-        <FeedbackButton />
-      </div>
-      <ContextThirdParty
-        ipeCycleId={ipeCycleId}
-        onBack={() => navigate(-1)}
-        userName={userName}
-      />
-    </>
+    <ContextThirdParty
+      ipeCycleId={ipeCycleId}
+      onBack={() => navigate(-1)}
+      userName={userName}
+    />
   );
 }

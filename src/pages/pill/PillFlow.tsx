@@ -1036,7 +1036,7 @@ export default function PillFlow() {
         </div>
 
         <div className={`r-talk-secondary r-stage-in${m5Stage >= 4 ? " show" : ""}`}>
-          <a onClick={() => navigate("/pills")}>fazer outra pill →</a>
+          <a onClick={() => navigate("/pills")}>fazer outra tensão →</a>
         </div>
       </div>
 

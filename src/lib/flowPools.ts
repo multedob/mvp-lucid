@@ -23,18 +23,18 @@ export interface FlowPool {
 const POOLS: Record<FlowDestination, FlowPool> = {
   pills: {
     diablo: [
-      "pills são leituras curtas.",
+      "tensões são leituras curtas.",
       "você reage. o sistema escuta.",
-      "cada pill é uma dimensão sua.",
-      "pills revelam padrões.",
-      "não há pill certa.",
+      "cada tensão é uma dimensão sua.",
+      "tensões revelam padrões.",
+      "não há tensão certa.",
       "comece pela que te chamar.",
-      "uma pill leva poucos minutos.",
+      "uma tensão leva poucos minutos.",
       "pode pausar. fica salvo.",
     ],
     hints: [
-      "escolha uma pill para começar.",
-      "qual pill faz sentido agora?",
+      "escolha uma tensão para começar.",
+      "qual tensão faz sentido agora?",
       "pode começar por qualquer uma.",
     ],
   },
@@ -49,13 +49,13 @@ const POOLS: Record<FlowDestination, FlowPool> = {
       "responda no seu ritmo.",
       "não é prova.",
       "honestidade afia a leitura.",
-      "o questionário não te define.",
+      "o ciclo não te define.",
       "ele só te lê.",
     ],
     hints: [
       "perguntas restantes: 16",
       "responda no seu ritmo.",
-      "abrindo o questionário.",
+      "abrindo o ciclo.",
     ],
   },
 
@@ -107,7 +107,7 @@ const POOLS: Record<FlowDestination, FlowPool> = {
   thirdparty: {
     diablo: [
       "olhares de fora afinam o ciclo.",
-      "terceiros veem o que você não vê.",
+      "amigos veem o que você não vê.",
       "perspectiva externa amplia a leitura.",
       "pessoas próximas refletem padrões.",
       "pontos cegos viram visíveis.",
@@ -187,11 +187,11 @@ export const PATH_TO_DEST: Record<string, FlowDestination> = {
 
 /** Section do header por destino. */
 export const DEST_SECTION: Record<FlowDestination, string> = {
-  pills: "pills",
-  questionnaire: "questionário",
+  pills: "tensão",
+  questionnaire: "ciclo",
   reed: "reed",
-  context: "contexto",
-  thirdparty: "terceiros",
+  context: "leitura",
+  thirdparty: "amigos",
 };
 
 /** Active do NavBottom por destino. */

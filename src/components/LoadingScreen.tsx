@@ -26,24 +26,24 @@ const FADE_MS = 400;
 // Reed/voz, estrutura, filosofia.
 const DIABLO_POOL: string[] = [
   // Mecânica do sistema
-  "Um ciclo é composto por pills, questionário e terceiros.",
-  "As pills são leituras curtas. Você reage, o sistema escuta.",
-  "Cada pill representa uma dimensão da sua estrutura.",
-  "O questionário tem 18 blocos em 4 dimensões.",
-  "Você pode pausar o questionário. Ele guarda onde parou.",
-  "As pills alimentam o sistema e revelam padrões.",
-  "Um ciclo se fecha quando pills, questionário e terceiros estão respondidos.",
+  "Um ciclo tem tensões, perguntas e amigos.",
+  "As tensões são leituras curtas. Você reage, o sistema escuta.",
+  "Cada tensão representa uma dimensão da sua estrutura.",
+  "O ciclo tem 18 blocos em 4 dimensões.",
+  "Você pode pausar o ciclo. Ele guarda onde parou.",
+  "As tensões alimentam o sistema e revelam padrões.",
+  "Um ciclo se fecha quando tensões, perguntas e amigos estão respondidos.",
   // Profundidade no tempo
   "Quanto mais ciclos, mais camadas aparecem.",
   "Sua leitura se aprofunda com o tempo, não com a pressa.",
   "Padrões só aparecem com repetição.",
   "O rdwth amadurece com você ao longo dos ciclos.",
-  // Terceiros
-  "A visão de terceiros mitiga seus pontos cegos.",
+  // Amigos
+  "A visão dos amigos mitiga seus pontos cegos.",
   "Pessoas próximas veem coisas que você não vê de dentro.",
-  "Convidar terceiros leva 5 minutos do lado deles.",
-  "Você pode revogar um convite de terceiro a qualquer momento.",
-  "Terceiros respondem em anonimato se preferirem.",
+  "Convidar amigos leva 5 minutos do lado deles.",
+  "Você pode revogar um convite a qualquer momento.",
+  "Amigos respondem em anonimato se preferirem.",
   // Privacidade
   "Suas respostas são suas. O rdwth não compartilha nada.",
   "O rdwth não diagnostica. Ele não preescreve.",

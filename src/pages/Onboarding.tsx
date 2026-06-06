@@ -133,7 +133,7 @@ export default function Onboarding() {
           marginBottom: 24,
         }}>
           <SystemTerminalLine
-            text={"reed é a voz do rdwth.\nnas pills, no questionário, na conversa."}
+            text={"reed é a voz do rdwth.\nnas tensões, no ciclo, na conversa."}
           />
           <FeedbackButton />
         </div>

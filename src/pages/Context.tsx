@@ -27,7 +27,7 @@ import SystemCyclingLine from "@/components/SystemCyclingLine";
 // Tudo lowercase, ≤ 38 chars (não quebra em mobile).
 const THIRD_PARTY_DIABLOS = [
   "olhares de fora afinam o ciclo.",
-  "terceiros veem o que você não vê.",
+  "amigos veem o que você não vê.",
   "perspectiva externa amplia a leitura.",
   "pessoas próximas refletem padrões.",
   "pontos cegos viram visíveis.",
@@ -95,15 +95,15 @@ export function ContextSystem({ onBack }: { onBack?: () => void }) {
           text: ["Reed é a voz do rdwth nas conversas. Traduz a saída estrutural em linguagem. Sua referência é uma biblioteca curada de psicologia, filosofia e teoria organizacional. Sem internet, sem opinião própria."],
         },
         {
-          label: "Pills",
+          label: "Tensão",
           text: ["Seis leituras curtas, uma por dimensão. Você reage; a forma da reação é o sinal. As tensões: Eu↔Pertencimento, Eu↔Papel, Presença↔Distância, Clareza↔Ação, Dentro↔Fora, Movimento↔Pausa."],
         },
         {
-          label: "Questionário",
-          text: ["Perguntas em 4 dimensões. No seu ritmo — pode pausar e voltar. Com as pills, forma a base da leitura."],
+          label: "Ciclo",
+          text: ["Perguntas em 4 dimensões. No seu ritmo — pode pausar e voltar. Com as tensões, forma a base da leitura."],
         },
         {
-          label: "Questionário de terceiros",
+          label: "Amigos",
           text: [
             "Um link único pra pessoas próximas. 5 perguntas curtas, 5-10 minutos do lado delas. O olhar de fora vê o que de dentro escapa.",
             "O anonimato é decisão de quem responde — você só vê quem aceitou aparecer. Limite: 8 convites por ciclo.",
@@ -117,7 +117,7 @@ export function ContextSystem({ onBack }: { onBack?: () => void }) {
       items: [
         {
           label: "Ciclos",
-          text: ["Um ciclo é um momento fechado: pills, questionário e olhar de fora. Cada um se sustenta sozinho. Conforme se acumulam, padrões emergem por si — o sistema observa, não impõe."],
+          text: ["Um ciclo é um momento fechado: tensões, perguntas e amigos. Cada um se sustenta sozinho. Conforme se acumulam, padrões emergem por si — o sistema observa, não impõe."],
         },
         {
           label: "Leitura por ciclo",
@@ -125,7 +125,7 @@ export function ContextSystem({ onBack }: { onBack?: () => void }) {
         },
         {
           label: "Leitura profunda",
-          text: ["Integra pills, questionário e terceiros num só lugar. Não diagnostica, não prescreve — devolve forma ao que você trouxe."],
+          text: ["Integra tensões, perguntas e amigos num só lugar. Não diagnostica, não prescreve — devolve forma ao que você trouxe."],
         },
         {
           label: "Natureza provisória",
@@ -629,22 +629,28 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
 
   return (
     <>
-      <div className="r-scroll" style={{ padding: "28px 24px 16px", display: "flex", flexDirection: "column", gap: 20 }}>
-        {/* Voz do sistema — diablo1 → diablo2 → reverse → hint typewriter.
-            Após hint completar: conteúdo entra + timer de leitura (1500ms) +
-            fade-out da voz (400ms). Voz fica no DOM com opacity 0 pra
-            preservar a posição do conteúdo (não sobe). */}
-        <SystemVoiceSequence
-          slots={voiceSlots}
-          fadeOut={voiceFadeOut}
-          multilineHint
-          hintLines={hintLines}
-          onHintReady={() => {
-            setContentVisible(true);
-            // Tempo de leitura da hint antes do fade out
-            window.setTimeout(() => setVoiceFadeOut(true), 1500);
-          }}
-        />
+      {/* Voice slot — 110px no topo, padrão paridade com Questionnaire/Pills.
+          Fix UX 06/jun: FeedbackButton entra no MESMO flex da voz (não mais wrapper externo),
+          pra altura ficar igual às outras páginas (Reed/Tensão/Ciclo). */}
+      <div style={{ minHeight: 110, flexShrink: 0, padding: "12px 24px 0" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <SystemVoiceSequence
+              slots={voiceSlots}
+              fadeOut={voiceFadeOut}
+              multilineHint
+              hintLines={hintLines}
+              onHintReady={() => {
+                setContentVisible(true);
+                window.setTimeout(() => setVoiceFadeOut(true), 1500);
+              }}
+            />
+          </div>
+          <FeedbackButton />
+        </div>
+      </div>
+
+      <div className="r-scroll" style={{ padding: "0 24px 16px", display: "flex", flexDirection: "column", gap: 20 }}>
 
         {/* Conteúdo único — KPIs, botões, painel de criação inline e lista de ciclos.
             Fix UX 06/jun: eliminou view "history" separada — tudo na mesma rolagem,
@@ -942,8 +948,8 @@ export default function Context() {
           description = wParas.slice(0, 2).join("\n\n");
           deep = wFull;
         } else if (hasPending) {
-          description = "A leitura aparece conforme você responde — pills e questionário alimentam ela.";
-          deep = "Esta leitura se constrói conforme você fala. Responda uma pill ou um bloco do questionário pra ela aparecer aqui.";
+          description = "A leitura aparece conforme você responde — tensões e perguntas alimentam ela.";
+          deep = "Esta leitura se constrói conforme você fala. Responda uma tensão ou um bloco do ciclo pra ela aparecer aqui.";
         } else {
           description = paragraphs.slice(0, 2).join("\n\n");
           deep = text;
@@ -989,7 +995,7 @@ export default function Context() {
       <div style={{ minHeight: 110, flexShrink: 0, padding: "12px 24px 0" }}>
         {!fromFlow && (
           <SystemTerminalLine
-            text={"nenhuma leitura ainda.\ncomplete um questionário pra começar."}
+            text={"nenhuma leitura ainda.\ncomplete um ciclo pra começar."}
           />
         )}
       </div>
@@ -1000,7 +1006,7 @@ export default function Context() {
   const cycle = cycles[selectedIdx];
   const disclaimerText = userName
     ? `${userName}, aqui tem histórico de leituras dos seus ciclos e o canal para questionário de terceiros.`
-    : "Aqui tem histórico de leituras dos seus ciclos e o canal para questionário de terceiros.";
+    : "Aqui tem histórico de leituras dos seus ciclos e o canal para convidar amigos.";
 
   return (
     <>

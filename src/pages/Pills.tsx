@@ -106,7 +106,7 @@ export default function Pills() {
         </div>
         {!fromFlow && !loading && pillsDone.size === 0 && (
           <EmptyStateMessage
-            text="escolha uma pill para começar."
+            text="escolha uma tensão para começar."
             contextKey="pills_first_visit"
             onAction={() => navigate("/pill/PI")}
           />
