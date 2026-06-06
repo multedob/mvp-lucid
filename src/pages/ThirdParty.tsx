@@ -586,9 +586,9 @@ export default function ThirdParty() {
     return (
       <div className="r-screen">
         <Header onLabelClick={() => navigate("/home")} />
-        <div key="scroll-email" className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
-          <div className="r-question" style={cascade(1)}>como você se chama?</div>
-          <div className="r-input-wrap" style={cascade(2)}>
+        <div key="scroll-email" className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 20, alignItems: "stretch" }}>
+          <div className="r-question" style={{ textAlign: "left", marginLeft: 0, marginRight: 0, maxWidth: "none", ...cascade(1) }}>como você se chama?</div>
+          <div className="r-input-wrap" style={{ marginLeft: 0, marginRight: 0, maxWidth: "none", ...cascade(2) }}>
             <input
               type="text"
               className="r-textarea"
@@ -597,8 +597,8 @@ export default function ThirdParty() {
               placeholder="seu nome"
             />
           </div>
-          <div className="r-question" style={{ marginTop: 16, ...cascade(3) }}>seu email</div>
-          <div className="r-input-wrap" style={cascade(4)}>
+          <div className="r-question" style={{ textAlign: "left", marginTop: 16, marginLeft: 0, marginRight: 0, maxWidth: "none", ...cascade(3) }}>seu email</div>
+          <div className="r-input-wrap" style={{ marginLeft: 0, marginRight: 0, maxWidth: "none", ...cascade(4) }}>
             <input
               type="email"
               className="r-textarea"
@@ -607,7 +607,7 @@ export default function ThirdParty() {
               placeholder="email@exemplo.com"
             />
           </div>
-          <div className="r-sub" style={cascade(5)}>usado pra confirmar sua resposta. {capitalizeName(data?.user_name)} só verá se você decidir revelar no final.</div>
+          <div className="r-sub" style={{ textAlign: "left", ...cascade(5) }}>usado pra confirmar sua resposta. {capitalizeName(data?.user_name)} só verá se você decidir revelar no final.</div>
           {errorMsg && <div style={{ color: "var(--terracota, #b85a3e)", fontSize: 13 }}>{errorMsg}</div>}
         </div>
         <Footer onContinue={handleSubmitEmail} onBack={handleBack} disabled={!isValidEmail(email) || !name.trim()} submitting={submitting} />
@@ -660,11 +660,11 @@ export default function ThirdParty() {
     return (
       <div className="r-screen">
         <Header onLabelClick={() => navigate("/home")} subtitle={`pergunta ${currentQIdx + 1} de ${coreQuestions.length}`} />
-        <div key={`scroll-question-${currentQIdx}`} className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 32 }}>
+        <div key={`scroll-question-${currentQIdx}`} className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 32, alignItems: "stretch" }}>
           {/* Bloco 01 — Episódio */}
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div className="r-sub" style={{ fontStyle: "italic", ...cascade(1) }}>{replaceName(currentQ.stem)}</div>
-            <div className="r-question" style={cascade(2)}>{replaceName(currentQ.episode_prompt)}</div>
+            <div className="r-sub" style={{ fontStyle: "italic", textAlign: "left", ...cascade(1) }}>{replaceName(currentQ.stem)}</div>
+            <div className="r-question" style={{ textAlign: "left", marginLeft: 0, marginRight: 0, maxWidth: "none", ...cascade(2) }}>{replaceName(currentQ.episode_prompt)}</div>
             <div style={cascade(3)}>
               <ResponseInput
                 value={episodes[qid] ?? ""}
@@ -688,16 +688,21 @@ export default function ThirdParty() {
                   />
                 ) : undefined}
               />
+              {(episodes[qid] ?? "").trim().length > 0 && (episodes[qid] ?? "").trim().length < 30 && (
+                <div className="r-sub" style={{ fontSize: 11, color: "var(--r-muted)", marginTop: 6, textAlign: "left" }}>
+                  faltam {30 - (episodes[qid] ?? "").trim().length} caracteres
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Bloco 02 — Escala */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingTop: 24, borderTop: "0.5px solid var(--r-ghost)" }}>
-            <div className="r-sub" style={cascade(4)}>{replaceName(currentQ.scale_label)}</div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "8px 0", maxWidth: 600, marginLeft: "auto", marginRight: "auto", width: "100%", ...cascade(5) }}>
-              {/* Régua horizontal — paridade visual com a pill (linha conectando os 5 pontos) */}
-              <div style={{ position: "relative", width: "100%", maxWidth: 320, padding: "16px 0" }}>
-                <div style={{ position: "absolute", top: "50%", left: 4, right: 4, height: "0.5px", background: "var(--r-ghost)", transform: "translateY(-50%)" }} />
+          {/* Bloco 02 — Escala (régua larga, textos à esquerda) */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, paddingTop: 24, borderTop: "0.5px solid var(--r-ghost)" }}>
+            <div className="r-sub" style={{ textAlign: "left", ...cascade(4) }}>{replaceName(currentQ.scale_label)}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "8px 0", width: "100%", ...cascade(5) }}>
+              {/* Régua horizontal — ocupa largura toda, linha conectando os 5 pontos */}
+              <div style={{ position: "relative", width: "100%", padding: "16px 0" }}>
+                <div style={{ position: "absolute", top: "50%", left: 6, right: 6, height: "0.5px", background: "var(--r-muted)", transform: "translateY(-50%)" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", width: "100%", position: "relative", zIndex: 1, alignItems: "center" }}>
                   {[1, 2, 3, 4, 5].map((n) => (
                     <span
@@ -709,7 +714,7 @@ export default function ThirdParty() {
                   ))}
                 </div>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", width: "100%", padding: "0 4px", gap: 24 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", width: "100%", gap: 16 }}>
                 <span className="r-sub" style={{ fontSize: 11, flex: 1, textAlign: "left" }}>{replaceName(currentQ.scale_min_label)}</span>
                 <span className="r-sub" style={{ fontSize: 11, flex: 1, textAlign: "right" }}>{replaceName(currentQ.scale_max_label)}</span>
               </div>
@@ -718,7 +723,7 @@ export default function ThirdParty() {
 
           {/* Bloco 03 — Comentário aberto */}
           <div style={{ display: "flex", flexDirection: "column", gap: 14, paddingTop: 24, borderTop: "0.5px solid var(--r-ghost)" }}>
-            <div className="r-sub" style={cascade(6)}>{replaceName(currentQ.open_prompt)}</div>
+            <div className="r-sub" style={{ textAlign: "left", ...cascade(6) }}>{replaceName(currentQ.open_prompt)}</div>
             <div style={cascade(7)}>
               <ResponseInput
                 value={opens[qid] ?? ""}
