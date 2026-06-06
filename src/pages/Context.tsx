@@ -258,7 +258,7 @@ function SystemSections({ sections }: {
 
 // ─── ContextCycle — leitura salva ────────────────────────────────
 function ContextCycle({ cycle, onBack, userName }: { cycle: CycleData; onBack: () => void; userName: string | null }) {
-  useShell({ section: `contexto · ${cycle.id}`, active: "context" });
+  useShell({ section: `leitura · ${cycle.id}`, active: "context" });
   const navigate = useNavigate();
   const disclaimerText = userName
     ? `${userName}, esta é uma leitura estrutural de um momento. Não define quem você é.`
@@ -287,7 +287,7 @@ function ContextCycle({ cycle, onBack, userName }: { cycle: CycleData; onBack: (
 
 // ─── ContextDeep — deep reading ──────────────────────────────────
 function ContextDeep({ cycle, onBack, userName }: { cycle: CycleData; onBack: () => void; userName: string | null }) {
-  useShell({ section: `contexto · ${cycle.id}`, active: "context" });
+  useShell({ section: `leitura · ${cycle.id}`, active: "context" });
   const navigate = useNavigate();
   const disclaimerText = userName
     ? `${userName}, esta é uma leitura estrutural de um momento. Não define quem você é.`
@@ -979,7 +979,7 @@ export default function Context() {
     return <LoadingScreen
       loadComplete={!loading}
       onDone={() => setLoadingScreenDone(true)}
-      section="contexto"
+      section="leitura"
       active="context"
     />;
   }
@@ -1005,7 +1005,7 @@ export default function Context() {
 
   const cycle = cycles[selectedIdx];
   const disclaimerText = userName
-    ? `${userName}, aqui tem histórico de leituras dos seus ciclos e o canal para questionário de terceiros.`
+    ? `${userName}, aqui tem histórico de leituras dos seus ciclos e o canal para convidar amigos.`
     : "Aqui tem histórico de leituras dos seus ciclos e o canal para convidar amigos.";
 
   return (
