@@ -1,6 +1,7 @@
 // src/components/QuestionnaireLoadingScreen.tsx
 // Wrapper sobre LoadingScreen pro questionário.
-// Header `rdwth | questionário | data` + footer com "questionário" iluminado.
+// Header `rdwth | ciclo | data` + footer com "ciclo" iluminado.
+// Fix UX 06/jun — section trocada de "questionário" pra "ciclo" (vocabulário novo).
 // Frases agora são fixas (morph + 2 Diablo + pronto), padrão do LoadingScreen v3.
 
 import { LoadingScreen } from "./LoadingScreen";
@@ -15,7 +16,7 @@ export function QuestionnaireLoadingScreen({ loadComplete, onDone }: Props) {
     <LoadingScreen
       loadComplete={loadComplete}
       onDone={onDone}
-      section="questionário"
+      section="ciclo"
       active="questionnaire"
     />
   );

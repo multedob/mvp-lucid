@@ -365,8 +365,13 @@ export default function Questionnaire() {
 
       await fetchNextBlock(activeCycle.id, null)
     } catch (e) {
+      // Fix UX 06/jun — log explícito + força sair do loading pra exibir o erro.
+      // Antes: catch silencioso mantinha phase='loading', tela travava em "> ciclo".
+      console.error('[Questionnaire] init failed:', e)
       track('questionnaire_init_failed', { reason: String(e) })
       setError('algo deu errado ao iniciar. tenta de novo.')
+      setPhase('question') // força sair do estado loading pra renderizar o erro
+      setLoadingScreenDone(true)
     }
   }
 

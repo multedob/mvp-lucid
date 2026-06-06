@@ -285,7 +285,7 @@ const InvisibleTextarea = forwardRef<HTMLDivElement, {
           if (onSend && e.key === "Enter" && (e.metaKey || e.ctrlKey)) onSend();
         }}
         placeholder={placeholder} rows={1}
-        maxRows={10}
+        maxRows={3}
         disabled={disabled}
         readOnly={disabled}
       />
