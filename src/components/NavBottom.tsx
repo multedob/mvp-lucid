@@ -99,7 +99,9 @@ export default function NavBottom({ active = 'none', pulseOnce = false }: NavBot
       onClick={() => handleNav(path)}
       style={{
         fontFamily: 'var(--r-font-sys)',
-        fontWeight: slug === active ? 400 : 300,
+        // Fix UX 06/jun — peso fixo 300 (antes 400 quando ativo causava layout shift sutil).
+        // Ativo é diferenciado SÓ por cor (telha vs muted).
+        fontWeight: 300,
         fontSize,
         color: slug === active ? 'var(--r-telha)' : 'var(--r-muted)',
         letterSpacing: '0.06em',
