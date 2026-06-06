@@ -696,14 +696,14 @@ export default function ThirdParty() {
             </div>
           </div>
 
-          {/* Bloco 02 — Escala (régua larga, textos à esquerda) */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 14, paddingTop: 24, borderTop: "0.5px solid var(--r-ghost)" }}>
+          {/* Bloco 02 — Escala (régua larga, textos à esquerda).
+              Fix 06/jun: removido borderTop (era 2ª linha redundante com border-bottom do input). */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div className="r-sub" style={{ textAlign: "left", ...cascade(4) }}>{replaceName(currentQ.scale_label)}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "8px 0", width: "100%", ...cascade(5) }}>
-              {/* Régua horizontal — ocupa largura toda, linha conectando os 5 pontos.
-                  Linha 1px solid atravessa por trás dos dots (sem bg que esconda). */}
+              {/* Régua horizontal — linha 0.5px ghost (paridade com border-bottom dos inputs). */}
               <div style={{ position: "relative", width: "100%", padding: "20px 0" }}>
-                <div style={{ position: "absolute", top: "50%", left: 8, right: 8, height: "1px", background: "var(--r-muted)", transform: "translateY(-50%)", zIndex: 0, pointerEvents: "none" }} />
+                <div style={{ position: "absolute", top: "50%", left: 8, right: 8, height: "0.5px", background: "var(--r-ghost)", transform: "translateY(-50%)", zIndex: 0, pointerEvents: "none" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", width: "100%", position: "relative", zIndex: 1, alignItems: "center" }}>
                   {[1, 2, 3, 4, 5].map((n) => (
                     <span
@@ -722,8 +722,8 @@ export default function ThirdParty() {
             </div>
           </div>
 
-          {/* Bloco 03 — Comentário aberto */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 14, paddingTop: 24, borderTop: "0.5px solid var(--r-ghost)" }}>
+          {/* Bloco 03 — Comentário aberto (sem borderTop, gap 32 já separa). */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div className="r-sub" style={{ textAlign: "left", ...cascade(6) }}>{replaceName(currentQ.open_prompt)}</div>
             <div style={cascade(7)}>
               <ResponseInput
