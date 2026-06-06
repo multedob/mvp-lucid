@@ -483,7 +483,7 @@ export default function ThirdParty() {
     return (
       <div className="r-screen" style={{ padding: "60px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
         <Wordmark />
-        <div className="r-question">você já respondeu este questionário.</div>
+        <div className="r-question">você já respondeu.</div>
         <div className="r-sub">obrigado.</div>
       </div>
     );

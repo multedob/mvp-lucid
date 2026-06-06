@@ -170,7 +170,7 @@ export default function Questionnaire() {
   const location = useLocation()
   const fromFlow = !!(location.state as { fromFlow?: boolean } | null)?.fromFlow
 
-  useShell({ section: "questionário", active: "questionnaire" })
+  useShell({ section: "ciclo", active: "questionnaire" })
   const { flow, clearFlow } = useFlow()
 
   const [phase, setPhase] = useState<Phase>('loading')

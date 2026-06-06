@@ -210,7 +210,7 @@ function Header({ moment }: { moment: Moment }) {
   const counter = HEADER_LABEL[moment];
   return (
     <>
-      <AppHeader section={counter ? `pills · ${counter}` : "pills"} />
+      <AppHeader section={counter ? `tensão · ${counter}` : "tensão"} />
       <div style={{ display: "flex", justifyContent: "flex-end", padding: "8px 24px 0", flexShrink: 0 }}>
         <FeedbackButton />
       </div>

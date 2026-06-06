@@ -38,7 +38,7 @@ export default function Pills() {
   const [pillsDone, setPillsDone] = useState<Set<PillId>>(new Set());
   const [loading, setLoading] = useState(true);
 
-  useShell({ section: "pills", active: "pills" });
+  useShell({ section: "tensão", active: "pills" });
   const { markFlowReady } = useFlow();
 
   // Cascade: lista entra com fade após voz sistema falar.
@@ -186,7 +186,7 @@ export default function Pills() {
                   letterSpacing: "0.08em",
                   color: "var(--r-text)",
                 }}>
-                  continuar para o questionário
+                  continuar para o ciclo
                 </span>
               </div>
             )}

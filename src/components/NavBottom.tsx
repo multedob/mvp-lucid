@@ -141,7 +141,7 @@ export default function NavBottom({ active = 'none', pulseOnce = false }: NavBot
     { label: 'tensão',    slug: 'pills' as ActivePage,         path: '/pills' },
     { label: 'ciclo',     slug: 'questionnaire' as ActivePage, path: '/questionnaire' },
     { label: 'amigos',    slug: 'thirdparty' as ActivePage,    path: '/terceiros' },
-    { label: 'leituras',  slug: 'context' as ActivePage,       path: '/context' },
+    { label: 'leitura',   slug: 'context' as ActivePage,       path: '/context' },
   ]
 
   // Layout único — 6 elementos equidistantes (space-between), mesma baseline

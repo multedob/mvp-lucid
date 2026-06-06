@@ -69,7 +69,7 @@ export default function useHomeNotices(): { notices: HomeNotice[] } {
               next.push({
                 id: "questionnaire_pending",
                 frase,
-                ctaLabel: "ir pro questionário",
+                ctaLabel: "ir pro ciclo",
                 ctaPath: "/questionnaire",
               });
             }

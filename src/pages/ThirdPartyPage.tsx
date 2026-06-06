@@ -12,7 +12,7 @@ import { ContextThirdParty } from "./Context";
 import { FeedbackButton } from "@/components/FeedbackButton";
 
 export default function ThirdPartyPage() {
-  useShell({ section: "terceiros", active: "thirdparty" });
+  useShell({ section: "amigos", active: "thirdparty" });
   const navigate = useNavigate();
   const userName = useUserName();
 
@@ -52,7 +52,7 @@ export default function ThirdPartyPage() {
         </div>
         <div style={{ padding: "32px 24px", display: "flex", justifyContent: "center" }}>
           <div className="r-sub" style={{ textAlign: "center" }}>
-            nenhum ciclo ativo. complete um questionário pra começar.
+            nenhum ciclo ativo. complete um ciclo pra começar.
           </div>
         </div>
       </>

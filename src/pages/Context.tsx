@@ -1033,7 +1033,7 @@ export default function Context() {
   const fromFlow = !!(location.state as { fromFlow?: boolean } | null)?.fromFlow;
 
   // Section "contexto" como default — sub-componentes sobrescrevem com section própria.
-  useShell({ section: "contexto", active: "context" });
+  useShell({ section: "leitura", active: "context" });
   const { markFlowReady } = useFlow();
 
   const [cycles, setCycles] = useState<CycleData[]>([]);

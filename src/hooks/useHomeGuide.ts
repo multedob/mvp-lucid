@@ -32,11 +32,11 @@ const CATALOG: Record<Marco, CatalogEntry> = {
     target: "nav-reed",
   },
   all_pills: {
-    frase: "abra o questionário.",
+    frase: "abra o ciclo.",
     target: "nav-questionnaire",
   },
   questionnaire: {
-    frase: "veja seu contexto.",
+    frase: "veja sua leitura.",
     target: "nav-context",
   },
 };
