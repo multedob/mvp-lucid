@@ -287,6 +287,16 @@ export default function ThirdParty() {
     const t = window.setTimeout(() => setAudioPulseFirst(true), 3500);
     return () => window.clearTimeout(t);
   }, [phase, currentQIdx]);
+
+  // Auto-advance da tela INTRO (Olivia 06/jun) — wordmark + "read with"
+  // animam ~1.2s, dá +2.3s pra leitura antes de pular pra onboarding.
+  // Botão "continuar" no Footer permite antecipar manualmente.
+  useEffect(() => {
+    if (phase !== "intro") return;
+    const t = window.setTimeout(() => setPhase("onboarding"), 3500);
+    return () => window.clearTimeout(t);
+  }, [phase]);
+
   const [finalizeLoadingDone, setFinalizeLoadingDone] = useState(false);
 
   const validatedRef = useRef(false);
@@ -650,74 +660,88 @@ export default function ThirdParty() {
     return (
       <div className="r-screen">
         <Header onLabelClick={() => navigate("/home")} subtitle={`pergunta ${currentQIdx + 1} de ${coreQuestions.length}`} />
-        <div key={`scroll-question-${currentQIdx}`} className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
-          <div className="r-sub" style={{ fontStyle: "italic", ...cascade(1) }}>{replaceName(currentQ.stem)}</div>
-          <div className="r-question" style={cascade(2)}>{replaceName(currentQ.episode_prompt)}</div>
-          <div style={cascade(3)}>
-            <ResponseInput
-              value={episodes[qid] ?? ""}
-              onChange={(value) => setEpisodes((prev) => ({ ...prev, [qid]: value }))}
-              placeholder="conta a situação aqui (mínimo 30 caracteres) — ou grave em áudio"
-              minLength={30}
-              onSend={handleSubmitQuestion}
-              submitting={submitting}
-              recorder={data?.invite_id ? (
-                <AudioRecorder
-                  userId={data.invite_id}
-                  cycleId={token ?? "third-party"}
-                  pillId={qid}
-                  moment="third-party"
-                  thirdPartyToken={token ?? undefined}
-                  language="pt-BR"
-                  breathingPulseOnce={audioPulseFirst && currentQIdx === 0}
-                  onLiveTranscript={text => setEpisodes((prev) => ({ ...prev, [qid]: text }))}
-                  onFinalTranscript={text => setEpisodes((prev) => ({ ...prev, [qid]: text }))}
-                  disabled={submitting}
-                />
-              ) : undefined}
-            />
-          </div>
-          <div className="r-sub" style={{ marginTop: 16, ...cascade(4) }}>{replaceName(currentQ.scale_label)}</div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "8px 0", maxWidth: 600, marginLeft: "auto", marginRight: "auto", width: "100%", ...cascade(5) }}>
-            <div style={{ display: "flex", gap: 16, padding: "8px 0" }}>
-              {[1, 2, 3, 4, 5].map((n) => (
-                <span
-                  key={n}
-                  onClick={() => setScales((prev) => ({ ...prev, [qid]: n }))}
-                  className={`r-choice-dot${scales[qid] === n ? " selected" : ""}`}
-                  style={{ cursor: "pointer" }}
-                />
-              ))}
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", width: "100%", padding: "0 4px", gap: 24 }}>
-              <span className="r-sub" style={{ fontSize: 11, flex: 1, textAlign: "left" }}>{replaceName(currentQ.scale_min_label)}</span>
-              <span className="r-sub" style={{ fontSize: 11, flex: 1, textAlign: "right" }}>{replaceName(currentQ.scale_max_label)}</span>
+        <div key={`scroll-question-${currentQIdx}`} className="r-scroll" style={{ padding: "32px 24px 24px", display: "flex", flexDirection: "column", gap: 32 }}>
+          {/* Bloco 01 — Episódio */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div className="r-sub" style={{ fontStyle: "italic", ...cascade(1) }}>{replaceName(currentQ.stem)}</div>
+            <div className="r-question" style={cascade(2)}>{replaceName(currentQ.episode_prompt)}</div>
+            <div style={cascade(3)}>
+              <ResponseInput
+                value={episodes[qid] ?? ""}
+                onChange={(value) => setEpisodes((prev) => ({ ...prev, [qid]: value }))}
+                placeholder="conta a situação aqui (mínimo 30 caracteres) — ou grave em áudio"
+                minLength={30}
+                onSend={handleSubmitQuestion}
+                submitting={submitting}
+                recorder={data?.invite_id ? (
+                  <AudioRecorder
+                    userId={data.invite_id}
+                    cycleId={token ?? "third-party"}
+                    pillId={qid}
+                    moment="third-party"
+                    thirdPartyToken={token ?? undefined}
+                    language="pt-BR"
+                    breathingPulseOnce={audioPulseFirst && currentQIdx === 0}
+                    onLiveTranscript={text => setEpisodes((prev) => ({ ...prev, [qid]: text }))}
+                    onFinalTranscript={text => setEpisodes((prev) => ({ ...prev, [qid]: text }))}
+                    disabled={submitting}
+                  />
+                ) : undefined}
+              />
             </div>
           </div>
 
-          <div className="r-sub" style={{ marginTop: 16, ...cascade(6) }}>{replaceName(currentQ.open_prompt)}</div>
-          <div style={cascade(7)}>
-            <ResponseInput
-              value={opens[qid] ?? ""}
-              onChange={(value) => setOpens((prev) => ({ ...prev, [qid]: value }))}
-              placeholder="uma frase"
-              minLength={5}
-              onSend={handleSubmitQuestion}
-              submitting={submitting}
-              recorder={data?.invite_id ? (
-                <AudioRecorder
-                  userId={data.invite_id}
-                  cycleId={token ?? "third-party"}
-                  pillId={`${qid}_open`}
-                  moment="third-party"
-                  thirdPartyToken={token ?? undefined}
-                  language="pt-BR"
-                  onLiveTranscript={text => setOpens((prev) => ({ ...prev, [qid]: text }))}
-                  onFinalTranscript={text => setOpens((prev) => ({ ...prev, [qid]: text }))}
-                  disabled={submitting}
-                />
-              ) : undefined}
-            />
+          {/* Bloco 02 — Escala */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingTop: 24, borderTop: "0.5px solid var(--r-ghost)" }}>
+            <div className="r-sub" style={cascade(4)}>{replaceName(currentQ.scale_label)}</div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "8px 0", maxWidth: 600, marginLeft: "auto", marginRight: "auto", width: "100%", ...cascade(5) }}>
+              {/* Régua horizontal — paridade visual com a pill (linha conectando os 5 pontos) */}
+              <div style={{ position: "relative", width: "100%", maxWidth: 320, padding: "16px 0" }}>
+                <div style={{ position: "absolute", top: "50%", left: 4, right: 4, height: "0.5px", background: "var(--r-ghost)", transform: "translateY(-50%)" }} />
+                <div style={{ display: "flex", justifyContent: "space-between", width: "100%", position: "relative", zIndex: 1, alignItems: "center" }}>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <span
+                      key={n}
+                      onClick={() => setScales((prev) => ({ ...prev, [qid]: n }))}
+                      className={`r-scale-dot${scales[qid] === n ? " selected" : ""}`}
+                      style={{ cursor: "pointer" }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", width: "100%", padding: "0 4px", gap: 24 }}>
+                <span className="r-sub" style={{ fontSize: 11, flex: 1, textAlign: "left" }}>{replaceName(currentQ.scale_min_label)}</span>
+                <span className="r-sub" style={{ fontSize: 11, flex: 1, textAlign: "right" }}>{replaceName(currentQ.scale_max_label)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Bloco 03 — Comentário aberto */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, paddingTop: 24, borderTop: "0.5px solid var(--r-ghost)" }}>
+            <div className="r-sub" style={cascade(6)}>{replaceName(currentQ.open_prompt)}</div>
+            <div style={cascade(7)}>
+              <ResponseInput
+                value={opens[qid] ?? ""}
+                onChange={(value) => setOpens((prev) => ({ ...prev, [qid]: value }))}
+                placeholder="uma frase"
+                minLength={5}
+                onSend={handleSubmitQuestion}
+                submitting={submitting}
+                recorder={data?.invite_id ? (
+                  <AudioRecorder
+                    userId={data.invite_id}
+                    cycleId={token ?? "third-party"}
+                    pillId={`${qid}_open`}
+                    moment="third-party"
+                    thirdPartyToken={token ?? undefined}
+                    language="pt-BR"
+                    onLiveTranscript={text => setOpens((prev) => ({ ...prev, [qid]: text }))}
+                    onFinalTranscript={text => setOpens((prev) => ({ ...prev, [qid]: text }))}
+                    disabled={submitting}
+                  />
+                ) : undefined}
+              />
+            </div>
           </div>
 
           {errorMsg && <div style={{ color: "var(--terracota, #b85a3e)", fontSize: 13 }}>{errorMsg}</div>}
