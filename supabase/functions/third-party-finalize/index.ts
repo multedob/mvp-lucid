@@ -118,6 +118,14 @@ Deno.serve(async (req) => {
   try {
     if (req.method !== "POST") return json({ error: "Method not allowed" }, 405, req);
 
+    // Kill switch — permite desligar Anthropic globalmente sem deploy.
+    // Aplicado aqui (antes de rate limit/parse) para curto-circuito imediato.
+    const anthropicEnabled = (Deno.env.get("ANTHROPIC_ENABLED") ?? "true").toLowerCase() !== "false";
+    if (!anthropicEnabled) {
+      console.warn("third-party-finalize: anthropic disabled via env var");
+      return json({ error: "service_unavailable" }, 503, req);
+    }
+
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "unknown";
     if (!checkRateLimit(ip)) return json({ error: "Too many requests" }, 429, req);
 

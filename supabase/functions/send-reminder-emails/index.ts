@@ -107,11 +107,20 @@ Deno.serve(async (req) => {
     }
 
     if (!onboardedUsers || onboardedUsers.length === 0) {
-      return json({ sent: 0, failed: 0, total_candidates: 0, skipped_recent: 0 }, 200, req);
+      return json({ sent: 0, failed: 0, total_candidates: 0, skipped_recent: 0, skipped_test: 0 }, 200, req);
     }
+
+    // 5b. Lista de test users (DEBT #33 resolvido) — exclui emails de teste/dev/QA.
+    // Configurável via env var REMINDER_TEST_EMAILS (CSV, ex: "bruno@x.com,olivia@y.com").
+    // Mudança não exige redeploy do código — só set/unset da env var.
+    const testEmailsRaw = Deno.env.get("REMINDER_TEST_EMAILS") ?? "";
+    const testEmails = new Set(
+      testEmailsRaw.split(",").map(e => e.trim().toLowerCase()).filter(Boolean)
+    );
 
     // 6. Pra cada onboarded user, checar last_sign_in_at + email
     const eligibleUsers: Array<{ id: string; email: string; display_name: string }> = [];
+    let skippedTest = 0;
     for (const u of onboardedUsers) {
       const uid = (u as any).user_id as string;
       const { data: authData, error: authErr } = await admin.auth.admin.getUserById(uid);
@@ -119,6 +128,11 @@ Deno.serve(async (req) => {
       const lastSignIn = authData.user.last_sign_in_at;
       if (!lastSignIn || lastSignIn > fiveDaysAgo) continue;
       if (!authData.user.email) continue;
+      // DEBT #33 — pula test users
+      if (testEmails.has(authData.user.email.toLowerCase())) {
+        skippedTest++;
+        continue;
+      }
       // display_name vem do auth.users.user_metadata (mesmo padrão do RootRedirect em App.tsx)
       const displayName =
         (authData.user.user_metadata?.display_name as string) ??
@@ -128,7 +142,7 @@ Deno.serve(async (req) => {
     }
 
     if (eligibleUsers.length === 0) {
-      return json({ sent: 0, failed: 0, total_candidates: 0, skipped_recent: 0 }, 200, req);
+      return json({ sent: 0, failed: 0, total_candidates: 0, skipped_recent: 0, skipped_test: skippedTest ?? 0 }, 200, req);
     }
 
     // 7. Filtrar quem NÃO recebeu reminder nos últimos 7 dias
@@ -204,6 +218,7 @@ Deno.serve(async (req) => {
       failed: failedCount,
       total_candidates: eligibleUsers.length,
       skipped_recent: eligibleUsers.length - toSend.length,
+      skipped_test: skippedTest,
     }, 200, req);
 
   } catch (err) {
