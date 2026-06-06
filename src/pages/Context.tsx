@@ -357,6 +357,10 @@ interface ThirdPartyInvite {
   question_set: string | null;
   created_at: string;
   submitted_at: string | null;
+  // Fix UX 06/jun — apelido interno definido pelo user na criação,
+  // e timestamp de quando user marcou como enviado.
+  internal_nickname: string | null;
+  sent_at: string | null;
 }
 
 interface ThirdPartyResponse {
@@ -396,9 +400,13 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
     return "elu";
   }
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
+  const [createdNickname, setCreatedNickname] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null); // invite_id expandido
   const [errorMsg, setErrorMsg] = useState("");
+  // Fix UX 06/jun — etapa nickname antes de gerar link.
+  const [nicknameInput, setNicknameInput] = useState("");
+  const [creatingPhase, setCreatingPhase] = useState<"nickname" | "submitting" | "done">("nickname");
 
   // Quando link é gerado (e auto-copiado), mostra check brevemente — depois reseta pra ícone copy.
   useEffect(() => {
@@ -510,11 +518,17 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
 
   useEffect(() => { loadAll(); }, [ipeCycleId]);
 
-  const createInvite = async () => {
+  const createInvite = async (nickname: string) => {
+    const trimmed = nickname.trim();
+    if (trimmed.length < 1 || trimmed.length > 40) {
+      setErrorMsg("digite um apelido (1-40 caracteres)");
+      return;
+    }
     setErrorMsg("");
+    setCreatingPhase("submitting");
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) { setCreatingPhase("nickname"); return; }
       const r = await fetch(`${SUPABASE_URL}/functions/v1/third-party-create-invite`, {
         method: "POST",
         headers: {
@@ -522,17 +536,58 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
           apikey: ANON_KEY,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ ipe_cycle_id: ipeCycleId, user_pronoun: inferPronoun(userName) }),
+        body: JSON.stringify({
+          ipe_cycle_id: ipeCycleId,
+          user_pronoun: inferPronoun(userName),
+          internal_nickname: trimmed,
+        }),
       });
       const d = await r.json();
-      if (!r.ok) { setErrorMsg(d.error ?? "erro"); return; }
+      if (!r.ok) {
+        const msgMap: Record<string, string> = {
+          nickname_required: "apelido obrigatório",
+          nickname_invalid_length: "apelido deve ter 1-40 caracteres",
+        };
+        setErrorMsg(msgMap[d.error] ?? d.error ?? "erro");
+        setCreatingPhase("nickname");
+        return;
+      }
       setCreatedUrl(d.url);
+      setCreatedNickname(trimmed);
+      setCreatingPhase("done");
       track("third_party_invite_created", { pronoun: inferPronoun(userName) });
       // Copia automaticamente
       try { await navigator.clipboard.writeText(d.url); } catch {}
       await loadAll();
     } catch (err: any) {
       setErrorMsg(err?.message ?? "erro");
+      setCreatingPhase("nickname");
+    }
+  };
+
+  // Fix UX 06/jun — marca invite como enviado (sent_at = now).
+  // PATCH direto via PostgREST (RLS já valida ownership).
+  const markSent = async (inviteId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      await fetch(
+        `${SUPABASE_URL}/rest/v1/third_party_invites?id=eq.${inviteId}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            apikey: ANON_KEY,
+            "Content-Type": "application/json",
+            Prefer: "return=minimal",
+          },
+          body: JSON.stringify({ sent_at: new Date().toISOString() }),
+        }
+      );
+      track("third_party_invite_marked_sent");
+      await loadAll();
+    } catch (err) {
+      console.error("[ContextThirdParty] markSent error:", err);
     }
   };
 
@@ -569,14 +624,35 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
     try { await navigator.clipboard.writeText(inviteUrl(inv)); } catch {}
   };
 
-  const statusLabel = (s: string) =>
-    s === "pending" ? "aguardando" :
-    s === "submitted" ? "respondido" :
-    s === "revoked" ? "cancelado" :
-    s === "expired" ? "expirado" : s;
+  // Status semântico: separa "aguardando envio" de "enviado, aguardando resposta".
+  // Fix UX 06/jun — antes "pending" cobria os dois.
+  const statusLabel = (inv: { status: string; sent_at: string | null; submitted_at: string | null }) => {
+    if (inv.status === "revoked") return "cancelado";
+    if (inv.status === "expired") return "expirado";
+    if (inv.status === "submitted") return "respondeu";
+    if (inv.status === "pending") return inv.sent_at ? "enviado" : "aguardando envio";
+    return inv.status;
+  };
+
+  // Timestamp humano simplificado — "agora", "há 2h", "há 3 dias".
+  const timeAgo = (iso: string | null): string => {
+    if (!iso) return "";
+    const ms = Date.now() - new Date(iso).getTime();
+    const min = Math.floor(ms / 60000);
+    if (min < 1) return "agora";
+    if (min < 60) return `há ${min}min`;
+    const h = Math.floor(min / 60);
+    if (h < 24) return `há ${h}h`;
+    const d = Math.floor(h / 24);
+    if (d < 30) return `há ${d} dia${d > 1 ? "s" : ""}`;
+    const mo = Math.floor(d / 30);
+    return `há ${mo} mês${mo > 1 ? "es" : ""}`;
+  };
 
   const activeCount = invites.filter(i => i.status === "pending" || i.status === "submitted").length;
   const submittedCount = invites.filter(i => i.status === "submitted").length;
+  const awaitingSendCount = invites.filter(i => i.status === "pending" && !i.sent_at).length;
+  const sentCount = invites.filter(i => i.status === "pending" && i.sent_at).length;
 
   // Helpers de UI
   const minimalBtn = {
@@ -600,7 +676,19 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
     letterSpacing: "0.06em",
   };
 
-  // Agrupa invites por cycle_number (decrescente)
+  // Agrupa invites por cycle_number (decrescente).
+  // Dentro de cada ciclo, ordena por prioridade de atenção (fix UX 06/jun):
+  //  1) pending sem sent_at (aguardando envio — ação pendente)
+  //  2) pending com sent_at (enviado, aguardando resposta)
+  //  3) submitted (respondido)
+  //  4) revoked / expired (terminados)
+  // Dentro de cada bucket, mais recente primeiro.
+  const inviteSortPriority = (inv: ThirdPartyInvite): number => {
+    if (inv.status === "pending" && !inv.sent_at) return 0;
+    if (inv.status === "pending" && inv.sent_at) return 1;
+    if (inv.status === "submitted") return 2;
+    return 3;
+  };
   const groupsByCycle = (() => {
     const map = new Map<number, typeof invites>();
     invites.forEach((inv) => {
@@ -608,6 +696,15 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
       if (!map.has(cn)) map.set(cn, []);
       map.get(cn)!.push(inv);
     });
+    // Sort dentro de cada ciclo
+    for (const [, list] of map) {
+      list.sort((a, b) => {
+        const pa = inviteSortPriority(a);
+        const pb = inviteSortPriority(b);
+        if (pa !== pb) return pa - pb;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+    }
     return Array.from(map.entries()).sort((a, b) => b[0] - a[0]);
   })();
 
@@ -634,10 +731,17 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
             marginTop extra pra dar respiro entre a voz e os KPIs. */}
         {contentVisible && view === "main" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 20, marginTop: 12 }}>
-            {/* KPIs */}
+            {/* KPIs — fix UX 06/jun: separa aguardando-envio de enviados aguardando resposta */}
             {!loading && invites.length > 0 && (
               <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 9, color: "var(--r-ghost)", letterSpacing: "0.12em" }}>
-                {submittedCount} respondidos · {activeCount} ativos · {invites.length} no total
+                {submittedCount} respondidos · {sentCount} enviados · {awaitingSendCount} aguardando envio
+              </div>
+            )}
+
+            {/* Aviso explícito — 1 link por amigo (fix UX 06/jun) */}
+            {!loading && (
+              <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--r-muted)", lineHeight: 1.5 }}>
+                crie 1 link por amigo. cada link funciona uma vez só.
               </div>
             )}
 
@@ -646,7 +750,14 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
               {activeCount < 8 && !creating && (
                 <div
                   style={minimalBtn}
-                  onClick={() => { setCreating(true); setCreatedUrl(null); createInvite(); }}
+                  onClick={() => {
+                    setCreating(true);
+                    setCreatedUrl(null);
+                    setCreatedNickname(null);
+                    setNicknameInput("");
+                    setCreatingPhase("nickname");
+                    setErrorMsg("");
+                  }}
                 >
                   <div style={minimalBtnLine} />
                   <span style={minimalBtnLabel}>+ novo convite</span>
@@ -666,18 +777,72 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
               )}
             </div>
 
-            {/* Painel de criação (após click "novo convite") */}
+            {/* Painel de criação — fix UX 06/jun: 3 fases (nickname → submitting → done) */}
             {creating && (
               <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "12px 16px", border: "1px solid var(--r-ghost)", maxWidth: 480, marginLeft: "auto", marginRight: "auto", width: "100%" }}>
-                {!createdUrl && (
+                {/* Fase 1 — pede apelido antes de gerar link */}
+                {creatingPhase === "nickname" && (
                   <>
-                    <div className="r-sub" style={{ fontStyle: "italic" }}>gerando link...</div>
+                    <div className="r-sub">como vou chamar essa pessoa? (só você vê)</div>
+                    <input
+                      type="text"
+                      value={nicknameInput}
+                      onChange={(e) => setNicknameInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && nicknameInput.trim().length >= 1) {
+                          createInvite(nicknameInput);
+                        }
+                      }}
+                      maxLength={40}
+                      autoFocus
+                      placeholder="ex: carla, irmão do gabriel, terapeuta..."
+                      style={{
+                        fontFamily: "var(--r-font-sys)",
+                        fontSize: 13,
+                        padding: "8px 10px",
+                        background: "var(--r-bg)",
+                        border: "1px solid var(--r-ghost)",
+                        outline: "none",
+                        color: "var(--r-text)",
+                      }}
+                    />
                     {errorMsg && <div style={{ color: "var(--terracota, #b85a3e)", fontSize: 12 }}>{errorMsg}</div>}
+                    <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+                      <span
+                        onClick={() => { setCreating(false); setNicknameInput(""); setErrorMsg(""); }}
+                        style={{ fontFamily: "var(--r-font-sys)", fontSize: 12, color: "var(--r-muted)", cursor: "pointer" }}
+                      >
+                        cancelar
+                      </span>
+                      <span
+                        onClick={() => createInvite(nicknameInput)}
+                        style={{
+                          fontFamily: "var(--r-font-sys)",
+                          fontSize: 12,
+                          color: nicknameInput.trim().length >= 1 ? "var(--r-text)" : "var(--r-ghost)",
+                          cursor: nicknameInput.trim().length >= 1 ? "pointer" : "default",
+                          letterSpacing: "0.04em",
+                        }}
+                      >
+                        gerar link
+                      </span>
+                    </div>
                   </>
                 )}
-                {createdUrl && (
+
+                {/* Fase 2 — gerando */}
+                {creatingPhase === "submitting" && (
+                  <div className="r-sub" style={{ fontStyle: "italic" }}>gerando link...</div>
+                )}
+
+                {/* Fase 3 — link gerado */}
+                {creatingPhase === "done" && createdUrl && (
                   <>
-                    <div className="r-sub">link gerado e copiado pra área de transferência:</div>
+                    {createdNickname && (
+                      <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 12, color: "var(--r-text)", letterSpacing: "0.04em" }}>
+                        link de <strong style={{ color: "var(--r-voice-founders)" }}>{createdNickname}</strong>:
+                      </div>
+                    )}
                     <div style={{ position: "relative", fontFamily: "monospace", fontSize: 11, padding: "8px 36px 8px 8px", background: "var(--r-bg)", border: "1px dashed var(--r-ghost)", wordBreak: "break-all" }}>
                       {createdUrl}
                       <button
@@ -700,13 +865,21 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
                     </div>
                     <div style={{ height: 1, background: "var(--r-ghost)", margin: "4px 0" }} />
                     <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--r-muted)", lineHeight: 1.5 }}>
-                      Esse link é único para uma pessoa. Para convidar mais gente, gera outro.
-                    </div>
-                    <div className="r-sub" style={{ fontStyle: "italic" }}>
-                      envie esse link pra quem você quer que responda.
+                      copiado pra área de transferência. depois de mandar, marca em "convites enviados" como enviado.
                     </div>
                     <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-                      <span onClick={() => { setCreating(false); setCreatedUrl(null); }} style={{ fontFamily: "var(--r-font-sys)", fontSize: 12, color: "var(--r-text)", cursor: "pointer" }}>fechar</span>
+                      <span
+                        onClick={() => {
+                          setCreating(false);
+                          setCreatedUrl(null);
+                          setCreatedNickname(null);
+                          setNicknameInput("");
+                          setCreatingPhase("nickname");
+                        }}
+                        style={{ fontFamily: "var(--r-font-sys)", fontSize: 12, color: "var(--r-text)", cursor: "pointer" }}
+                      >
+                        fechar
+                      </span>
                     </div>
                   </>
                 )}
@@ -750,14 +923,24 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
                         const expectedTotal = 6;
                         const showDetails = expanded === inv.id;
                         const canShowResponses = inv.status === "submitted" && inv.reveal_identity === true;
-                        const displayName =
-                          inv.status === "submitted"
+
+                        // Display name — fix UX 06/jun:
+                        // prioriza internal_nickname (sempre conhecido pelo user).
+                        // Fallback pra responder_name se invite legado sem nickname e revelou identidade.
+                        const displayName = inv.internal_nickname
+                          ? capitalizeName(inv.internal_nickname)
+                          : inv.status === "submitted"
                             ? inv.reveal_identity === true && inv.responder_name
                               ? capitalizeName(inv.responder_name)
                               : "respondeu sem se identificar"
-                            : inv.status === "pending"
-                              ? "convite aguardando"
-                              : "—";
+                            : "convite sem apelido";
+
+                        // Timestamp relevante por estado
+                        const timestamp =
+                          inv.status === "submitted" ? timeAgo(inv.submitted_at) :
+                          inv.status === "pending" && inv.sent_at ? timeAgo(inv.sent_at) :
+                          inv.status === "pending" ? timeAgo(inv.created_at) :
+                          "";
 
                         return (
                           <div key={inv.id} style={{ paddingTop: 8, paddingBottom: 4 }}>
@@ -767,15 +950,24 @@ export function ContextThirdParty({ ipeCycleId, onBack, userName }: {
                                   {displayName}
                                 </div>
                                 <div style={{ fontFamily: "var(--r-font-sys)", fontSize: 10, color: "var(--r-muted)", marginTop: 2 }}>
-                                  {statusLabel(inv.status)}
+                                  {statusLabel(inv)}{timestamp && ` ${timestamp}`}
                                   {inv.status === "submitted" && respCount > 0 && ` · ${respCount}/${expectedTotal} respostas`}
                                   {inv.question_set && ` · grupo ${inv.question_set === "alpha" ? "α" : "β"}`}
                                 </div>
                               </div>
-                              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                              <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
                                 {inv.status === "pending" && (
                                   <>
                                     <span onClick={() => copyUrl(inv)} style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--r-muted)", cursor: "pointer" }} title="copiar link">copiar link</span>
+                                    {!inv.sent_at && (
+                                      <span
+                                        onClick={() => markSent(inv.id)}
+                                        style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--r-voice-founders)", cursor: "pointer", letterSpacing: "0.04em" }}
+                                        title="marcar como enviado"
+                                      >
+                                        marcar enviado
+                                      </span>
+                                    )}
                                     <span onClick={() => revokeInvite(inv.id)} style={{ fontFamily: "var(--r-font-sys)", fontSize: 11, color: "var(--terracota, #b85a3e)", cursor: "pointer" }}>revogar</span>
                                   </>
                                 )}

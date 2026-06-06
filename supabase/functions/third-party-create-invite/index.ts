@@ -89,8 +89,20 @@ Deno.serve(async (req) => {
     const user_id = auth_data.user.id;
 
     const body = await req.json().catch(() => ({}));
-    const { ipe_cycle_id, user_pronoun } = body;
+    const { ipe_cycle_id, user_pronoun, internal_nickname } = body;
     if (!ipe_cycle_id) return json({ error: "Missing ipe_cycle_id" }, 400, req);
+
+    // Validação nickname (fix UX 06/jun) — obrigatório, 1-40 chars trim.
+    // Defesa em profundidade: front também valida, mas backend rejeita
+    // caso UI seja contornada.
+    if (typeof internal_nickname !== "string") {
+      return json({ error: "nickname_required" }, 400, req);
+    }
+    const nicknameTrimmed = internal_nickname.trim();
+    if (nicknameTrimmed.length < 1 || nicknameTrimmed.length > 40) {
+      return json({ error: "nickname_invalid_length" }, 400, req);
+    }
+
     const pronoun: string = (typeof user_pronoun === "string" && VALID_PRONOUNS.includes(user_pronoun as any))
       ? user_pronoun
       : "ela";
@@ -142,8 +154,9 @@ Deno.serve(async (req) => {
           status: "pending",
           user_pronoun: pronoun,
           question_set,
+          internal_nickname: nicknameTrimmed,
         }])
-        .select("id, token, slug, created_at, question_set")
+        .select("id, token, slug, created_at, question_set, internal_nickname")
         .single();
       if (!error) { insertedRows = data; insErr = null; break; }
       insErr = error;
@@ -162,6 +175,7 @@ Deno.serve(async (req) => {
       created_at: insertedRows.created_at,
       question_set: insertedRows.question_set,
       user_pronoun: pronoun,
+      internal_nickname: insertedRows.internal_nickname,
       debug_fingerprint: DEPLOY_FINGERPRINT,
     }, 200, req);
   } catch (err) {
