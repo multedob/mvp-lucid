@@ -690,7 +690,11 @@ export default function Questionnaire() {
                   value={remainingQuestions ?? 16}
                 />
                 <EmptyStateMessage
-                  text="responda no seu ritmo. pode pausar e voltar."
+                  text={
+                    remainingQuestions != null && remainingQuestions < 16
+                      ? "as pílulas preencheram parte. responda o que falta no seu ritmo."
+                      : "responda no seu ritmo. pode pausar e voltar."
+                  }
                   contextKey="questionnaire_first_visit"
                   delayMs={700}
                 />

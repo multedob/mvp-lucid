@@ -455,6 +455,9 @@ body {
 }
 
 /* ─── scale (régua vertical) ────────────────────────────────────── */
+/* Fix C4 (auditoria): alvo visual continua 7×7 (selected 9×9) por questão estética,
+   mas área de clique foi expandida via ::before pra 31×31 (WCAG 2.5.8 mínimo 24×24).
+   Espaçamento entre dots na régua é ~77-85px → hit areas não sobrepõem. */
 
 .r-scale-dot {
   width: 7px;
@@ -465,6 +468,15 @@ body {
   cursor: pointer;
   transition: all 0.2s;
   flex-shrink: 0;
+  position: relative;
+}
+
+.r-scale-dot::before {
+  content: "";
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
+  /* invisível mas captura pointer events — alvo de clique 31×31 */
 }
 
 .r-scale-dot.selected {
@@ -472,6 +484,11 @@ body {
   height: 9px;
   background: var(--r-telha);
   border-color: var(--r-telha);
+}
+
+.r-scale-dot.selected::before {
+  inset: -11px;
+  /* mantém ~31x31 mesmo após dot crescer pra 9x9 */
 }
 
 /* ─── choice options ────────────────────────────────────────────── */

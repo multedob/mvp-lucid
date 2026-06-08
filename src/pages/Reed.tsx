@@ -18,6 +18,16 @@ import { track } from '@/lib/analytics'
 import { FeedbackButton } from '@/components/FeedbackButton'
 
 interface Message { role: 'user' | 'reed'; text: string; isWelcome?: boolean }
+
+// Fix M1 (auditoria): Reed às vezes recebe markdown literal do edge function
+// (**autonomia** etc). Strip antes de renderizar — Reed é texto puro, sem formatting.
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, '$1')   // **bold** → bold
+    .replace(/__([^_]+)__/g, '$1')        // __bold__ → bold
+    .replace(/\*([^*]+)\*/g, '$1')        // *italic* → italic
+    .replace(/`([^`]+)`/g, '$1')          // `code` → code
+}
 interface CanonicalILs { d1: number[]; d2: number[]; d3: number[]; d4: number[] }
 interface PillContext { pill_id: string; m2_text: string; m4_percepcao: string; eco_text: string }
 
@@ -649,14 +659,14 @@ export default function Reed() {
             if (msg.isWelcome) {
               return (
                 <div key={i} style={{ paddingLeft: 0 }}>
-                  <BlockReveal text={msg.text} blockStyle={reedStyle} blockDelayMs={700} />
+                  <BlockReveal text={stripMarkdown(msg.text)} blockStyle={reedStyle} blockDelayMs={700} />
                 </div>
               )
             }
 
             return (
               <div key={i} style={{ paddingLeft: 0 }}>
-                <p style={reedStyle}>{msg.text}{sending && i === messages.length - 1 && <span className="r-typing-cursor">▌</span>}</p>
+                <p style={reedStyle}>{stripMarkdown(msg.text)}{sending && i === messages.length - 1 && <span className="r-typing-cursor">▌</span>}</p>
               </div>
             )
           }
