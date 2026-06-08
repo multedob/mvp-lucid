@@ -1194,7 +1194,7 @@ export type Database = {
           question_set: string | null
           responder_email: string | null
           responder_name: string | null
-          reveal_identity: boolean | null
+          reveal_identity: boolean
           revoked_at: string | null
           slug: string
           status: string
@@ -1210,7 +1210,7 @@ export type Database = {
           question_set?: string | null
           responder_email?: string | null
           responder_name?: string | null
-          reveal_identity?: boolean | null
+          reveal_identity?: boolean
           revoked_at?: string | null
           slug: string
           status?: string
@@ -1226,7 +1226,7 @@ export type Database = {
           question_set?: string | null
           responder_email?: string | null
           responder_name?: string | null
-          reveal_identity?: boolean | null
+          reveal_identity?: boolean
           revoked_at?: string | null
           slug?: string
           status?: string
