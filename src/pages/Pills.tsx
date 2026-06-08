@@ -114,85 +114,104 @@ export default function Pills() {
       </div>
 
       {/* Pill list — cascade após voz sistema (~2700ms) */}
-      <div style={{
+      <main style={{
         flex: 1,
         display: "flex",
         flexDirection: "column",
         padding: "16px 24px 0",
         opacity: listVisible ? 1 : 0,
         transition: "opacity 500ms ease-in",
-      }}>
+      }} aria-label="lista de tensões">
         {!loading && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <ul style={{ display: "flex", flexDirection: "column", gap: 14, listStyle: "none", margin: 0, padding: 0 }}>
             {PILL_ORDER.map(pill => {
               const done = pillsDone.has(pill);
               return (
-                <div
-                  key={pill}
-                  onClick={() => {
-                    track("pill_clicked_from_list", { pill_id: pill, is_review: done });
-                    navigate(`/pill/${pill}`);
-                  }}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    cursor: "pointer",
-                    transition: "opacity 0.2s",
-                  }}
-                >
-                  <div style={{
-                    width: 1,
-                    height: 12,
-                    background: done ? "var(--r-telha)" : "var(--r-muted)",
-                    opacity: done ? 0.5 : 1,
-                    flexShrink: 0,
-                  }} />
-                  <span style={{
-                    fontFamily: "var(--r-font-sys)",
-                    fontWeight: 300,
-                    fontSize: 11,
-                    letterSpacing: "0.06em",
-                    color: done ? "var(--r-telha)" : "var(--r-sub)",
-                    opacity: done ? 0.7 : 1,
-                  }}>
-                    {PILL_TENSAO[pill]}
-                    {done && (
-                      <span style={{
-                        fontWeight: 300,
-                        fontStyle: "italic",
-                        marginLeft: 6,
-                        opacity: 0.6,
-                      }}>· revisitar</span>
-                    )}
-                  </span>
-                </div>
+                <li key={pill} style={{ margin: 0, padding: 0 }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      track("pill_clicked_from_list", { pill_id: pill, is_review: done });
+                      navigate(`/pill/${pill}`);
+                    }}
+                    aria-label={done ? `${PILL_TENSAO[pill]}, revisitar` : PILL_TENSAO[pill]}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      cursor: "pointer",
+                      transition: "opacity 0.2s",
+                      background: "transparent",
+                      border: "none",
+                      padding: 0,
+                      outline: "none",
+                      width: "100%",
+                      textAlign: "left",
+                    }}
+                    onFocus={(e) => { e.currentTarget.style.outline = "1px dotted var(--r-telha)"; e.currentTarget.style.outlineOffset = "4px"; }}
+                    onBlur={(e) => { e.currentTarget.style.outline = "none"; }}
+                  >
+                    <div aria-hidden="true" style={{
+                      width: 1,
+                      height: 12,
+                      background: done ? "var(--r-telha)" : "var(--r-muted)",
+                      opacity: done ? 0.5 : 1,
+                      flexShrink: 0,
+                    }} />
+                    <span style={{
+                      fontFamily: "var(--r-font-sys)",
+                      fontWeight: 300,
+                      fontSize: 11,
+                      letterSpacing: "0.06em",
+                      color: done ? "var(--r-telha)" : "var(--r-sub)",
+                      opacity: done ? 0.7 : 1,
+                    }}>
+                      {PILL_TENSAO[pill]}
+                      {done && (
+                        <span style={{
+                          fontWeight: 300,
+                          fontStyle: "italic",
+                          marginLeft: 6,
+                          opacity: 0.6,
+                        }}>· revisitar</span>
+                      )}
+                    </span>
+                  </button>
+                </li>
               );
             })}
 
             {allDone && (
-              <div
-                onClick={() => {
-                  track("pills_continue_to_questionnaire");
-                  navigate("/questionnaire");
-                }}
-                style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginTop: 12 }}
-              >
-                <div style={{ width: 1, height: 14, background: "var(--r-telha)", flexShrink: 0 }} />
-                <span style={{
-                  fontFamily: "var(--r-font-sys)",
-                  fontWeight: 300,
-                  fontSize: 11,
-                  letterSpacing: "0.08em",
-                  color: "var(--r-text)",
-                }}>
-                  continuar para o ciclo
-                </span>
-              </div>
+              <li style={{ margin: "12px 0 0 0", padding: 0 }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    track("pills_continue_to_questionnaire");
+                    navigate("/questionnaire");
+                  }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 10, cursor: "pointer",
+                    background: "transparent", border: "none", padding: 0, outline: "none",
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.outline = "1px dotted var(--r-telha)"; e.currentTarget.style.outlineOffset = "4px"; }}
+                  onBlur={(e) => { e.currentTarget.style.outline = "none"; }}
+                >
+                  <div aria-hidden="true" style={{ width: 1, height: 14, background: "var(--r-telha)", flexShrink: 0 }} />
+                  <span style={{
+                    fontFamily: "var(--r-font-sys)",
+                    fontWeight: 300,
+                    fontSize: 11,
+                    letterSpacing: "0.08em",
+                    color: "var(--r-text)",
+                  }}>
+                    continuar para o ciclo
+                  </span>
+                </button>
+              </li>
             )}
-          </div>
+          </ul>
         )}
-      </div>
+      </main>
 
     </>
   );

@@ -94,7 +94,7 @@ export default function Home() {
           Sem flow: TeamMessage + saudação + guide ocupam.
           Com flow (clique no NavBottom): Home desmonta imediatamente — espaço da
           página alvo assume o overlay. */}
-      <div style={{ minHeight: 110, flexShrink: 0 }}>
+      <main aria-label="página inicial" style={{ minHeight: 110, flexShrink: 0 }}>
         <TeamMessage
           contextKey="home_first_visit"
           onLoaded={(has) => {
@@ -142,7 +142,10 @@ export default function Home() {
                     fontSize: 11,
                     letterSpacing: "0.06em",
                     color: "var(--r-telha)",
+                    outline: "none",
                   }}
+                  onFocus={(e) => { e.currentTarget.style.outline = "1px dotted var(--r-telha)"; e.currentTarget.style.outlineOffset = "4px"; }}
+                  onBlur={(e) => { e.currentTarget.style.outline = "none"; }}
                 >
                   {n.ctaLabel} →
                 </button>
@@ -151,7 +154,7 @@ export default function Home() {
           </div>
           <FeedbackButton />
         </div>
-      </div>
+      </main>
 
       {/* Spacer — restante do canvas vazio */}
       <div style={{ flex: 1 }} />

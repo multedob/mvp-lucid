@@ -70,21 +70,49 @@ const Footer = forwardRef<HTMLDivElement, QFooterProps>(({
     <>
       <div className="r-line" />
       <div ref={ref} className="r-footer">
-        <span onClick={() => navigate(-1)} style={{ fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13, color: "var(--r-muted)", cursor: "pointer" }}>‹</span>
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          aria-label="voltar"
+          style={{
+            fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 13,
+            color: "var(--r-muted)", cursor: "pointer",
+            background: "transparent", border: "none", padding: 0, outline: "none",
+          }}
+          onFocus={(e) => { e.currentTarget.style.outline = "1px dotted var(--r-telha)"; e.currentTarget.style.outlineOffset = "4px"; }}
+          onBlur={(e) => { e.currentTarget.style.outline = "none"; }}
+        >‹</button>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 14 }}>
           {onFallback && fallbackLabel && (
-            <span className="r-footer-action" onClick={onFallback}>
+            <button
+              type="button"
+              className="r-footer-action"
+              onClick={onFallback}
+              style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer", outline: "none", font: "inherit", color: "inherit" }}
+              onFocus={(e) => { e.currentTarget.style.outline = "1px dotted var(--r-telha)"; e.currentTarget.style.outlineOffset = "4px"; }}
+              onBlur={(e) => { e.currentTarget.style.outline = "none"; }}
+            >
               {fallbackLabel}
-            </span>
+            </button>
           )}
           {onContinue && (
-            <span
+            <button
+              type="button"
               className="r-footer-action"
               onClick={disabled ? undefined : onContinue}
-              style={{ opacity: disabled ? 0.3 : 1, cursor: disabled ? 'default' : 'pointer' }}
+              disabled={disabled}
+              aria-disabled={disabled}
+              style={{
+                opacity: disabled ? 0.3 : 1,
+                cursor: disabled ? 'default' : 'pointer',
+                background: "transparent", border: "none", padding: 0, outline: "none",
+                font: "inherit", color: "inherit",
+              }}
+              onFocus={(e) => { if (!disabled) { e.currentTarget.style.outline = "1px dotted var(--r-telha)"; e.currentTarget.style.outlineOffset = "4px"; } }}
+              onBlur={(e) => { e.currentTarget.style.outline = "none"; }}
             >
               {continueLabel}
-            </span>
+            </button>
           )}
         </div>
       </div>
@@ -639,7 +667,7 @@ export default function Questionnaire() {
   return (
     <>
     {loadingOverlay}
-    <>
+    <main aria-label="ciclo — questionário">
 
       {/* Voice slot — 110px no topo do canvas.
           Com flow: SystemVoiceSequence inline (CSS-only, não suspende durante load).
@@ -748,7 +776,7 @@ export default function Questionnaire() {
         fallbackLabel={fallbackLabel}
       />
 
-    </>
+    </main>
     </>
   )
 }
