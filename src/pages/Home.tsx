@@ -103,10 +103,13 @@ export default function Home() {
           }}
         />
 
-        {/* Voice slot 110px — paridade com /tensão /ciclo /amigos /leitura */}
+        {/* Voice slot 110px (cresce conforme conteúdo) — paridade com /tensão /ciclo /amigos /leitura.
+            Fix UX 06/jun: notices (avisos do sistema) agora ficam dentro do mesmo bloco
+            do greeting, separados por gap mínimo — antes ficavam num container separado abaixo,
+            criando vácuo visual entre a saudação e o aviso. */}
         <div
           style={{
-            padding: "12px 24px 0",
+            padding: "12px 24px 20px",
             display: "flex",
             alignItems: "flex-start",
             justifyContent: "space-between",
@@ -115,24 +118,14 @@ export default function Home() {
             flexShrink: 0,
           }}
         >
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 14 }}>
             {greeting && showGreeting && (
               <SystemTerminalLine text={greeting} delayMs={0} />
             )}
-          </div>
-          <FeedbackButton />
-        </div>
-
-        {guide && showGuide && (
-          <div style={{ padding: "12px 24px 20px" }}>
-            <SystemTerminalLine text={guide.frase} delayMs={0} />
-          </div>
-        )}
-
-        {/* Fix 2A/2B — notices empilháveis: questionário pendente, terceiros pendentes */}
-        {showGuide && notices.length > 0 && (
-          <div style={{ padding: "0 24px 20px", display: "flex", flexDirection: "column", gap: 18 }}>
-            {notices.map((n, i) => (
+            {guide && showGuide && (
+              <SystemTerminalLine text={guide.frase} delayMs={0} />
+            )}
+            {showGuide && notices.length > 0 && notices.map((n, i) => (
               <div key={n.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 <SystemTerminalLine text={n.frase} delayMs={i * 600} showCursor={false} />
                 <button
@@ -156,7 +149,8 @@ export default function Home() {
               </div>
             ))}
           </div>
-        )}
+          <FeedbackButton />
+        </div>
       </div>
 
       {/* Spacer — restante do canvas vazio */}
