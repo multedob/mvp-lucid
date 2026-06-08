@@ -927,7 +927,11 @@ export default function PillFlow() {
       <Footer onBack={() => setState(s => ({ ...s, moment: "M3_2" }))}
         onContinue={state.reviewMode ? () => advance("M4") : submitM3}
         continueLabel={state.loading ? "..." : "continuar"}
-        disabled={state.loading || (!state.reviewMode && (!state.m3_3_narrativa.trim() || !state.m3_3_condicao.trim()))} />
+        disabled={state.loading || (!state.reviewMode && (
+          !state.m3_3_narrativa.trim() ||
+          !state.m3_3_condicao.trim() ||
+          (!!m3_3Content.qTransversal && !state.m3_3_transversal.trim())
+        ))} />
     </div>
   );
 

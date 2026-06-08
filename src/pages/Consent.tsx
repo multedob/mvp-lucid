@@ -29,14 +29,14 @@ export default function Consent() {
     <div className="r-screen">
       <AppHeader />
 
-      <div className="r-scroll" style={{ padding: "28px 24px 0" }}>
-        <div style={{
+      <main className="r-scroll" style={{ padding: "28px 24px 0" }}>
+        <h1 style={{
           fontFamily: "var(--r-font-ed)", fontWeight: 800, fontSize: 22,
           letterSpacing: "-0.01em", lineHeight: 1.3, color: "var(--r-text)",
-          marginBottom: 24,
+          marginBottom: 24, marginTop: 0,
         }}>
           como tratamos seus dados.
-        </div>
+        </h1>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
           {ABOUT.map((line, i) => (
@@ -63,17 +63,29 @@ export default function Consent() {
             </div>
           ))}
         </div>
-      </div>
+      </main>
 
       <div style={{ padding: "20px 24px 48px", flexShrink: 0 }}>
         <div style={{ height: 1, background: "var(--r-ghost)", opacity: 0.5, marginBottom: 24 }} />
 
-        {/* Checkbox */}
+        {/* Checkbox — agora acessível: role=checkbox + aria-checked + keyboard (Space/Enter) */}
         <div
+          role="checkbox"
+          aria-checked={accepted}
+          aria-label="concordo com a Política de Privacidade e os Termos de Uso"
+          tabIndex={0}
           onClick={() => setAccepted(a => !a)}
-          style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", marginBottom: 24 }}
+          onKeyDown={(e) => {
+            if (e.key === " " || e.key === "Enter") {
+              e.preventDefault();
+              setAccepted(a => !a);
+            }
+          }}
+          style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer", marginBottom: 24, outline: "none" }}
+          onFocus={(e) => { e.currentTarget.style.outline = "1px dotted var(--r-telha)"; e.currentTarget.style.outlineOffset = "4px"; }}
+          onBlur={(e) => { e.currentTarget.style.outline = "none"; }}
         >
-          <div style={{
+          <div aria-hidden="true" style={{
             width: 14, height: 14, flexShrink: 0,
             border: `1px solid ${accepted ? "var(--r-telha)" : "var(--r-ghost)"}`,
             borderRadius: 2, display: "flex", alignItems: "center", justifyContent: "center",
@@ -106,8 +118,11 @@ export default function Consent() {
           </span>
         </div>
 
-        {/* Continue */}
-        <div
+        {/* Continue — agora botão real: focável, keyboard-accessible, disabled state semântico */}
+        <button
+          type="button"
+          disabled={!accepted}
+          aria-disabled={!accepted}
           onClick={async () => {
             if (!accepted) return;
             track("consent_given");
@@ -116,18 +131,22 @@ export default function Consent() {
           }}
           style={{
             display: "flex", alignItems: "center", gap: 10,
+            background: "transparent", border: "none", padding: 0,
             cursor: accepted ? "pointer" : "default",
             opacity: accepted ? 1 : 0.35, transition: "opacity 0.2s",
+            outline: "none",
           }}
+          onFocus={(e) => { if (accepted) { e.currentTarget.style.outline = "1px dotted var(--r-telha)"; e.currentTarget.style.outlineOffset = "4px"; } }}
+          onBlur={(e) => { e.currentTarget.style.outline = "none"; }}
         >
-          <div style={{ width: 1, height: 12, background: "var(--r-telha)", flexShrink: 0 }} />
+          <div aria-hidden="true" style={{ width: 1, height: 12, background: "var(--r-telha)", flexShrink: 0 }} />
           <span style={{
             fontFamily: "var(--r-font-sys)", fontWeight: 300, fontSize: 11,
             color: "var(--r-text)", letterSpacing: "0.06em",
           }}>
             continuar
           </span>
-        </div>
+        </button>
       </div>
 
       <div className="r-line" />
