@@ -250,6 +250,7 @@ export default function Questionnaire() {
   const [inputReady, setInputReady] = useState(false)
   const [audioPulseFirst, setAudioPulseFirst] = useState(false)
   const cascadeArmedRef = useRef(false)
+  const finalizedRef = useRef(false)   // trava: conclusão do ciclo só roda 1x (evita síntese duplicada)
   const AUDIO_PULSE_KEY = 'rdwth_audio_pulse_seen_questionnaire'
 
   // Cascade.
@@ -430,6 +431,11 @@ export default function Questionnaire() {
       }
 
       if (res.done) {
+        // Idempotência: a conclusão só roda 1x por ciclo. Sem isso, um disparo
+        // duplo de fetchNextBlock grava a síntese 2x em `cycles` (mensagem repetida
+        // no Reed). Ver auditoria 12/jun.
+        if (finalizedRef.current) return
+        finalizedRef.current = true
         // F4-Gap2 — distinguir primeiro ciclo (Ativação Q1) dos subsequentes.
         // localStorage como flag local — suficiente pra alpha; edge case de "troca de device" aceitável.
         const FIRST_CYCLE_FLAG = 'rdwth_first_cycle_completed'
