@@ -600,7 +600,7 @@ export default function Reed() {
   )
 
   return (
-    <main aria-label="reed — conversa">
+    <main aria-label="reed — conversa" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       {/* FeedbackButton fixo no canto superior direito, FORA do scroll —
           mantém posição estável enquanto user rola o chat (paridade com Pills/Questionnaire). */}
       <div style={{
