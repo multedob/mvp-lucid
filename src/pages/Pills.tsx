@@ -187,7 +187,7 @@ export default function Pills() {
                   type="button"
                   onClick={() => {
                     track("pills_continue_to_questionnaire");
-                    navigate("/questionnaire");
+                    navigate("/ciclo");
                   }}
                   style={{
                     display: "flex", alignItems: "center", gap: 10, cursor: "pointer",

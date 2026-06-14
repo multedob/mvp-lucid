@@ -304,7 +304,12 @@ function ContextDeep({ cycle, onBack, userName }: { cycle: CycleData; onBack: ()
     <>
       {/* Voz sistema sempre no topo — posição canônica */}
       <div style={{ padding: "12px 24px 0", flexShrink: 0 }}>
-        <SystemTerminalLine text={disclaimerText} />
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <SystemTerminalLine text={disclaimerText} />
+          </div>
+          <FeedbackButton />
+        </div>
       </div>
 
       <div

@@ -241,10 +241,11 @@ A pergunta final deve seguir estritamente a Lei 6:
 - COMEÇA COM "Vai": "Vai" implica ownership e ação. É mais forte que "pode", "poderia", "quer".
 - APROXIMA DE QUEM ELA QUER SER: a pergunta encoraja um comportamento que produz cognitive dissonance produtiva — dizer "não" custa, porque admite que ela não quer ser quem está se vendo.
 - IMEDIATA: pede continuação AGORA, dentro do produto, não amanhã, não em algum momento.
+- TERMINOLOGIA: ao se referir às leituras curtas, use SEMPRE "tensão"/"tensões". NUNCA use "pill"/"pills"/"pílula"/"pílulas" no texto voltado pra pessoa.
 
 EXEMPLOS DE PERGUNTAS FINAIS BOAS (use como referência de TOM — não copie literal):
 - "Vai me deixar puxar essa linha um pouco mais?"
-- "Vai abrir a primeira pill enquanto isso ainda está vivo?"
+- "Vai abrir a primeira tensão enquanto isso ainda está vivo?"
 - "Vai testar essa leitura agora?"
 - "Vai colocar em palavras o que essa frase mexe em você antes de fechar?"
 

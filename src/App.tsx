@@ -201,12 +201,17 @@ const App = () => (
                 ver hooks/useFlow.tsx. */}
             <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
               <Route path="/home" element={<Home />} />
-              <Route path="/pills" element={<Pills />} />
-              <Route path="/questionnaire" element={<Questionnaire />} />
-              <Route path="/context" element={<Context />} />
-              <Route path="/terceiros" element={<ThirdPartyPage />} />
+              <Route path="/tensao" element={<Pills />} />
+              <Route path="/ciclo" element={<Questionnaire />} />
+              <Route path="/leitura" element={<Context />} />
+              <Route path="/amigos" element={<ThirdPartyPage />} />
               <Route path="/reed" element={<Reed />} />
               <Route path="/settings" element={<Settings />} />
+              {/* Redirects das rotas antigas → novas (coerência de URLs). */}
+              <Route path="/pills" element={<Navigate to="/tensao" replace />} />
+              <Route path="/questionnaire" element={<Navigate to="/ciclo" replace />} />
+              <Route path="/context" element={<Navigate to="/leitura" replace />} />
+              <Route path="/terceiros" element={<Navigate to="/amigos" replace />} />
             </Route>
             <Route path="/pill/:pillId" element={<ProtectedRoute><ErrorBoundary boundaryName="pillflow"><PillFlow /></ErrorBoundary></ProtectedRoute>} />
             <Route path="/como-funciona" element={<ProtectedRoute><ContextSystem /></ProtectedRoute>} />

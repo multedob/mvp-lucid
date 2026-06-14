@@ -68,7 +68,6 @@ const Footer = forwardRef<HTMLDivElement, QFooterProps>(({
   const navigate = useNavigate()
   return (
     <>
-      <div className="r-line" />
       <div ref={ref} className="r-footer">
         <button
           type="button"
@@ -88,7 +87,7 @@ const Footer = forwardRef<HTMLDivElement, QFooterProps>(({
               type="button"
               className="r-footer-action"
               onClick={onFallback}
-              style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer", outline: "none", font: "inherit", color: "inherit" }}
+              style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer", outline: "none" }}
               onFocus={(e) => { e.currentTarget.style.outline = "1px dotted var(--r-telha)"; e.currentTarget.style.outlineOffset = "4px"; }}
               onBlur={(e) => { e.currentTarget.style.outline = "none"; }}
             >
@@ -211,6 +210,7 @@ export default function Questionnaire() {
   //   - Voz fade-out APÓS pergunta visível
   const [voiceHintReady, setVoiceHintReady] = useState(false)
   const [voiceFadeOut, setVoiceFadeOut] = useState(false)
+  const [voiceDone, setVoiceDone] = useState(false)
   // Slots: 3 ciclos de frases + hint
   //   linha 1: diablo1 → extras[0] → extras[2]
   //   linha 2: diablo2 → extras[1] → extras[3]
@@ -292,7 +292,7 @@ export default function Questionnaire() {
 
   // Visibilidade real: cascade armed E dados prontos (phase fora de loading).
   const questionVisible = questionReady && phase !== 'loading' && phase !== 'transition'
-  const inputVisible = inputReady && phase !== 'loading' && phase !== 'transition'
+  const inputVisible = inputReady && phase !== 'loading' && phase !== 'transition' && (!fromFlow || voiceDone)
 
   // Dispara fade-out da voz APÓS a pergunta entrar (não antes).
   // Espera 600ms desde questionVisible ficar true (tempo do fade-in da pergunta + folga).
@@ -673,7 +673,7 @@ export default function Questionnaire() {
   return (
     <>
     {loadingOverlay}
-    <main aria-label="ciclo — questionário">
+    <main aria-label="ciclo — questionário" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
 
       {/* Voice slot — 110px no topo do canvas.
           Com flow: SystemVoiceSequence inline (CSS-only, não suspende durante load).
@@ -686,7 +686,7 @@ export default function Questionnaire() {
                 slots={voiceSlots}
                 fadeOut={voiceFadeOut}
                 onHintReady={() => setVoiceHintReady(true)}
-                onFinish={clearFlow}
+                onFinish={() => { setVoiceDone(true); clearFlow() }}
               />
             )}
             {!fromFlow && (
@@ -698,7 +698,7 @@ export default function Questionnaire() {
                 <EmptyStateMessage
                   text={
                     remainingQuestions != null && remainingQuestions < 16
-                      ? "as pílulas preencheram parte. responda o que falta no seu ritmo."
+                      ? "as tensões preencheram parte. responda o que falta no seu ritmo."
                       : "responda no seu ritmo. pode pausar e voltar."
                   }
                   contextKey="questionnaire_first_visit"
@@ -737,7 +737,6 @@ export default function Questionnaire() {
       </div>
 
       {/* Input — cascade após pergunta (~3300ms, igual warmup) */}
-      <div className="r-line" style={{ opacity: inputVisible ? 1 : 0, transition: 'opacity 500ms ease-in' }} />
       <div style={{
         padding: '12px 24px 10px',
         flexShrink: 0,
@@ -780,11 +779,13 @@ export default function Questionnaire() {
         )}
       </div>
 
-      {/* Footer — mesmo padrão das pills */}
-      <Footer
-        onFallback={canFallback ? handleFallback : undefined}
-        fallbackLabel={fallbackLabel}
-      />
+      {/* Footer — aparece junto com o input (fim do cascade) */}
+      <div style={{ opacity: inputVisible ? 1 : 0, transition: 'opacity 500ms ease-in', pointerEvents: inputVisible ? 'auto' : 'none' }}>
+        <Footer
+          onFallback={canFallback ? handleFallback : undefined}
+          fallbackLabel={fallbackLabel}
+        />
+      </div>
 
     </main>
     </>

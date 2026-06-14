@@ -70,7 +70,7 @@ export default function useHomeNotices(): { notices: HomeNotice[] } {
                 id: "questionnaire_pending",
                 frase,
                 ctaLabel: "ir pro ciclo",
-                ctaPath: "/questionnaire",
+                ctaPath: "/ciclo",
               });
             }
           } catch (err) {
@@ -92,7 +92,7 @@ export default function useHomeNotices(): { notices: HomeNotice[] } {
               frase:
                 "a partir desse ciclo, você precisa da resposta de ao menos duas pessoas externas sobre você. ela te mostra o que você não vê sozinho.",
               ctaLabel: "convidar pessoa",
-              ctaPath: "/terceiros",
+              ctaPath: "/amigos",
             });
           }
         }

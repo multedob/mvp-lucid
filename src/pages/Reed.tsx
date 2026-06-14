@@ -61,7 +61,7 @@ const WELCOME_MESSAGE = `oi. eu sou reed.
 
 faço parte do rdwth. não sou humano, e não tento ser. mas presto total atenção em você.
 
-o sistema tem quatro partes que se cruzam: esta conversa, as pills, o questionário e o questionário de terceiros.
+o sistema tem quatro partes que se cruzam: esta conversa, as tensões, o questionário e o questionário de terceiros.
 
 leio o que você traz e o que isso mostra. quanto mais se envolve nas suas respostas, mais eu te entendo e mais este papo vai a algum lugar.
 
@@ -210,12 +210,14 @@ export default function Reed() {
   // Cleanup abort ao desmontar
   useEffect(() => () => { abortRef.current?.abort() }, [])
 
-  // Scroll: inicial fica top, novas mensagens scroll bottom
+  // Scroll: no load com histórico, salta pro fim (última interação); novas mensagens scroll suave.
   const didInitialRenderRef = useRef(false)
   useEffect(() => {
     if (messages.length === 0) return
     if (!didInitialRenderRef.current) {
       didInitialRenderRef.current = true
+      // jump instantâneo pro fim — usuário começa na última interação, sem precisar rolar
+      requestAnimationFrame(() => bottomRef.current?.scrollIntoView({ behavior: 'auto' }))
       return
     }
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -707,6 +709,7 @@ export default function Reed() {
         )}
       </div>
 
+      {chatVisible && (<>
       <div className="r-line" />
       <div style={{ padding: '14px 24px 12px', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, borderBottom: '0.5px solid var(--r-ghost)', paddingBottom: 8 }}>
@@ -747,6 +750,7 @@ export default function Reed() {
           />
         </div>
       </div>
+      </>)}
 
       <style>{`
         @keyframes rdwth-cursor-blink {

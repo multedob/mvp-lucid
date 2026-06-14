@@ -41,10 +41,10 @@ function renderEmailHtml(displayName: string): string {
   <body style="font-family: -apple-system, BlinkMacSystemFont, sans-serif; color: #111; max-width: 480px; margin: 0 auto; padding: 32px 24px; line-height: 1.5;">
     <p>oi ${safeName},</p>
     <p>faz 5 dias.</p>
-    <p>tem uma pill nova esperando: ela te coloca diante de uma pergunta que você ainda não fez pra si.</p>
+    <p>tem uma tensão nova esperando: ela te coloca diante de uma pergunta que você ainda não fez pra si.</p>
     <p style="margin: 32px 0;">
       <a href="${APP_BASE_URL}?entry_source=email_reminder" style="background: #111; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
-        abrir pill
+        abrir tensão
       </a>
     </p>
     <p style="color: #666; font-size: 13px; margin-top: 48px;">— rdwth</p>
@@ -58,9 +58,9 @@ function renderEmailText(displayName: string): string {
 
 faz 5 dias.
 
-tem uma pill nova esperando: ela te coloca diante de uma pergunta que você ainda não fez pra si.
+tem uma tensão nova esperando: ela te coloca diante de uma pergunta que você ainda não fez pra si.
 
-abrir pill: ${APP_BASE_URL}?entry_source=email_reminder
+abrir tensão: ${APP_BASE_URL}?entry_source=email_reminder
 
 — rdwth`;
 }
@@ -176,7 +176,7 @@ Deno.serve(async (req) => {
           body: JSON.stringify({
             from: FROM_EMAIL,
             to: user.email,
-            subject: "tem uma pill te esperando",
+            subject: "tem uma tensão te esperando",
             html: renderEmailHtml(user.display_name),
             text: renderEmailText(user.display_name),
           }),

@@ -140,10 +140,10 @@ export default function NavBottom({ active = 'none', pulseOnce = false }: NavBot
   )
 
   const centerItems = [
-    { label: 'tensão',    slug: 'pills' as ActivePage,         path: '/pills' },
-    { label: 'ciclo',     slug: 'questionnaire' as ActivePage, path: '/questionnaire' },
-    { label: 'amigos',    slug: 'thirdparty' as ActivePage,    path: '/terceiros' },
-    { label: 'leitura',   slug: 'context' as ActivePage,       path: '/context' },
+    { label: 'tensão',    slug: 'pills' as ActivePage,         path: '/tensao' },
+    { label: 'ciclo',     slug: 'questionnaire' as ActivePage, path: '/ciclo' },
+    { label: 'amigos',    slug: 'thirdparty' as ActivePage,    path: '/amigos' },
+    { label: 'leitura',   slug: 'context' as ActivePage,       path: '/leitura' },
   ]
 
   // Layout único — 6 elementos equidistantes (space-between), mesma baseline

@@ -1040,15 +1040,15 @@ export default function PillFlow() {
         </div>
 
         <div className={`r-talk-secondary r-stage-in${m5Stage >= 4 ? " show" : ""}`}>
-          <a onClick={() => navigate("/pills")}>fazer outra tensão →</a>
+          <a onClick={() => navigate("/tensao")}>fazer outra tensão →</a>
         </div>
       </div>
 
       <Footer
-        onBack={() => navigate("/pills")}
+        onBack={() => navigate("/tensao")}
         onContinue={state.reviewMode
           ? () => setState(s => ({ ...s, moment: "M2" }))
-          : () => navigate("/pills")}
+          : () => navigate("/tensao")}
         continueLabel={state.reviewMode ? "ler respostas" : "continuar"}
       />
     </div>

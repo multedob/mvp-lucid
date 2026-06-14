@@ -178,11 +178,11 @@ export function pickFlowVoice(dest: FlowDestination): {
 
 /** Map de path → destino do flow. */
 export const PATH_TO_DEST: Record<string, FlowDestination> = {
-  "/pills": "pills",
-  "/questionnaire": "questionnaire",
+  "/tensao": "pills",
+  "/ciclo": "questionnaire",
   "/reed": "reed",
-  "/context": "context",
-  "/terceiros": "thirdparty",
+  "/leitura": "context",
+  "/amigos": "thirdparty",
 };
 
 /** Section do header por destino. */
